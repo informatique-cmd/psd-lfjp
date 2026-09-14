@@ -1,0 +1,155 @@
+{
+  "/": { "name": "Accueil" },
+  "/methode": {
+    "name": "Méthode",
+    "parent": "/"
+  },
+  "/vision-missions-valeurs": {
+    "name": "Vision, Missions et Valeurs",
+    "parent": "/"
+  },
+  "/diagnostic": {
+    "name": "Diagnostic",
+    "parent": "/"
+  },
+  "/plan-strategique": {
+    "name": "Plan Stratégique",
+    "parent": "/"
+  },
+  "/planification-bac-blanc": {
+    "name": "Planification bac blanc",
+    "parent": "/plan-strategique"
+  },
+  "/plan-maintenance-strategique": {
+    "name": "Plan de Maintenance Stratégique",
+    "parent": "/plan-strategique"
+  },
+  "/implication-des-familles": {
+    "name": "Implication des familles",
+    "parent": "/plan-strategique"
+  },
+  "/curriculum-soft-skills": {
+    "name": "Curriculum Soft Skills & Éloquence",
+    "parent": "/plan-strategique"
+  },
+  "/curriculum-numerique-spiralaire": {
+    "name": "Curriculum numérique spiralaire",
+    "parent": "/plan-strategique"
+  },
+  "/introduction-au-code": {
+    "name": "Introduction au code",
+    "parent": "/plan-strategique"
+  },
+  "/module-ia": {
+    "name": "Module IA",
+    "parent": "/plan-strategique"
+  },
+  "/education-numerique-citoyen": {
+    "name": "Éducation au numérique citoyen",
+    "parent": "/plan-strategique"
+  },
+  "/connectivite-2-0": {
+    "name": "Connectivité 2.0",
+    "parent": "/plan-strategique"
+  },
+  "/profil-digital-lfjp": {
+    "name": "Profil digital du LFJP",
+    "parent": "/plan-strategique"
+  },
+  "/parcours-avenir": {
+    "name": "Parcours Avenir",
+    "parent": "/plan-strategique"
+  },
+  "/parcours-education-artistique-culturelle": {
+    "name": "Parcours d'Éducation Artistique et Culturelle",
+    "parent": "/plan-strategique"
+  },
+  "/parcours-sante": {
+    "name": "Parcours Santé",
+    "parent": "/plan-strategique"
+  },
+  "/semaine-des-cultures": {
+    "name": "Semaine des cultures",
+    "parent": "/plan-strategique"
+  },
+  "/film-annuel/3e": {
+    "name": "Film annuel 3e",
+    "parent": "/parcours-avenir"
+  },
+  "/film-annuel/2nde": {
+    "name": "Film annuel 2nde",
+    "parent": "/parcours-avenir"
+  },
+  "/film-annuel/1ere": {
+    "name": "Film annuel 1ère",
+    "parent": "/parcours-avenir"
+  },
+  "/film-annuel/terminale": {
+    "name": "Film annuel Terminale",
+    "parent": "/parcours-avenir"
+  },
+  "/section-internationale-bfi": {
+    "name": "Section Internationale et BFI",
+    "parent": "/plan-strategique"
+  },
+  "/dnbi": {
+    "name": "DNBi – SIA collège",
+    "parent": "/plan-strategique"
+  },
+  "/pc-par-lyceen": {
+    "name": "PC par Lycéen",
+    "parent": "/plan-strategique"
+  },
+  "/plan-strategique/reussite-citoyenne": {
+    "name": "Réussite citoyenne",
+    "parent": "/plan-strategique"
+  },
+  "/education-financiere-vie-autonome": {
+    "name": "Éducation financière et à la vie autonome",
+    "parent": "/plan-strategique"
+  },
+  "/mecenat-numerique": {
+    "name": "Mécénat numérique",
+    "parent": "/plan-strategique"
+  },
+  "/construction-cantine": {
+    "name": "Construction de la Cantine",
+    "parent": "/plan-strategique"
+  },
+  "/protocole-phare": {
+    "name": "Protocole PHARE",
+    "parent": "/plan-strategique"
+  },
+  "/mediation-entre-pairs": {
+    "name": "Médiation entre pairs",
+    "parent": "/plan-strategique"
+  },
+  "/expression-participation": {
+    "name": "Expression & participation",
+    "parent": "/plan-strategique"
+  },
+  "/echanges-scolaires-adn-aefe": {
+    "name": "Échanges scolaires ADN-AEFE",
+    "parent": "/plan-strategique"
+  },
+  "/jumelages-partages-projets-collaboratifs": {
+    "name": "Jumelages et projets collaboratifs",
+    "parent": "/plan-strategique"
+  },
+  "/savoir-rouler": {
+    "name": "Savoir Rouler à Vélo",
+    "parent": "/plan-strategique"
+  },
+  "/savoir-nager": {
+    "name": "Dispositif Savoir Nager",
+    "parent": "/plan-strategique"
+  },
+  "/politique-e3d": {
+    "name": "Politique E3D",
+    "parent": "/plan-strategique"
+  },
+  "/elcs-analyse-complete": {
+    "name": "Analyse Complète ELCS",
+    "parent": "/diagnostic"
+  }
+}
