@@ -55,7 +55,7 @@ const Admin = () => {
     setContent((current) => ({ ...current, home: { ...current.home, [field]: value } }));
   };
 
-  const updateMessage = (index: number, field: 'title' | 'eyebrow' | 'image', value: string) => {
+  const updateMessage = (index: number, field: 'title' | 'eyebrow' | 'image' | 'imageAlt', value: string) => {
     setContent((current) => ({
       ...current,
       home: {
@@ -63,6 +63,46 @@ const Admin = () => {
         messages: current.home.messages.map((message, messageIndex) =>
           messageIndex === index ? { ...message, [field]: value } : message
         ),
+      },
+    }));
+  };
+
+  const updateMessageArray = (index: number, field: 'paragraphs' | 'signature', itemIndex: number, value: string) => {
+    setContent((current) => ({
+      ...current,
+      home: {
+        ...current.home,
+        messages: current.home.messages.map((message, messageIndex) => (
+          messageIndex === index
+            ? { ...message, [field]: message[field].map((item, currentIndex) => currentIndex === itemIndex ? value : item) }
+            : message
+        )),
+      },
+    }));
+  };
+
+  const addMessageArrayItem = (index: number, field: 'paragraphs' | 'signature') => {
+    setContent((current) => ({
+      ...current,
+      home: {
+        ...current.home,
+        messages: current.home.messages.map((message, messageIndex) => (
+          messageIndex === index ? { ...message, [field]: [...message[field], ''] } : message
+        )),
+      },
+    }));
+  };
+
+  const removeMessageArrayItem = (index: number, field: 'paragraphs' | 'signature', itemIndex: number) => {
+    setContent((current) => ({
+      ...current,
+      home: {
+        ...current.home,
+        messages: current.home.messages.map((message, messageIndex) => (
+          messageIndex === index
+            ? { ...message, [field]: message[field].filter((_, currentIndex) => currentIndex !== itemIndex) }
+            : message
+        )),
       },
     }));
   };
@@ -235,6 +275,25 @@ const Admin = () => {
                   <div className="grid gap-2"><Label>Rubrique</Label><Input value={message.eyebrow} onChange={(event) => updateMessage(index, 'eyebrow', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>Titre</Label><Input value={message.title} onChange={(event) => updateMessage(index, 'title', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>URL de l’image</Label><Input value={message.image} onChange={(event) => updateMessage(index, 'image', event.target.value)} /></div>
+                  <div className="grid gap-2"><Label>Description de l’image</Label><Input value={message.imageAlt} onChange={(event) => updateMessage(index, 'imageAlt', event.target.value)} /></div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between"><Label>Texte du message</Label><Button type="button" size="sm" variant="outline" onClick={() => addMessageArrayItem(index, 'paragraphs')}>Ajouter un paragraphe</Button></div>
+                    {message.paragraphs.map((paragraph, paragraphIndex) => (
+                      <div key={`paragraph-${paragraphIndex}`} className="flex gap-2">
+                        <Textarea className="min-h-[120px]" value={paragraph} onChange={(event) => updateMessageArray(index, 'paragraphs', paragraphIndex, event.target.value)} aria-label={`Paragraphe ${paragraphIndex + 1}`} />
+                        <Button type="button" size="sm" variant="ghost" onClick={() => removeMessageArrayItem(index, 'paragraphs', paragraphIndex)} aria-label={`Supprimer le paragraphe ${paragraphIndex + 1}`}>Supprimer</Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between"><Label>Signature</Label><Button type="button" size="sm" variant="outline" onClick={() => addMessageArrayItem(index, 'signature')}>Ajouter une ligne</Button></div>
+                    {message.signature.map((line, lineIndex) => (
+                      <div key={`signature-${lineIndex}`} className="flex gap-2">
+                        <Input value={line} onChange={(event) => updateMessageArray(index, 'signature', lineIndex, event.target.value)} aria-label={`Ligne de signature ${lineIndex + 1}`} />
+                        <Button type="button" size="sm" variant="ghost" onClick={() => removeMessageArrayItem(index, 'signature', lineIndex)} aria-label={`Supprimer la ligne ${lineIndex + 1}`}>Supprimer</Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </CardContent>

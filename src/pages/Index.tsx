@@ -59,9 +59,9 @@ const Index = () => {
                   <h3 className="text-2xl font-playfair font-bold text-french-blue">{message.title}</h3>
                 </div>
                 <div className="space-y-4 text-gray-700 leading-relaxed text-justify">
-                  {message.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                  {message.paragraphs.map((paragraph, index) => <p key={`paragraph-${index}`}>{paragraph}</p>)}
                   <div className="pt-2 space-y-2">
-                    {message.signature.map((line) => <p key={line} className="font-semibold text-gray-900">{line}</p>)}
+                    {message.signature.map((line, index) => <p key={`signature-${index}`} className="font-semibold text-gray-900">{line}</p>)}
                   </div>
                 </div>
               </CardContent>
