@@ -61,6 +61,8 @@ import NiveauExcellenceReussiteExamens from "./pages/NiveauExcellenceReussiteExa
 import AutonomiePerseverance from "./pages/AutonomiePerseverance";
 import ToutesLesReussites from "./pages/ToutesLesReussites";
 import CelebrationReussitesDiplomes from "./pages/CelebrationReussitesDiplomes";
+import Admin from "./pages/Admin";
+import ManagedPage from "./pages/ManagedPage";
 
 // Créer l'instance QueryClient en dehors du composant pour éviter les recréations
 const queryClient = new QueryClient({
@@ -83,6 +85,7 @@ const App = () => {
             <ScrollToTop />
             <div className="flex flex-col min-h-screen">
               <Routes>
+                <Route path="/admin" element={<Admin />} />
                 <Route path="/" element={<Index />} />
                 <Route path="/methode" element={
                   <>
@@ -442,7 +445,7 @@ const App = () => {
                   </>
                 } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
+                <Route path="*" element={<ManagedPage />} />
               </Routes>
             </div>
           </BrowserRouter>

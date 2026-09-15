@@ -8,6 +8,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const routesPath = resolve(__dirname, '../src/data/breadcrumbRoutes.json');
 const routes = JSON.parse(readFileSync(routesPath, 'utf-8'));
+const contentPath = resolve(__dirname, '../src/content/siteContent.json');
+const siteContent = JSON.parse(readFileSync(contentPath, 'utf-8'));
+const pagesPath = resolve(__dirname, '../src/content/pages.json');
+const pages = JSON.parse(readFileSync(pagesPath, 'utf-8'));
 
 const expectedRoutes = {
   '/vision-missions-valeurs': { parent: '/' },
@@ -81,4 +85,24 @@ test('les routes peuvent chaîner plusieurs parents jusqu\'à la racine', () => 
     reachedRoot,
     `La route "${targetPath}" doit pouvoir remonter jusqu'à la racine "/" en suivant ses parents.`
   );
+});
+
+test('le contenu administrable de l’accueil possède les champs nécessaires', () => {
+  assert.equal(typeof siteContent.home.heroTitle, 'string');
+  assert.equal(typeof siteContent.home.heroSubtitle, 'string');
+  assert.equal(siteContent.home.cards.length, 4);
+  assert.ok(siteContent.home.messages.every((message) =>
+    typeof message.title === 'string' &&
+    typeof message.image === 'string' &&
+    message.paragraphs.length > 0
+  ));
+});
+
+test('le registre des pages administrables est valide', () => {
+  assert.ok(Array.isArray(pages.pages));
+  for (const page of pages.pages) {
+    assert.match(page.slug, /^\/[^/].*/);
+    assert.equal(typeof page.title, 'string');
+    assert.ok(Array.isArray(page.blocks));
+  }
 });

@@ -1,0 +1,91 @@
+{
+  "home": {
+    "heroTitle": "Lycée Français Jacques Prévert",
+    "heroSubtitle": "Excellence, Respect, Créativité, Persévérance, Civisme",
+    "sectionTitle": "Plan stratégique de développement du Lycée Français Jacques Prévert",
+    "cards": [
+      {
+        "title": "Méthode",
+        "description": "Parcourez la démarche en 7 étapes et la gouvernance participative qui cadrent l'élaboration du plan stratégique du LFJP.",
+        "linkLabel": "Comprendre",
+        "path": "/methode"
+      },
+      {
+        "title": "Vision, Missions et Valeurs",
+        "description": "Découvrez notre vision, nos missions éducatives et les valeurs qui guident quotidiennement notre établissement dans la formation des citoyens du monde.",
+        "linkLabel": "Découvrir",
+        "path": "/vision-missions-valeurs"
+      },
+      {
+        "title": "Diagnostic",
+        "description": "Analysez la situation actuelle de notre établissement à travers les données des enquêtes et l'évaluation des besoins qui orientent notre développement.",
+        "linkLabel": "Analyser",
+        "path": "/diagnostic"
+      },
+      {
+        "title": "Plan Stratégique de Développement",
+        "description": "Consultez notre Plan Stratégique de Développement 2026-2030 qui détaille nos objectifs, actions et indicateurs pour les années à venir.",
+        "linkLabel": "Consulter",
+        "path": "/plan-strategique"
+      }
+    ],
+    "messages": [
+      {
+        "eyebrow": "Mot du poste diplomatique",
+        "title": "Service de Coopération et d’Action Culturelle",
+        "image": "https://i.imgur.com/OjzrXjM.png",
+        "imageAlt": "Service de Coopération et d’Action Culturelle",
+        "paragraphs": [
+          "Le service de coopération et d’action culturelle salue l’élaboration du Plan Stratégique de Développement du lycée Jacques Prévert, résultat d’un travail approfondi et concerté avec le comité de gestion, l’équipe de direction et l’ensemble de la communauté éducative.",
+          "Ce document s’inscrit dans la continuité des orientations du réseau d’enseignement français à l’étranger et constitue une feuille de route précieuse pour accompagner le développement de l’établissement pour les prochaines années dans une direction clairement établie : celle de consolider un environnement d’apprentissage dans un climat scolaire favorable mais exigeant, ouvert et inclusif.",
+          "Le service de coopération et d’action culturelle, à travers l’action du conseiller de coopération et d’action culturelle et de l’attaché de coopération éducative, continuera d’accompagner l’établissement dans la mise en œuvre des objectifs définis, en lien avec l'AEFE et l'ensemble des acteurs de la communauté éducative."
+        ],
+        "signature": [
+          "Laurent Viguié",
+          "Conseiller de coopération et d’action culturelle",
+          "Carole Blaszczyk",
+          "Attachée régionale de coopération éducative"
+        ],
+        "wide": true
+      },
+      {
+        "eyebrow": "Mot du président",
+        "title": "Comité de gestion",
+        "image": "https://i.imgur.com/su3En9d.jpeg",
+        "imageAlt": "Vignette du président du Comité de Gestion",
+        "paragraphs": [
+          "« Ensemble pour nos enfants » résonne avec une force particulière dans un établissement comme le nôtre, où la gestion parentale et l’implication de toutes et tous sont au cœur de notre modèle. Il souligne combien notre responsabilité est partagée, et combien la collaboration entre les familles, les équipes pédagogiques et nos partenaires est essentielle pour offrir à chaque élève un cadre propice à son développement intellectuel, humain et citoyen.",
+          "Dans un monde en constante évolution, il est crucial de ne jamais perdre de vue cette mission fondamentale. La large consultation que nous avons conduite – auprès des parents, des personnels, des élèves et de nos partenaires sénégalais – nous a permis de réaffirmer nos valeurs et de bâtir, main dans la main, une vision ambitieuse et fédératrice pour les années à venir.",
+          "Notre lycée est une belle somme d’énergies, de compétences et de regards complémentaires. Les nombreux échanges que nous avons eus ont fait émerger une intelligence collective précieuse, dont ce plan stratégique est le fruit. C’est en unissant nos forces, en écoutant chacune des voix, que nous parviendrons à toujours mieux accompagner nos enfants, à les faire grandir et à leur donner les clés pour construire un avenir serein et prometteur.",
+          "Le Plan Stratégique 2026-2031 est donc le reflet de votre parole, de vos aspirations et de votre engagement. Nous espérons que vous vous y reconnaîtrez, car il a été conçu avec vous… et pour eux, pour nos enfants.",
+          "C’est avec une grande fierté que nous continuons à écrire, ensemble, les belles pages du Lycée Français Jacques Prévert. Merci à toutes et à tous de votre confiance et de votre dynamisme.",
+          "Le plus beau reste à venir… ensemble pour nos enfants !"
+        ],
+        "signature": [
+          "Le Président du Comité de Gestion,",
+          "Omar V. Benson",
+          "Au nom de toute la communauté éducative du LFJP"
+        ],
+        "wide": false
+      },
+      {
+        "eyebrow": "Mot de la direction pédagogique",
+        "title": "Proviseur et directrice du primaire",
+        "image": "https://i.imgur.com/kIXNjzR.jpeg",
+        "imageAlt": "Vignette de la direction pédagogique",
+        "paragraphs": [
+          "Le Lycée Français Jacques Prévert a connu un essor remarquable, marqué par son installation en 2022 dans un établissement neuf et des espaces élargis. Si la préservation et la valorisation de ces actifs immobiliers constituent une priorité absolue pour le Comité de Gestion, notre ambition commune allait plus loin.",
+          "En tant que membres du Comité de Gestion, la Directrice et le Proviseur ont porté, avec les représentants des parents, une volonté forte : celle de s'engager dans l'élaboration d'un document unique. Ce document fusionne désormais le Plan Stratégique de Développement — intégrant les investissements à moyen et long terme — et le Projet d'Établissement incluant le Projet d’Ecole. Vous trouverez ainsi dans ces pages une vision globale.",
+          "S'il est théoriquement admis que les investissements doivent servir la pédagogie et l'accueil des élèves, la réalité d'un établissement en gestion parentale rend parfois complexe l'alignement du temps financier et du temps éducatif. C'est pourtant le pari que nous faisons aujourd'hui collectivement : parents, enseignants et élèves.",
+          "Si le concept de communauté éducative demeure bien souvent une utopie, ce Plan Stratégique de Développement est la preuve que nous parvenons à le concrétiser. Il témoigne qu'au prix d'efforts inlassables, cet idéal devient ici quelque chose de très concret, imbriquant enfin la gestion et la pédagogie.",
+          "Finalement, cette mobilisation collective ne doit avoir qu’une seule boussole. Au-delà des stratégies et des structures, ce sont les élèves qui constituent le cœur battant de notre établissement. C’est pour leur épanouissement et leur réussite future que nous déployons toute cette énergie, en veillant à replacer invariablement leurs intérêts au centre de chacune de nos intentions, de nos discussions et de nos actions."
+        ],
+        "signature": [
+          "Bastien Capel - Proviseur",
+          "Nathalie Maginot-France - Directrice du primaire"
+        ],
+        "wide": false
+      }
+    ]
+  }
+}
