@@ -14,27 +14,41 @@ type Content = typeof siteContent;
 const draftStorageKey = 'lfjp-admin-draft';
 const pagesDraftStorageKey = 'lfjp-admin-pages-draft';
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const loadContentDraft = (): Content => {
+  const savedDraft = window.localStorage.getItem(draftStorageKey);
+  if (!savedDraft) return siteContent;
+  try {
+    const parsed: unknown = JSON.parse(savedDraft);
+    if (!isRecord(parsed) || !isRecord(parsed.home) || !Array.isArray(parsed.home.cards) || !Array.isArray(parsed.home.messages)) {
+      throw new Error('Structure de brouillon invalide.');
+    }
+    return parsed as Content;
+  } catch {
+    window.localStorage.removeItem(draftStorageKey);
+    return siteContent;
+  }
+};
+
+const loadPagesDraft = (): ManagedPage[] => {
+  const savedPages = window.localStorage.getItem(pagesDraftStorageKey);
+  if (!savedPages) return pagesFile.pages as ManagedPage[];
+  try {
+    const parsed: unknown = JSON.parse(savedPages);
+    if (!isRecord(parsed) || !Array.isArray(parsed.pages) || !parsed.pages.every((page) => isRecord(page) && typeof page.slug === 'string' && typeof page.title === 'string' && Array.isArray(page.blocks))) {
+      throw new Error('Structure de pages invalide.');
+    }
+    return parsed.pages as ManagedPage[];
+  } catch {
+    window.localStorage.removeItem(pagesDraftStorageKey);
+    return pagesFile.pages as ManagedPage[];
+  }
+};
+
 const Admin = () => {
-  const [content, setContent] = useState<Content>(() => {
-    const savedDraft = window.localStorage.getItem(draftStorageKey);
-    if (!savedDraft) return siteContent;
-    try {
-      return JSON.parse(savedDraft) as Content;
-    } catch {
-      window.localStorage.removeItem(draftStorageKey);
-      return siteContent;
-    }
-  });
-  const [pages, setPages] = useState<ManagedPage[]>(() => {
-    const savedPages = window.localStorage.getItem(pagesDraftStorageKey);
-    if (!savedPages) return pagesFile.pages as ManagedPage[];
-    try {
-      return JSON.parse(savedPages) as ManagedPage[];
-    } catch {
-      window.localStorage.removeItem(pagesDraftStorageKey);
-      return pagesFile.pages as ManagedPage[];
-    }
-  });
+  const [content, setContent] = useState<Content>(loadContentDraft);
+  const [pages, setPages] = useState<ManagedPage[]>(loadPagesDraft);
   const [selectedPage, setSelectedPage] = useState(0);
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
   const [status, setStatus] = useState('');
