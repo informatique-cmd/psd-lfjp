@@ -9,7 +9,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NotFound from '@/pages/NotFound';
 import pagesData from '@/content/pages.json';
-import type { ContentBlock, ManagedPage as ManagedPageData } from '@/content/pageTypes';
+import { isValidContentBlock, type ContentBlock, type ManagedPage as ManagedPageData } from '@/content/pageTypes';
 
 const pages = pagesData.pages as ManagedPageData[];
 
@@ -62,7 +62,7 @@ const ManagedPage = () => {
           <CardContent className="space-y-6 p-8 md:p-12">
             <h1 className="text-4xl font-playfair font-bold text-french-blue md:text-5xl">{page.title}</h1>
             {page.description && <p className="text-xl text-gray-600">{page.description}</p>}
-            {page.blocks.map((block, index) => <Block key={`${block.type}-${index}`} block={block} />)}
+            {page.blocks.filter(isValidContentBlock).map((block, index) => <Block key={`${block.type}-${index}`} block={block} />)}
           </CardContent>
         </Card>
       </main>
