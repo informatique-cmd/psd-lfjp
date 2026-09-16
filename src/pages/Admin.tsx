@@ -215,32 +215,33 @@ const Admin = () => {
       blocks: [{ type: 'paragraph', text: 'Écrivez votre contenu ici.' }],
     };
 
-    const deletePage = () => {
-      const page = pages[selectedPage];
-      if (!page || !window.confirm(`Supprimer la page « ${page.title} » et son contenu ?`)) return;
-      const nextPages = pages.filter((_, index) => index !== selectedPage);
-      setPages(nextPages);
-      setSelectedPage(Math.max(0, Math.min(selectedPage, nextPages.length - 1)));
-      setStatus('Page supprimée du brouillon. Enregistrez puis créez une Preview pour la publier.');
-    };
-
-    const duplicatePage = () => {
-      const source = pages[selectedPage];
-      if (!source) return;
-      const copyIndex = pages.length + 1;
-      const copy: ManagedPage = {
-        ...source,
-        slug: `${normalizePageSlug(source.slug)}-copie-${copyIndex}`,
-        title: `${source.title} (copie)`,
-        menuLabel: source.menuLabel ? `${source.menuLabel} (copie)` : undefined,
-        blocks: source.blocks.map((block) => ({ ...block })),
-      };
-      setPages((current) => [...current, copy]);
-      setSelectedPage(pages.length);
-      setStatus('Page dupliquée dans le brouillon.');
-    };
     setPages((current) => [...current, page]);
     setSelectedPage(pages.length);
+  };
+
+  const deletePage = () => {
+    const page = pages[selectedPage];
+    if (!page || !window.confirm(`Supprimer la page « ${page.title} » et son contenu ?`)) return;
+    const nextPages = pages.filter((_, index) => index !== selectedPage);
+    setPages(nextPages);
+    setSelectedPage(Math.max(0, Math.min(selectedPage, nextPages.length - 1)));
+    setStatus('Page supprimée du brouillon. Enregistrez puis créez une Preview pour la publier.');
+  };
+
+  const duplicatePage = () => {
+    const source = pages[selectedPage];
+    if (!source) return;
+    const copyIndex = pages.length + 1;
+    const copy: ManagedPage = {
+      ...source,
+      slug: `${normalizePageSlug(source.slug)}-copie-${copyIndex}`,
+      title: `${source.title} (copie)`,
+      menuLabel: source.menuLabel ? `${source.menuLabel} (copie)` : undefined,
+      blocks: source.blocks.map((block) => ({ ...block })),
+    };
+    setPages((current) => [...current, copy]);
+    setSelectedPage(pages.length);
+    setStatus('Page dupliquée dans le brouillon.');
   };
 
   const updatePage = (field: keyof ManagedPage, value: string) => {
