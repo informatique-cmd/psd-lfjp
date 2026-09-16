@@ -28,7 +28,10 @@ export const decryptToken = (value: string) => {
 };
 
 export const getCookies = (header = '') => Object.fromEntries(
-  header.split(';').map((part) => part.trim().split('=').map(decodeURIComponent)).filter(([key, value]) => key && value)
+  header
+    .split(';')
+    .map((part) => part.trim().split('=').map(decodeURIComponent))
+    .filter(([key, value]) => key && value),
 );
 
 export const getSessionToken = (req: { headers: { cookie?: string } }) => {
