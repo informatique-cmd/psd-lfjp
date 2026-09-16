@@ -20,13 +20,13 @@ const Block = ({ block }: { block: ContentBlock }) => {
         ? <h3 className="mt-8 text-2xl font-playfair font-bold text-french-blue">{block.text}</h3>
         : <h2 className="mt-8 text-3xl font-playfair font-bold text-french-blue">{block.text}</h2>;
     case 'paragraph':
-      return <p className="leading-relaxed text-gray-700">{block.text}</p>;
+      return <p className="whitespace-pre-line leading-relaxed text-gray-700">{block.text}</p>;
     case 'image':
       return <figure><img src={block.src} alt={block.alt} className="max-h-[520px] w-full rounded-lg object-cover shadow-md" />{block.caption && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.caption}</figcaption>}</figure>;
     case 'gallery':
       return <div className="grid gap-4 sm:grid-cols-2">{block.images.map((image) => <img key={`${image.src}-${image.alt}`} src={image.src} alt={image.alt} className="h-56 w-full rounded-lg object-cover shadow-md" />)}</div>;
     case 'video':
-      return <figure><video className="w-full rounded-lg shadow-md" controls preload="metadata" src={block.src}>{block.title && <track kind="captions" label={block.title} />}</video>{block.title && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.title}</figcaption>}</figure>;
+      return <figure><video className="w-full rounded-lg shadow-md" controls preload="metadata" src={block.src}>{block.title && <track kind="captions" label={block.title} srcLang="fr" />}</video>{block.title && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.title}</figcaption>}</figure>;
     case 'embed':
       return <iframe className="w-full rounded-lg border-0 shadow-md" style={{ height: block.height || 420 }} src={block.src} title={block.title} loading="lazy" />;
     case 'quote':

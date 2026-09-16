@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, ExternalLink, Github, Image, Save, Send } from 'lucide-react';
+import { ArrowLeft, Check, Copy, ExternalLink, Eye, Github, Image, Save, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
-import type { ContentBlock, ManagedPage } from '@/content/pageTypes';
+import { normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage } from '@/content/pageTypes';
 
 type Content = typeof siteContent;
 const draftStorageKey = 'lfjp-admin-draft';
@@ -53,6 +53,38 @@ const Admin = () => {
 
   const updateHome = (field: keyof Content['home'], value: string) => {
     setContent((current) => ({ ...current, home: { ...current.home, [field]: value } }));
+  };
+
+  const updateCard = (index: number, field: keyof Content['home']['cards'][number], value: string) => {
+    setContent((current) => ({
+      ...current,
+      home: {
+        ...current.home,
+        cards: current.home.cards.map((card, cardIndex) => cardIndex === index ? { ...card, [field]: value } : card),
+      },
+    }));
+  };
+
+  const addCard = () => {
+    setContent((current) => ({
+      ...current,
+      home: {
+        ...current.home,
+        cards: [...current.home.cards, {
+          title: 'Nouvelle rubrique',
+          description: 'Décrivez cette rubrique.',
+          linkLabel: 'Découvrir',
+          path: '/nouvelle-rubrique',
+        }],
+      },
+    }));
+  };
+
+  const removeCard = (index: number) => {
+    setContent((current) => ({
+      ...current,
+      home: { ...current.home, cards: current.home.cards.filter((_, cardIndex) => cardIndex !== index) },
+    }));
   };
 
   const updateMessage = (index: number, field: 'title' | 'eyebrow' | 'image' | 'imageAlt', value: string) => {
@@ -111,6 +143,8 @@ const Admin = () => {
     setIsSaving(true);
     setStatus('');
     try {
+      const validationErrors = validateManagedPages(pages);
+      if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
       const response = await fetch('/api/github/pull-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -179,6 +213,31 @@ const Admin = () => {
       title: 'Nouvelle page',
       description: '',
       blocks: [{ type: 'paragraph', text: 'Écrivez votre contenu ici.' }],
+    };
+
+    const deletePage = () => {
+      const page = pages[selectedPage];
+      if (!page || !window.confirm(`Supprimer la page « ${page.title} » et son contenu ?`)) return;
+      const nextPages = pages.filter((_, index) => index !== selectedPage);
+      setPages(nextPages);
+      setSelectedPage(Math.max(0, Math.min(selectedPage, nextPages.length - 1)));
+      setStatus('Page supprimée du brouillon. Enregistrez puis créez une Preview pour la publier.');
+    };
+
+    const duplicatePage = () => {
+      const source = pages[selectedPage];
+      if (!source) return;
+      const copyIndex = pages.length + 1;
+      const copy: ManagedPage = {
+        ...source,
+        slug: `${normalizePageSlug(source.slug)}-copie-${copyIndex}`,
+        title: `${source.title} (copie)`,
+        menuLabel: source.menuLabel ? `${source.menuLabel} (copie)` : undefined,
+        blocks: source.blocks.map((block) => ({ ...block })),
+      };
+      setPages((current) => [...current, copy]);
+      setSelectedPage(pages.length);
+      setStatus('Page dupliquée dans le brouillon.');
     };
     setPages((current) => [...current, page]);
     setSelectedPage(pages.length);
@@ -315,6 +374,24 @@ const Admin = () => {
 
           <Card>
             <CardHeader className="flex-row items-center justify-between">
+              <div><CardTitle>Rubriques de l’accueil</CardTitle><CardDescription>Gérez les cartes affichées sous le titre principal.</CardDescription></div>
+              <Button type="button" size="sm" variant="outline" onClick={addCard}>Ajouter une rubrique</Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {content.home.cards.map((card, index) => (
+                <div key={`card-${index}`} className="grid gap-3 rounded-lg border p-4 md:grid-cols-2">
+                  <div className="grid gap-2"><Label>Titre</Label><Input value={card.title} onChange={(event) => updateCard(index, 'title', event.target.value)} /></div>
+                  <div className="grid gap-2"><Label>Chemin interne</Label><Input value={card.path} onChange={(event) => updateCard(index, 'path', event.target.value)} /></div>
+                  <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea value={card.description} onChange={(event) => updateCard(index, 'description', event.target.value)} /></div>
+                  <div className="grid gap-2"><Label>Texte du lien</Label><Input value={card.linkLabel} onChange={(event) => updateCard(index, 'linkLabel', event.target.value)} /></div>
+                  <div className="flex items-end justify-end"><Button type="button" size="sm" variant="ghost" onClick={() => removeCard(index)}>Supprimer cette rubrique</Button></div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
               <div><CardTitle>Pages personnalisées</CardTitle><CardDescription>Crée des pages et sous-pages avec des blocs de contenu.</CardDescription></div>
               <Button onClick={addPage} size="sm">Nouvelle page</Button>
             </CardHeader>
@@ -326,12 +403,13 @@ const Admin = () => {
                   </div>
                   {pages[selectedPage] && (
                     <div className="space-y-4 rounded-lg border p-4">
-                      <div className="grid gap-2"><Label>Chemin URL</Label><Input value={pages[selectedPage].slug} onChange={(event) => updatePage('slug', event.target.value)} placeholder="/mon-chemin" /></div>
+                      <div className="grid gap-2"><Label>Chemin URL</Label><Input value={pages[selectedPage].slug} onChange={(event) => updatePage('slug', normalizePageSlug(event.target.value))} placeholder="/mon-chemin" /><p className="text-xs text-slate-500">Adresse publique : <a className="text-french-blue underline" href={pages[selectedPage].slug} target="_blank" rel="noreferrer"><Eye className="mr-1 inline h-3 w-3" />prévisualiser cette page</a></p></div>
                       <div className="grid gap-2"><Label>Page parente (optionnel)</Label><Input value={pages[selectedPage].parent || ''} onChange={(event) => updatePage('parent', event.target.value)} placeholder="/plan-strategique" /></div>
                       <div className="grid gap-2"><Label>Titre</Label><Input value={pages[selectedPage].title} onChange={(event) => updatePage('title', event.target.value)} /></div>
                       <div className="grid gap-2"><Label>Description</Label><Textarea value={pages[selectedPage].description || ''} onChange={(event) => updatePage('description', event.target.value)} /></div>
                       <div className="grid gap-2"><Label>Nom dans le menu</Label><Input value={pages[selectedPage].menuLabel || ''} onChange={(event) => updatePage('menuLabel', event.target.value)} placeholder="Laisser vide pour utiliser le titre" /></div>
                       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pages[selectedPage].showInNavigation !== false} onChange={(event) => setPages((current) => current.map((page, index) => index === selectedPage ? { ...page, showInNavigation: event.target.checked } : page))} /> Afficher cette page dans la navigation</label>
+                      <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" onClick={duplicatePage}><Copy className="mr-1 h-4 w-4" /> Dupliquer</Button><Button type="button" size="sm" variant="destructive" onClick={deletePage}><Trash2 className="mr-1 h-4 w-4" /> Supprimer</Button></div>
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-2"><div><Label>Contenu de la page</Label><p className="text-xs text-slate-500">Ajoutez les blocs dans l’ordre souhaité, sans écrire de JSON.</p></div><div className="flex flex-wrap gap-2">{(['heading', 'paragraph', 'image', 'gallery', 'video', 'embed', 'quote', 'list', 'callout', 'table', 'chart', 'button', 'divider'] as ContentBlock['type'][]).map((type) => <Button key={type} type="button" size="sm" variant="outline" onClick={() => addBlock(type)}>+ {type}</Button>)}</div></div>
                         {pages[selectedPage].blocks.map((block, blockIndex) => (
