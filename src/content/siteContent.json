@@ -29,11 +29,26 @@
       "Financer le Plan Stratégique de Développement et optimiser la gestion des ressources nécessaires à sa mise en œuvre"
     ],
     "values": [
-      { "name": "Respect", "description": "Du bien-être d'autrui, de soi-même, des particularités et des écosystèmes partagés" },
-      { "name": "Excellence", "description": "Encourager et valoriser le meilleur de chacun" },
-      { "name": "Civisme", "description": "Se comporter et agir pour consolider ou améliorer le bien-vivre-ensemble" },
-      { "name": "Créativité", "description": "Innover et apporter au monde une perspective nouvelle, originale et significative" },
-      { "name": "Persévérance", "description": "Poursuivre avec passion et détermination l'accomplissement de nos objectifs partagés" }
+      {
+        "name": "Respect",
+        "description": "Du bien-être d'autrui, de soi-même, des particularités et des écosystèmes partagés"
+      },
+      {
+        "name": "Excellence",
+        "description": "Encourager et valoriser le meilleur de chacun"
+      },
+      {
+        "name": "Civisme",
+        "description": "Se comporter et agir pour consolider ou améliorer le bien-vivre-ensemble"
+      },
+      {
+        "name": "Créativité",
+        "description": "Innover et apporter au monde une perspective nouvelle, originale et significative"
+      },
+      {
+        "name": "Persévérance",
+        "description": "Poursuivre avec passion et détermination l'accomplissement de nos objectifs partagés"
+      }
     ]
   },
   "home": {
