@@ -3,12 +3,12 @@
     {
       "slug": "/nouvelle-rubrique",
       "title": "Nouvelle rubrique test",
-      "description": "Décrivez cette rubrique.",
+      "description": "Décrivez cette rubrique",
       "showInNavigation": true,
       "blocks": [
         {
           "type": "paragraph",
-          "text": "Décrivez cette rubrique."
+          "text": "Décrivez cette rubrique"
         }
       ]
     }
