@@ -10,6 +10,7 @@ import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
 import breadcrumbRoutes from '@/data/breadcrumbRoutes.json';
 import { isValidManagedPage, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage } from '@/content/pageTypes';
+import { normalizeMediaUrl } from '@/lib/media';
 
 type Content = typeof siteContent;
 const draftStorageKey = 'lfjp-admin-draft';
@@ -45,6 +46,16 @@ const loadPagesDraft = (): ManagedPage[] => {
     window.localStorage.removeItem(pagesDraftStorageKey);
     return pagesFile.pages as ManagedPage[];
   }
+};
+
+const MediaPreview = ({ src, type = 'image' }: { src: string; type?: 'image' | 'video' }) => {
+  const [failed, setFailed] = useState(false);
+  const normalized = normalizeMediaUrl(src, type);
+  if (!normalized) return null;
+  if (failed) return <p className="text-xs text-red-600">Aperçu impossible. Vérifiez que le fichier est public et que le lien est accessible sans connexion.</p>;
+  return type === 'video'
+    ? <video className="max-h-40 w-full rounded-md border bg-slate-100 object-contain" controls src={normalized} onError={() => setFailed(true)} />
+    : <img className="max-h-40 w-full rounded-md border bg-slate-100 object-contain" src={normalized} alt="Aperçu du média" onError={() => setFailed(true)} />;
 };
 
 const Admin = () => {
@@ -89,7 +100,7 @@ const Admin = () => {
   };
 
   const updateSite = (field: keyof Content['site'], value: string) => {
-    setContent((current) => ({ ...current, site: { ...current.site, [field]: value } }));
+    setContent((current) => ({ ...current, site: { ...current.site, [field]: field === 'logoUrl' ? normalizeMediaUrl(value) : value } }));
   };
 
   const updateVisionParagraph = (index: number, value: string) => {
@@ -127,7 +138,7 @@ const Admin = () => {
       ...current,
       home: {
         ...current.home,
-        cards: current.home.cards.map((card, cardIndex) => cardIndex === index ? { ...card, [field]: value } : card),
+        cards: current.home.cards.map((card, cardIndex) => cardIndex === index ? { ...card, [field]: field === 'image' ? normalizeMediaUrl(value) : value } : card),
       },
     }));
   };
@@ -175,7 +186,7 @@ const Admin = () => {
       home: {
         ...current.home,
         messages: current.home.messages.map((message, messageIndex) =>
-          messageIndex === index ? { ...message, [field]: value } : message
+          messageIndex === index ? { ...message, [field]: field === 'image' ? normalizeMediaUrl(value) : value } : message
         ),
       },
     }));
@@ -378,7 +389,9 @@ const Admin = () => {
   };
 
   const updateBlockText = (blockIndex: number, field: 'text' | 'title' | 'src' | 'alt' | 'caption' | 'author' | 'label' | 'href' | 'tone', value: string) => {
-    updateBlock(blockIndex, { [field]: value });
+    const block = pages[selectedPage]?.blocks[blockIndex];
+    const mediaField = field === 'src' && (block?.type === 'image' || block?.type === 'video');
+    updateBlock(blockIndex, { [field]: mediaField ? normalizeMediaUrl(value, block.type) : value });
   };
 
   const importMedia = (file: File | undefined, onLoad: (dataUrl: string) => void) => {
@@ -435,9 +448,9 @@ const Admin = () => {
       case 'button':
         return <>{textField('label', 'Libellé', block.label)}{textField('href', 'Lien', block.href)}</>;
       case 'image':
-        return <>{textField('src', 'URL de l’image', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importMedia(event.target.files?.[0], (src) => updateBlock(blockIndex, { src }))} /></label>{textField('alt', 'Texte alternatif', block.alt)}{textField('caption', 'Légende', block.caption || '')}</>;
+        return <>{textField('src', 'URL de l’image ou lien Google Drive public', block.src)}<MediaPreview src={block.src} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importMedia(event.target.files?.[0], (src) => updateBlock(blockIndex, { src }))} /></label>{textField('alt', 'Texte alternatif', block.alt)}{textField('caption', 'Légende', block.caption || '')}</>;
       case 'video':
-        return <>{textField('src', 'URL de la vidéo', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une vidéo<input className="sr-only" type="file" accept="video/*" onChange={(event) => importMedia(event.target.files?.[0], (src) => updateBlock(blockIndex, { src }))} /></label>{textField('title', 'Titre de la vidéo', block.title || '')}</>;
+        return <>{textField('src', 'URL de la vidéo ou lien Google Drive public', block.src)}<MediaPreview src={block.src} type="video" /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une vidéo<input className="sr-only" type="file" accept="video/*" onChange={(event) => importMedia(event.target.files?.[0], (src) => updateBlock(blockIndex, { src }))} /></label>{textField('title', 'Titre de la vidéo', block.title || '')}</>;
       case 'embed':
         return <>{textField('src', 'URL intégrée', block.src)}{textField('title', 'Titre accessible', block.title)}<div className="grid gap-2"><Label>Hauteur (pixels)</Label><Input type="number" value={block.height || 420} onChange={(event) => updateBlock(blockIndex, { height: Number(event.target.value) || 420 })} /></div></>;
       case 'callout':
@@ -493,7 +506,7 @@ const Admin = () => {
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2"><Label>Nom du site</Label><Input value={content.site.name} onChange={(event) => updateSite('name', event.target.value)} /></div>
               <div className="grid gap-2"><Label>Sous-titre</Label><Input value={content.site.tagline} onChange={(event) => updateSite('tagline', event.target.value)} /></div>
-              <div className="grid gap-2"><Label>URL du logo</Label><Input value={content.site.logoUrl} onChange={(event) => updateSite('logoUrl', event.target.value)} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer le logo<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateSite('logoUrl', src))} /></label></div>
+              <div className="grid gap-2"><Label>URL du logo ou lien Google Drive public</Label><Input value={content.site.logoUrl} onChange={(event) => updateSite('logoUrl', event.target.value)} /><MediaPreview src={content.site.logoUrl} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer le logo<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateSite('logoUrl', src))} /></label></div>
               <div className="grid gap-2"><Label>Texte alternatif du logo</Label><Input value={content.site.logoAlt} onChange={(event) => updateSite('logoAlt', event.target.value)} /></div>
               <div className="grid gap-2"><Label>Texte du copyright</Label><Input value={content.site.footerCopyright} onChange={(event) => updateSite('footerCopyright', event.target.value)} /></div>
               <div className="grid gap-2"><Label>Texte complémentaire du pied de page</Label><Input value={content.site.footerPlan} onChange={(event) => updateSite('footerPlan', event.target.value)} /></div>
@@ -573,7 +586,7 @@ const Admin = () => {
                   <div className="grid gap-2"><Label>Chemin interne</Label><Input value={card.path} onChange={(event) => updateCard(index, 'path', event.target.value)} /></div>
                   <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea value={card.description} onChange={(event) => updateCard(index, 'description', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>Texte du lien</Label><Input value={card.linkLabel} onChange={(event) => updateCard(index, 'linkLabel', event.target.value)} /></div>
-                  <div className="grid gap-2"><Label>Image de la rubrique</Label><Input value={card.image || ''} onChange={(event) => updateCard(index, 'image', event.target.value)} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateCard(index, 'image', src))} /></label></div>
+                  <div className="grid gap-2"><Label>Image de la rubrique</Label><Input value={card.image || ''} onChange={(event) => updateCard(index, 'image', event.target.value)} /><MediaPreview src={card.image || ''} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateCard(index, 'image', src))} /></label></div>
                   <div className="flex items-end justify-end"><Button type="button" size="sm" variant="ghost" onClick={() => removeCard(index)}>Supprimer cette rubrique</Button></div>
                 </div>
               ))}
@@ -642,7 +655,7 @@ const Admin = () => {
                   <div className="flex items-center gap-2 text-french-blue"><Image size={18} /><h3 className="font-semibold">{message.title}</h3></div>
                   <div className="grid gap-2"><Label>Rubrique</Label><Input value={message.eyebrow} onChange={(event) => updateMessage(index, 'eyebrow', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>Titre</Label><Input value={message.title} onChange={(event) => updateMessage(index, 'title', event.target.value)} /></div>
-                  <div className="grid gap-2"><Label>URL de l’image</Label><Input value={message.image} onChange={(event) => updateMessage(index, 'image', event.target.value)} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateMessage(index, 'image', src))} /></label></div>
+                  <div className="grid gap-2"><Label>URL de l’image ou lien Google Drive public</Label><Input value={message.image} onChange={(event) => updateMessage(index, 'image', event.target.value)} /><MediaPreview src={message.image} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateMessage(index, 'image', src))} /></label></div>
                   <div className="grid gap-2"><Label>Description de l’image</Label><Input value={message.imageAlt} onChange={(event) => updateMessage(index, 'imageAlt', event.target.value)} /></div>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between"><Label>Texte du message</Label><Button type="button" size="sm" variant="outline" onClick={() => addMessageArrayItem(index, 'paragraphs')}>Ajouter un paragraphe</Button></div>

@@ -10,6 +10,7 @@ import Footer from '@/components/Footer';
 import NotFound from '@/pages/NotFound';
 import pagesData from '@/content/pages.json';
 import { isValidContentBlock, isValidManagedPage, type ContentBlock, type ManagedPage as ManagedPageData } from '@/content/pageTypes';
+import { normalizeMediaUrl } from '@/lib/media';
 
 const pages = pagesData.pages as ManagedPageData[];
 
@@ -22,11 +23,11 @@ const Block = ({ block }: { block: ContentBlock }) => {
     case 'paragraph':
       return <p className="whitespace-pre-line leading-relaxed text-gray-700">{block.text}</p>;
     case 'image':
-      return <figure><img src={block.src} alt={block.alt} className="max-h-[520px] w-full rounded-lg object-cover shadow-md" />{block.caption && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.caption}</figcaption>}</figure>;
+      return <figure><img src={normalizeMediaUrl(block.src)} alt={block.alt} className="max-h-[520px] w-full rounded-lg object-cover shadow-md" />{block.caption && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.caption}</figcaption>}</figure>;
     case 'gallery':
-      return <div className="grid gap-4 sm:grid-cols-2">{block.images.map((image) => <img key={`${image.src}-${image.alt}`} src={image.src} alt={image.alt} className="h-56 w-full rounded-lg object-cover shadow-md" />)}</div>;
+      return <div className="grid gap-4 sm:grid-cols-2">{block.images.map((image) => <img key={`${image.src}-${image.alt}`} src={normalizeMediaUrl(image.src)} alt={image.alt} className="h-56 w-full rounded-lg object-cover shadow-md" />)}</div>;
     case 'video':
-      return <figure><video className="w-full rounded-lg shadow-md" controls preload="metadata" src={block.src}>{block.title && <track kind="captions" label={block.title} srcLang="fr" />}</video>{block.title && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.title}</figcaption>}</figure>;
+      return <figure><video className="w-full rounded-lg shadow-md" controls preload="metadata" src={normalizeMediaUrl(block.src, 'video')}>{block.title && <track kind="captions" label={block.title} srcLang="fr" />}</video>{block.title && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.title}</figcaption>}</figure>;
     case 'embed':
       return <iframe className="w-full rounded-lg border-0 shadow-md" style={{ height: block.height || 420 }} src={block.src} title={block.title} loading="lazy" />;
     case 'quote':

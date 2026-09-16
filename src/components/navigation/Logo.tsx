@@ -1,6 +1,7 @@
 
 import React from 'react';
 import siteContent from '@/content/siteContent.json';
+import { normalizeMediaUrl } from '@/lib/media';
 
 interface LogoProps {
   showLogo: boolean;
@@ -11,7 +12,7 @@ const Logo = ({ showLogo }: LogoProps) => {
     <div className="flex items-center space-x-4">
       {showLogo && (
         <img 
-          src={siteContent.site.logoUrl}
+          src={normalizeMediaUrl(siteContent.site.logoUrl)}
           alt={siteContent.site.logoAlt}
           className="h-14 w-auto transition-transform duration-300 hover:scale-105" 
         />
