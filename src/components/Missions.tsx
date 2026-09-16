@@ -1,24 +1,10 @@
 
 import React from 'react';
 import { List } from 'lucide-react';
+import siteContent from '@/content/siteContent.json';
 
 const Missions = () => {
-  const missions = [
-    "Assurer une continuité du service public d'éducation aux enfants français, et donner accès à l'enseignement français aux enfants d'autres nationalités",
-    "Contribuer au rayonnement de la langue et de la culture françaises",
-    "Veiller au respect des principes de l'école inclusive envers les élèves à besoins éducatifs particuliers",
-    "Former des citoyens multilingues, écoresponsables, ouverts au monde et capables de s'adapter à la digitalisation croissante de nos sociétés",
-    "Développer et faire vivre au sein de l'établissement les valeurs humanistes du vivre-ensemble et les principes de laïcité, d'inclusion et d'égalité",
-    "Assurer une coéducation en impliquant les parents d'élèves à la vie de l'établissement",
-    "Favoriser l'autonomie de l'élève afin de lui permettre d'élaborer son projet personnel, en se projetant vers l'enseignement supérieur et en se préparant à l'exercice de la citoyenneté",
-    "Développer la curiosité intellectuelle des élèves",
-    "Favoriser l'accès aux outils numériques et accompagner l'appropriation des dernières innovations technologiques",
-    "Offrir à nos élèves un corps enseignant compétent, passionné et reconnu pour son investissement",
-    "Créer un environnement favorable à l'épanouissement personnel de chaque élève au sein de l'établissement",
-    "Mettre à disposition des locaux modernes et adaptés, propices aux apprentissages",
-    "Développer des filières internationales, des coopérations éducatives locales et des partenariats extérieurs",
-    "Financer le Plan Stratégique de Développement et optimiser la gestion des ressources nécessaires à sa mise en œuvre"
-  ];
+  const missions = siteContent.visionMissionsValeurs.missions;
 
   return (
     <section id="missions" className="py-16 md:py-24 bg-gray-50">
