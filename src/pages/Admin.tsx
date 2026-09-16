@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Copy, ExternalLink, Eye, Github, Image, Save, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Copy, ExternalLink, Eye, Github, Image, Save, Send, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -340,6 +340,24 @@ const Admin = () => {
     updateBlock(blockIndex, { [field]: value });
   };
 
+  const importMedia = (blockIndex: number, file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      setStatus('Sélectionnez une image ou une vidéo.');
+      return;
+    }
+    if (file.size > 350000) {
+      setStatus('Le fichier doit faire moins de 350 Ko pour rester publiable dans le fichier JSON.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') updateBlock(blockIndex, { src: reader.result });
+    };
+    reader.onerror = () => setStatus('Le fichier média n’a pas pu être importé.');
+    reader.readAsDataURL(file);
+  };
+
   const renderBlockEditor = (block: ContentBlock, blockIndex: number) => {
     const textField = (field: Parameters<typeof updateBlockText>[1], label: string, value: string, multiline = false) => (
       <div className="grid gap-2">
@@ -359,9 +377,9 @@ const Admin = () => {
       case 'button':
         return <>{textField('label', 'Libellé', block.label)}{textField('href', 'Lien', block.href)}</>;
       case 'image':
-        return <>{textField('src', 'URL de l’image', block.src)}{textField('alt', 'Texte alternatif', block.alt)}{textField('caption', 'Légende', block.caption || '')}</>;
+        return <>{textField('src', 'URL de l’image', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importMedia(blockIndex, event.target.files?.[0])} /></label>{textField('alt', 'Texte alternatif', block.alt)}{textField('caption', 'Légende', block.caption || '')}</>;
       case 'video':
-        return <>{textField('src', 'URL de la vidéo', block.src)}{textField('title', 'Titre de la vidéo', block.title || '')}</>;
+        return <>{textField('src', 'URL de la vidéo', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une vidéo<input className="sr-only" type="file" accept="video/*" onChange={(event) => importMedia(blockIndex, event.target.files?.[0])} /></label>{textField('title', 'Titre de la vidéo', block.title || '')}</>;
       case 'embed':
         return <>{textField('src', 'URL intégrée', block.src)}{textField('title', 'Titre accessible', block.title)}<div className="grid gap-2"><Label>Hauteur (pixels)</Label><Input type="number" value={block.height || 420} onChange={(event) => updateBlock(blockIndex, { height: Number(event.target.value) || 420 })} /></div></>;
       case 'callout':
@@ -400,7 +418,15 @@ const Admin = () => {
 
       <main className="container mx-auto grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
-          <Card>
+          <nav className="sticky top-2 z-10 flex flex-wrap gap-2 rounded-lg border bg-white/95 p-3 shadow-sm backdrop-blur" aria-label="Sections de l’administration">
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#identite">Identité du site</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#vision">Vision & valeurs</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#accueil">Accueil</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#pages">Rubriques & pages</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#messages">Messages & médias</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#publication">Enregistrer & publier</a>
+          </nav>
+          <Card id="identite">
             <CardHeader>
               <CardTitle>Identité, en-tête et pied de page</CardTitle>
               <CardDescription>Ces informations sont partagées par toutes les pages et conservent la mise en forme actuelle du site.</CardDescription>
@@ -415,7 +441,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="vision">
             <CardHeader>
               <CardTitle>Vision, missions et valeurs</CardTitle>
               <CardDescription>Modifiez cette page spécialisée sans modifier son design, ses icônes ou ses animations.</CardDescription>
@@ -455,7 +481,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="accueil">
             <CardHeader>
               <CardTitle>Accueil</CardTitle>
               <CardDescription>Ces champs alimentent le contenu public sans modifier sa mise en page.</CardDescription>
@@ -476,7 +502,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="pages">
             <CardHeader className="flex-row items-center justify-between">
               <div><CardTitle>Rubriques de l’accueil</CardTitle><CardDescription>Gérez les cartes affichées sous le titre principal.</CardDescription></div>
               <Button type="button" size="sm" variant="outline" onClick={addCard}>Ajouter une rubrique</Button>
@@ -494,7 +520,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="messages">
             <CardHeader className="flex-row items-center justify-between">
               <div><CardTitle>Pages personnalisées</CardTitle><CardDescription>Crée des pages et sous-pages avec des blocs de contenu.</CardDescription></div>
               <Button onClick={addPage} size="sm">Nouvelle page</Button>
@@ -507,7 +533,7 @@ const Admin = () => {
                   </div>
                   {pages[selectedPage] && (
                     <div className="space-y-4 rounded-lg border p-4">
-                      <div className="grid gap-2"><Label>Chemin URL</Label><Input value={pages[selectedPage].slug} onChange={(event) => updatePage('slug', normalizePageSlug(event.target.value))} placeholder="/mon-chemin" /><p className="text-xs text-slate-500">Adresse publique : <a className="text-french-blue underline" href={pages[selectedPage].slug} target="_blank" rel="noreferrer"><Eye className="mr-1 inline h-3 w-3" />prévisualiser cette page</a></p></div>
+                      <div className="grid gap-2"><Label>Chemin URL</Label><Input value={pages[selectedPage].slug} onChange={(event) => updatePage('slug', normalizePageSlug(event.target.value))} placeholder="/mon-chemin" /><p className="text-xs text-slate-500">Adresse publique : <a className="text-french-blue underline" href={`${pages[selectedPage].slug}?draft=1`} target="_blank" rel="noreferrer"><Eye className="mr-1 inline h-3 w-3" />prévisualiser le brouillon</a></p></div>
                       <div className="grid gap-2">
                         <Label>Page parente (optionnel)</Label>
                         <select
@@ -581,7 +607,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div id="publication" className="flex scroll-mt-24 flex-wrap items-center gap-3">
             <Button onClick={saveDraft} variant="outline"><Save /> Enregistrer le brouillon</Button>
             <Button onClick={resetDraft} variant="ghost">Réinitialiser</Button>
             <Button onClick={createPullRequest} disabled={isSaving}><Send /> {isSaving ? 'Préparation…' : 'Créer une Preview GitHub'}</Button>
