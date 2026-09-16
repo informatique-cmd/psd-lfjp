@@ -122,10 +122,10 @@ const Admin = () => {
       const responseText = await response.text();
       let result: { error?: string; url?: string; number?: number };
       try {
-        result = responseText ? JSON.parse(responseText) as { error?: string; url?: string } : {};
+        result = responseText ? JSON.parse(responseText) as { error?: string; url?: string; number?: number } : {};
       } catch {
         throw new Error(
-          'Le serveur API n’est pas actif. Lance « npx vercel dev --listen 3000 », puis ouvre http://localhost:3000/admin.'
+          `L’API Vercel a renvoyé une réponse non JSON (HTTP ${response.status}). Vérifie les variables d’environnement Vercel et redéploie.`
         );
       }
       if (!response.ok) throw new Error(result.error || 'La Pull Request n’a pas pu être créée.');

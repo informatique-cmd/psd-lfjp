@@ -49,8 +49,10 @@ export const getCookies = (header = '') => Object.fromEntries(
   header.split(';').map((part) => part.trim().split('=').map(decodeURIComponent)).filter(([key, value]) => key && value)
 );
 
-export const getSessionToken = (req: { headers: { cookie?: string } }) =>
-  decryptToken(getCookies(req.headers.cookie).lfjp_admin_session || '');
+export const getSessionToken = (req: { headers: { cookie?: string } }) => {
+  const cookie = getCookies(req.headers.cookie).lfjp_admin_session;
+  return cookie ? decryptToken(cookie) : null;
+};
 
 export const githubRequest = async (token: string, path: string, init: RequestInit = {}) => {
   const response = await fetch(`https://api.github.com${path}`, {
