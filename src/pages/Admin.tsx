@@ -21,7 +21,7 @@ const loadContentDraft = (): Content => {
   if (!savedDraft) return siteContent;
   try {
     const parsed: unknown = JSON.parse(savedDraft);
-    if (!isRecord(parsed) || !isRecord(parsed.home) || !Array.isArray(parsed.home.cards) || !Array.isArray(parsed.home.messages)) {
+    if (!isRecord(parsed) || !isRecord(parsed.site) || typeof parsed.site.name !== 'string' || typeof parsed.site.tagline !== 'string' || typeof parsed.site.logoUrl !== 'string' || typeof parsed.site.logoAlt !== 'string' || typeof parsed.site.footerPlan !== 'string' || typeof parsed.site.footerCopyright !== 'string' || !isRecord(parsed.home) || !Array.isArray(parsed.home.cards) || !Array.isArray(parsed.home.messages)) {
       throw new Error('Structure de brouillon invalide.');
     }
     return parsed as Content;
@@ -67,6 +67,10 @@ const Admin = () => {
 
   const updateHome = (field: keyof Content['home'], value: string) => {
     setContent((current) => ({ ...current, home: { ...current.home, [field]: value } }));
+  };
+
+  const updateSite = (field: keyof Content['site'], value: string) => {
+    setContent((current) => ({ ...current, site: { ...current.site, [field]: value } }));
   };
 
   const updateCard = (index: number, field: keyof Content['home']['cards'][number], value: string) => {
@@ -366,6 +370,21 @@ const Admin = () => {
 
       <main className="container mx-auto grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Identité, en-tête et pied de page</CardTitle>
+              <CardDescription>Ces informations sont partagées par toutes les pages et conservent la mise en forme actuelle du site.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2"><Label>Nom du site</Label><Input value={content.site.name} onChange={(event) => updateSite('name', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Sous-titre</Label><Input value={content.site.tagline} onChange={(event) => updateSite('tagline', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>URL du logo</Label><Input value={content.site.logoUrl} onChange={(event) => updateSite('logoUrl', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Texte alternatif du logo</Label><Input value={content.site.logoAlt} onChange={(event) => updateSite('logoAlt', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Texte du copyright</Label><Input value={content.site.footerCopyright} onChange={(event) => updateSite('footerCopyright', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Texte complémentaire du pied de page</Label><Input value={content.site.footerPlan} onChange={(event) => updateSite('footerPlan', event.target.value)} /></div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Accueil</CardTitle>

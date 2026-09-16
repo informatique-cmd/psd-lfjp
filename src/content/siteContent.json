@@ -1,4 +1,12 @@
 {
+  "site": {
+    "name": "Lycée Français Jacques Prévert",
+    "tagline": "Sénégal - Petite Côte - Saly",
+    "logoUrl": "https://i.imgur.com/0YmGlXO.png",
+    "logoAlt": "Logo du Lycée Français Jacques Prévert",
+    "footerPlan": "Plan Stratégique de Développement (2026-2030)",
+    "footerCopyright": "Lycée Français Jacques Prévert"
+  },
   "home": {
     "heroTitle": "Lycée Français Jacques Prévert",
     "heroSubtitle": "Excellence, Respect, Créativité, Persévérance, Civisme",
