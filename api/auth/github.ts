@@ -1,5 +1,7 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from 'crypto';
 import type { ApiRequest, ApiResponse } from '../_github';
+
+export const runtime = 'nodejs';
 
 export default function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Méthode non autorisée.' });
