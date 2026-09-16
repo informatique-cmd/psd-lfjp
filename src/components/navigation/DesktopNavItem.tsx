@@ -13,8 +13,9 @@ interface DesktopNavItemProps {
 const DesktopNavItem = ({ to, isActive, children }: DesktopNavItemProps) => {
   return (
     <NavigationMenuItem>
-      <Link to={to}>
-        <NavigationMenuLink 
+      <NavigationMenuLink asChild>
+        <Link
+          to={to}
           className={cn(
             navigationMenuTriggerStyle(),
             "font-raleway transition-colors duration-200 relative",
@@ -23,8 +24,8 @@ const DesktopNavItem = ({ to, isActive, children }: DesktopNavItemProps) => {
           )}
         >
           {children}
-        </NavigationMenuLink>
-      </Link>
+        </Link>
+      </NavigationMenuLink>
     </NavigationMenuItem>
   );
 };
