@@ -2,13 +2,19 @@
   "pages": [
     {
       "slug": "/nouvelle-rubrique",
-      "title": "Nouvelle rubrique test",
-      "description": "Décrivez cette rubrique",
+      "title": "Nouvelle rubrique",
+      "description": "Décrivez cette \n**Mot de bienvenue de la direction**\n\nChers élèves, chers parents, chers membres de la communauté éducative,\n\nC’est avec une immense fierté et un réel enthousiasme que nous vous souhaitons la bienvenue au Lycée français Jacques Prévert de Saly.\n\nAncré au cœur de la Petite-Côte au Sénégal, notre établissement homologué par l’AEFE est un lieu d’apprentissage, d’épanouissement et d’ouverture sur le monde. Chaque jour, nous nous engageons à offrir à nos élèves un cadre structurant, bienveillant et exigeant, propre à développer leur curiosité, leur esprit critique et leur ambition.\n\n---\n\n**Nos engagements au quotidien**\n\n| Priorités de l'établissement | Actions & Objectifs |\n| --- | --- |\n| **Excellence & Réussite** | Un accompagnement personnalisé pour guider chaque élève vers la réussite aux examens et dans son parcours d'orientation. |\n| **Plurilinguisme & Ouverture** | L'apprentissage des langues et l'ouverture internationale dès le plus jeune âge. |\n| **Vivre-ensemble & Épanouissement** | Un climat scolaire serein favorisant l'autonomie, l'entraide et l'engagement citoyen. |\n\n> *\"L'éducation est un chemin que l'on parcourt ensemble, dans la confiance et la coopération.\"*\n\nQue vous rejoigniez notre communauté pour la première fois ou que vous poursuiviez votre parcours parmi nous, sachez que toute l'équipe éducative reste pleinement mobilisée pour accompagner vos enfants vers l'excellence et l'accomplissement de leurs projets.\n\nExcellente année scolaire à toutes et à tous !\n\n**La Direction du Lycée français Jacques Prévert**rubrique",
       "showInNavigation": true,
       "blocks": [
         {
           "type": "paragraph",
           "text": "Décrivez cette rubrique"
+        },
+        {
+          "type": "image",
+          "src": "https://drive.google.com/file/d/1At8FXFxeRmctBweHQaJXXRQHZxw86pQ0/view?usp=drive_link",
+          "alt": "image rubrique",
+          "caption": ""
         }
       ]
     }
