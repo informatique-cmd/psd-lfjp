@@ -2,6 +2,12 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import MobileNavItem from './MobileNavItem';
+import pagesFile from '@/content/pages.json';
+import type { ManagedPage } from '@/content/pageTypes';
+
+const managedNavigation = (pagesFile.pages as ManagedPage[])
+  .filter((page) => page.showInNavigation !== false && !page.parent)
+  .sort((a, b) => (a.order || 0) - (b.order || 0));
 
 interface MobileMenuProps {
   id?: string;
@@ -69,6 +75,16 @@ const MobileMenu = ({ id, mobileMenuOpen, setMobileMenuOpen, isActive }: MobileM
           Plan Stratégique
         </MobileNavItem>
 
+        {managedNavigation.map((page) => (
+          <MobileNavItem
+            key={page.slug}
+            to={page.slug}
+            isActive={isActive(page.slug)}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            {page.menuLabel || page.title}
+          </MobileNavItem>
+        ))}
       </div>
     </div>
   );

@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import routesData from "@/data/breadcrumbRoutes.json";
 import { Home } from 'lucide-react';
+import pagesFile from '@/content/pages.json';
+import type { ManagedPage } from '@/content/pageTypes';
 
 interface RouteMap {
   [key: string]: {
@@ -19,6 +21,7 @@ interface RouteMap {
 }
 
 const routes: RouteMap = routesData;
+const managedPages = pagesFile.pages as ManagedPage[];
 
 const BreadcrumbNav = () => {
   const location = useLocation();
@@ -28,7 +31,11 @@ const BreadcrumbNav = () => {
   if (pathnames.length === 0) return null;
   
   const currentPath = '/' + pathnames.join('/');
-  const currentRoute = routes[currentPath];
+  const managedPage = managedPages.find((page) => page.slug === currentPath);
+  const currentRoute = routes[currentPath] || (managedPage ? {
+    name: managedPage.title,
+    parent: managedPage.parent,
+  } : undefined);
 
   if (!currentRoute) return null;
 
@@ -39,7 +46,11 @@ const BreadcrumbNav = () => {
 
   while (parentPath && !visitedPaths.has(parentPath)) {
     visitedPaths.add(parentPath);
-    const parentRoute = routes[parentPath];
+    const managedParent = managedPages.find((page) => page.slug === parentPath);
+    const parentRoute = routes[parentPath] || (managedParent ? {
+      name: managedParent.title,
+      parent: managedParent.parent,
+    } : undefined);
 
     if (!parentRoute) break;
 

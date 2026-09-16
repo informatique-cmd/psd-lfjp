@@ -4,6 +4,12 @@ import {
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
 import DesktopNavItem from './DesktopNavItem';
+import pagesFile from '@/content/pages.json';
+import type { ManagedPage } from '@/content/pageTypes';
+
+const managedNavigation = (pagesFile.pages as ManagedPage[])
+  .filter((page) => page.showInNavigation !== false && !page.parent)
+  .sort((a, b) => (a.order || 0) - (b.order || 0));
 
 interface DesktopMenuProps {
   isActive: (path: string) => boolean;
@@ -33,6 +39,11 @@ const DesktopMenu = ({ isActive }: DesktopMenuProps) => {
           Plan Stratégique
         </DesktopNavItem>
 
+        {managedNavigation.map((page) => (
+          <DesktopNavItem key={page.slug} to={page.slug} isActive={isActive(page.slug)}>
+            {page.menuLabel || page.title}
+          </DesktopNavItem>
+        ))}
       </NavigationMenuList>
     </NavigationMenu>
   );
