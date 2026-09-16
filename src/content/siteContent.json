@@ -45,25 +45,29 @@
         "title": "Méthode",
         "description": "Parcourez la démarche en 7 étapes et la gouvernance participative qui cadrent l'élaboration du plan stratégique du LFJP.",
         "linkLabel": "Comprendre",
-        "path": "/methode"
+        "path": "/methode",
+        "image": ""
       },
       {
         "title": "Vision, Missions et Valeurs",
         "description": "Découvrez notre vision, nos missions éducatives et les valeurs qui guident quotidiennement notre établissement dans la formation des citoyens du monde.",
         "linkLabel": "Découvrir",
-        "path": "/vision-missions-valeurs"
+        "path": "/vision-missions-valeurs",
+        "image": ""
       },
       {
         "title": "Diagnostic",
         "description": "Analysez la situation actuelle de notre établissement à travers les données des enquêtes et l'évaluation des besoins qui orientent notre développement.",
         "linkLabel": "Analyser",
-        "path": "/diagnostic"
+        "path": "/diagnostic",
+        "image": ""
       },
       {
         "title": "Plan Stratégique de Développement",
         "description": "Consultez notre Plan Stratégique de Développement 2026-2030 qui détaille nos objectifs, actions et indicateurs pour les années à venir.",
         "linkLabel": "Consulter",
-        "path": "/plan-strategique"
+        "path": "/plan-strategique",
+        "image": ""
       }
     ],
     "messages": [

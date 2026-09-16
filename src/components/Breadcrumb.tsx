@@ -11,7 +11,7 @@ import {
 import routesData from "@/data/breadcrumbRoutes.json";
 import { Home } from 'lucide-react';
 import pagesFile from '@/content/pages.json';
-import type { ManagedPage } from '@/content/pageTypes';
+import { isValidManagedPage, type ManagedPage } from '@/content/pageTypes';
 
 interface RouteMap {
   [key: string]: {
@@ -21,7 +21,15 @@ interface RouteMap {
 }
 
 const routes: RouteMap = routesData;
-const managedPages = pagesFile.pages as ManagedPage[];
+const managedPages: ManagedPage[] = (() => {
+  if (new URLSearchParams(window.location.search).get('draft') !== '1') return pagesFile.pages as ManagedPage[];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem('lfjp-admin-pages-draft') || '{}') as { pages?: unknown };
+    return Array.isArray(parsed.pages) ? parsed.pages.filter(isValidManagedPage) : pagesFile.pages as ManagedPage[];
+  } catch {
+    return pagesFile.pages as ManagedPage[];
+  }
+})();
 
 const BreadcrumbNav = () => {
   const location = useLocation();

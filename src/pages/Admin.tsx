@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
+import breadcrumbRoutes from '@/data/breadcrumbRoutes.json';
 import { isValidManagedPage, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage } from '@/content/pageTypes';
 
 type Content = typeof siteContent;
@@ -62,6 +63,24 @@ const Admin = () => {
       .catch(() => setUser(null));
   }, []);
 
+  useEffect(() => {
+    const knownPaths = new Set(Object.keys(breadcrumbRoutes));
+    setPages((current) => {
+      const existingPaths = new Set(current.map((page) => normalizePageSlug(page.slug)));
+      const recoveredPages = content.home.cards
+        .map((card) => ({ ...card, path: normalizePageSlug(card.path) }))
+        .filter((card) => card.path !== '/' && !knownPaths.has(card.path) && !existingPaths.has(card.path))
+        .map((card): ManagedPage => ({
+          slug: card.path,
+          title: card.title,
+          description: card.description,
+          showInNavigation: true,
+          blocks: [{ type: 'paragraph', text: card.description }],
+        }));
+      return recoveredPages.length ? [...current, ...recoveredPages] : current;
+    });
+  }, [content.home.cards]);
+
   const serializedContent = useMemo(() => JSON.stringify(content, null, 2), [content]);
   const serializedPages = useMemo(() => JSON.stringify({ pages }, null, 2), [pages]);
 
@@ -114,6 +133,17 @@ const Admin = () => {
   };
 
   const addCard = () => {
+    const baseSlug = '/nouvelle-rubrique';
+    let slug = baseSlug;
+    let suffix = 2;
+    while (pages.some((page) => normalizePageSlug(page.slug) === slug)) slug = `${baseSlug}-${suffix++}`;
+    const page: ManagedPage = {
+      slug,
+      title: 'Nouvelle rubrique',
+      description: 'Décrivez cette rubrique.',
+      showInNavigation: true,
+      blocks: [{ type: 'paragraph', text: 'Écrivez votre contenu ici.' }],
+    };
     setContent((current) => ({
       ...current,
       home: {
@@ -122,10 +152,14 @@ const Admin = () => {
           title: 'Nouvelle rubrique',
           description: 'Décrivez cette rubrique.',
           linkLabel: 'Découvrir',
-          path: '/nouvelle-rubrique',
+          path: slug,
+          image: '',
         }],
       },
     }));
+    setPages((current) => [...current, page]);
+    setSelectedPage(pages.length);
+    setStatus(`Rubrique et page créées : ${slug}. Modifiez la page dans la section Pages personnalisées.`);
   };
 
   const removeCard = (index: number) => {
@@ -193,6 +227,13 @@ const Admin = () => {
     try {
       const validationErrors = validateManagedPages(pages);
       if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
+      const managedPaths = new Set(pages.map((page) => normalizePageSlug(page.slug)));
+      const knownPaths = new Set(Object.keys(breadcrumbRoutes));
+      const invalidCard = content.home.cards.find((card) => {
+        const path = normalizePageSlug(card.path);
+        return !managedPaths.has(path) && !knownPaths.has(path);
+      });
+      if (invalidCard) throw new Error(`La rubrique « ${invalidCard.title} » pointe vers une page inexistante (${invalidCard.path}). Créez ou rattachez cette page avant la Preview.`);
       const response = await fetch('/api/github/pull-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -340,7 +381,7 @@ const Admin = () => {
     updateBlock(blockIndex, { [field]: value });
   };
 
-  const importMedia = (blockIndex: number, file?: File) => {
+  const importMedia = (file: File | undefined, onLoad: (dataUrl: string) => void) => {
     if (!file) return;
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
       setStatus('Sélectionnez une image ou une vidéo.');
@@ -352,9 +393,26 @@ const Admin = () => {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === 'string') updateBlock(blockIndex, { src: reader.result });
+      if (typeof reader.result === 'string') onLoad(reader.result);
     };
     reader.onerror = () => setStatus('Le fichier média n’a pas pu être importé.');
+    reader.readAsDataURL(file);
+  };
+
+  const importContentImage = (file: File | undefined, onLoad: (dataUrl: string) => void) => {
+    if (!file || !file.type.startsWith('image/')) {
+      if (file) setStatus('Sélectionnez une image.');
+      return;
+    }
+    if (file.size > 350000) {
+      setStatus('L’image doit faire moins de 350 Ko pour rester publiable dans le fichier JSON.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') onLoad(reader.result);
+    };
+    reader.onerror = () => setStatus('L’image n’a pas pu être importée.');
     reader.readAsDataURL(file);
   };
 
@@ -377,9 +435,9 @@ const Admin = () => {
       case 'button':
         return <>{textField('label', 'Libellé', block.label)}{textField('href', 'Lien', block.href)}</>;
       case 'image':
-        return <>{textField('src', 'URL de l’image', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importMedia(blockIndex, event.target.files?.[0])} /></label>{textField('alt', 'Texte alternatif', block.alt)}{textField('caption', 'Légende', block.caption || '')}</>;
+        return <>{textField('src', 'URL de l’image', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importMedia(event.target.files?.[0], (src) => updateBlock(blockIndex, { src }))} /></label>{textField('alt', 'Texte alternatif', block.alt)}{textField('caption', 'Légende', block.caption || '')}</>;
       case 'video':
-        return <>{textField('src', 'URL de la vidéo', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une vidéo<input className="sr-only" type="file" accept="video/*" onChange={(event) => importMedia(blockIndex, event.target.files?.[0])} /></label>{textField('title', 'Titre de la vidéo', block.title || '')}</>;
+        return <>{textField('src', 'URL de la vidéo', block.src)}<label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une vidéo<input className="sr-only" type="file" accept="video/*" onChange={(event) => importMedia(event.target.files?.[0], (src) => updateBlock(blockIndex, { src }))} /></label>{textField('title', 'Titre de la vidéo', block.title || '')}</>;
       case 'embed':
         return <>{textField('src', 'URL intégrée', block.src)}{textField('title', 'Titre accessible', block.title)}<div className="grid gap-2"><Label>Hauteur (pixels)</Label><Input type="number" value={block.height || 420} onChange={(event) => updateBlock(blockIndex, { height: Number(event.target.value) || 420 })} /></div></>;
       case 'callout':
@@ -422,7 +480,8 @@ const Admin = () => {
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#identite">Identité du site</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#vision">Vision & valeurs</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#accueil">Accueil</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#pages">Rubriques & pages</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#rubriques">Rubriques de l’accueil</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#pages">Pages & hiérarchie</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#messages">Messages & médias</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#publication">Enregistrer & publier</a>
           </nav>
@@ -434,7 +493,7 @@ const Admin = () => {
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2"><Label>Nom du site</Label><Input value={content.site.name} onChange={(event) => updateSite('name', event.target.value)} /></div>
               <div className="grid gap-2"><Label>Sous-titre</Label><Input value={content.site.tagline} onChange={(event) => updateSite('tagline', event.target.value)} /></div>
-              <div className="grid gap-2"><Label>URL du logo</Label><Input value={content.site.logoUrl} onChange={(event) => updateSite('logoUrl', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>URL du logo</Label><Input value={content.site.logoUrl} onChange={(event) => updateSite('logoUrl', event.target.value)} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer le logo<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateSite('logoUrl', src))} /></label></div>
               <div className="grid gap-2"><Label>Texte alternatif du logo</Label><Input value={content.site.logoAlt} onChange={(event) => updateSite('logoAlt', event.target.value)} /></div>
               <div className="grid gap-2"><Label>Texte du copyright</Label><Input value={content.site.footerCopyright} onChange={(event) => updateSite('footerCopyright', event.target.value)} /></div>
               <div className="grid gap-2"><Label>Texte complémentaire du pied de page</Label><Input value={content.site.footerPlan} onChange={(event) => updateSite('footerPlan', event.target.value)} /></div>
@@ -502,7 +561,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="pages">
+          <Card id="rubriques">
             <CardHeader className="flex-row items-center justify-between">
               <div><CardTitle>Rubriques de l’accueil</CardTitle><CardDescription>Gérez les cartes affichées sous le titre principal.</CardDescription></div>
               <Button type="button" size="sm" variant="outline" onClick={addCard}>Ajouter une rubrique</Button>
@@ -514,15 +573,16 @@ const Admin = () => {
                   <div className="grid gap-2"><Label>Chemin interne</Label><Input value={card.path} onChange={(event) => updateCard(index, 'path', event.target.value)} /></div>
                   <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea value={card.description} onChange={(event) => updateCard(index, 'description', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>Texte du lien</Label><Input value={card.linkLabel} onChange={(event) => updateCard(index, 'linkLabel', event.target.value)} /></div>
+                  <div className="grid gap-2"><Label>Image de la rubrique</Label><Input value={card.image || ''} onChange={(event) => updateCard(index, 'image', event.target.value)} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateCard(index, 'image', src))} /></label></div>
                   <div className="flex items-end justify-end"><Button type="button" size="sm" variant="ghost" onClick={() => removeCard(index)}>Supprimer cette rubrique</Button></div>
                 </div>
               ))}
             </CardContent>
           </Card>
 
-          <Card id="messages">
+          <Card id="pages">
             <CardHeader className="flex-row items-center justify-between">
-              <div><CardTitle>Pages personnalisées</CardTitle><CardDescription>Crée des pages et sous-pages avec des blocs de contenu.</CardDescription></div>
+              <div><CardTitle>Pages & hiérarchie</CardTitle><CardDescription>Créez des pages, sous-pages et sous-sous-pages avec des blocs de contenu.</CardDescription></div>
               <Button onClick={addPage} size="sm">Nouvelle page</Button>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -571,7 +631,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="messages">
             <CardHeader>
               <CardTitle>Messages et images</CardTitle>
               <CardDescription>Les images doivent être publiquement accessibles par URL. L’ajout de fichiers dans Git sera ajouté dans l’étape suivante.</CardDescription>
@@ -582,7 +642,7 @@ const Admin = () => {
                   <div className="flex items-center gap-2 text-french-blue"><Image size={18} /><h3 className="font-semibold">{message.title}</h3></div>
                   <div className="grid gap-2"><Label>Rubrique</Label><Input value={message.eyebrow} onChange={(event) => updateMessage(index, 'eyebrow', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>Titre</Label><Input value={message.title} onChange={(event) => updateMessage(index, 'title', event.target.value)} /></div>
-                  <div className="grid gap-2"><Label>URL de l’image</Label><Input value={message.image} onChange={(event) => updateMessage(index, 'image', event.target.value)} /></div>
+                  <div className="grid gap-2"><Label>URL de l’image</Label><Input value={message.image} onChange={(event) => updateMessage(index, 'image', event.target.value)} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateMessage(index, 'image', src))} /></label></div>
                   <div className="grid gap-2"><Label>Description de l’image</Label><Input value={message.imageAlt} onChange={(event) => updateMessage(index, 'imageAlt', event.target.value)} /></div>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between"><Label>Texte du message</Label><Button type="button" size="sm" variant="outline" onClick={() => addMessageArrayItem(index, 'paragraphs')}>Ajouter un paragraphe</Button></div>
