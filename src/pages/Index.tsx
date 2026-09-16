@@ -28,6 +28,7 @@ const Index = () => {
                 className={`border-none shadow-lg hover:shadow-2xl hover:-translate-y-1 hover:-rotate-[0.35deg] transition-all duration-300 animate-fade-in${index ? `-delay-${index}` : ''} bg-white h-full`}
               >
                 <CardContent className="p-8 flex flex-col h-full">
+                  {card.image && <img src={card.image} alt="" className="mb-6 h-40 w-full rounded-lg object-cover" />}
                   <h3 className="text-2xl font-playfair font-bold mb-4 text-french-blue">{card.title}</h3>
                   <p className="text-gray-600 mb-6">{card.description}</p>
                   <Link to={card.path} className="inline-flex items-center text-french-blue font-medium hover:underline group mt-auto pt-4">

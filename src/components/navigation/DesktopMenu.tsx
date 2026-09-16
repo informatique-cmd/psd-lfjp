@@ -5,12 +5,22 @@ import {
 } from "@/components/ui/navigation-menu";
 import DesktopNavItem from './DesktopNavItem';
 import pagesFile from '@/content/pages.json';
-import type { ManagedPage } from '@/content/pageTypes';
+import { isValidManagedPage, type ManagedPage } from '@/content/pageTypes';
 
-const managedNavigation = (pagesFile.pages as ManagedPage[])
+const draftPages = new URLSearchParams(window.location.search).get('draft') === '1'
+  ? (() => {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem('lfjp-admin-pages-draft') || '{}') as { pages?: unknown };
+        return Array.isArray(parsed.pages) ? parsed.pages.filter(isValidManagedPage) : pagesFile.pages;
+      } catch {
+        return pagesFile.pages;
+      }
+    })()
+  : pagesFile.pages;
+const managedNavigation = (draftPages as ManagedPage[])
   .filter((page) => page.showInNavigation !== false && !page.parent)
   .sort((a, b) => (a.order || 0) - (b.order || 0));
-const childNavigation = (pagesFile.pages as ManagedPage[])
+const childNavigation = (draftPages as ManagedPage[])
   .filter((page) => page.showInNavigation !== false && page.parent)
   .sort((a, b) => (a.order || 0) - (b.order || 0));
 
