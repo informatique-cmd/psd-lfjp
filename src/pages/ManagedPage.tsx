@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NotFound from '@/pages/NotFound';
 import pagesData from '@/content/pages.json';
-import { isValidContentBlock, type ContentBlock, type ManagedPage as ManagedPageData } from '@/content/pageTypes';
+import { isValidContentBlock, isValidManagedPage, type ContentBlock, type ManagedPage as ManagedPageData } from '@/content/pageTypes';
 
 const pages = pagesData.pages as ManagedPageData[];
 
@@ -50,7 +50,19 @@ const Block = ({ block }: { block: ContentBlock }) => {
 
 const ManagedPage = () => {
   const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
-  const page = pages.find((item) => item.slug === pathname);
+  const draftPages = useMemo(() => {
+    if (new URLSearchParams(window.location.search).get('draft') !== '1') return pages;
+    const savedDraft = window.localStorage.getItem('lfjp-admin-pages-draft');
+    if (!savedDraft) return pages;
+    try {
+      const parsed: unknown = JSON.parse(savedDraft);
+      if (typeof parsed !== 'object' || parsed === null || !('pages' in parsed) || !Array.isArray(parsed.pages)) return pages;
+      return parsed.pages.filter(isValidManagedPage);
+    } catch {
+      return pages;
+    }
+  }, []);
+  const page = draftPages.find((item) => item.slug === pathname);
   if (!page) return <NotFound />;
 
   return (
