@@ -16,7 +16,8 @@
           "caption": ""
         }
       ],
-      "parent": "plan-strategique"
+      "parent": "plan-strategique",
+      "menuLabel": "TEST"
     }
   ]
 }
