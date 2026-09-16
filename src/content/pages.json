@@ -8,6 +8,12 @@
         {
           "type": "paragraph",
           "text": "BONJOUR"
+        },
+        {
+          "type": "image",
+          "src": "",
+          "alt": "",
+          "caption": ""
         }
       ],
       "parent": "plan-strategique"
