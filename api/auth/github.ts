@@ -1,7 +1,6 @@
 import type { ApiRequest, ApiResponse } from '../_github';
 
 export const runtime = 'nodejs';
-export const config = { runtime: 'nodejs20.x' };
 
 export default function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Méthode non autorisée.' });
