@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto';
 import type { ApiRequest, ApiResponse } from '../_github';
 
 export const runtime = 'nodejs';
@@ -9,7 +8,7 @@ export default function handler(req: ApiRequest, res: ApiResponse) {
   if (!process.env.GITHUB_CLIENT_ID || !process.env.ADMIN_SESSION_SECRET) {
     return res.status(500).json({ error: 'La connexion GitHub n’est pas configurée.' });
   }
-  const state = randomBytes(24).toString('hex');
+  const state = globalThis.crypto.randomUUID();
   const appUrl = process.env.APP_URL || `https://${req.headers.host}`;
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   res.setHeader('Set-Cookie', `lfjp_oauth_state=${state}; HttpOnly${secure}; SameSite=Lax; Path=/; Max-Age=600`);

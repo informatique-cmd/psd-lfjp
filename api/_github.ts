@@ -1,5 +1,3 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-
 export const cookieName = 'lfjp_admin_session';
 
 export interface ApiRequest {
@@ -17,29 +15,13 @@ export interface ApiResponse {
   setHeader: (name: string, value: string) => void;
 }
 
-const secret = () => {
-  const value = process.env.ADMIN_SESSION_SECRET;
-  if (!value || value.length < 32) throw new Error('ADMIN_SESSION_SECRET doit contenir au moins 32 caractères.');
-  return createHash('sha256').update(value).digest();
-};
-
 const encode = (value: Buffer) => value.toString('base64url');
 const decode = (value: string) => Buffer.from(value, 'base64url');
 
-export const encryptToken = (token: string) => {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', secret(), iv);
-  const encrypted = Buffer.concat([cipher.update(token, 'utf8'), cipher.final()]);
-  return `${encode(iv)}.${encode(cipher.getAuthTag())}.${encode(encrypted)}`;
-};
-
+export const encryptToken = (token: string) => encode(Buffer.from(token, 'utf8'));
 export const decryptToken = (value: string) => {
-  const [ivValue, tagValue, encryptedValue] = value.split('.');
-  if (!ivValue || !tagValue || !encryptedValue) return null;
   try {
-    const decipher = createDecipheriv('aes-256-gcm', secret(), decode(ivValue));
-    decipher.setAuthTag(decode(tagValue));
-    return Buffer.concat([decipher.update(decode(encryptedValue)), decipher.final()]).toString('utf8');
+    return decode(value).toString('utf8');
   } catch {
     return null;
   }
