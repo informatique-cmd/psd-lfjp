@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
-import { normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage } from '@/content/pageTypes';
+import { isValidManagedPage, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage } from '@/content/pageTypes';
 
 type Content = typeof siteContent;
 const draftStorageKey = 'lfjp-admin-draft';
@@ -36,7 +36,7 @@ const loadPagesDraft = (): ManagedPage[] => {
   if (!savedPages) return pagesFile.pages as ManagedPage[];
   try {
     const parsed: unknown = JSON.parse(savedPages);
-    if (!isRecord(parsed) || !Array.isArray(parsed.pages) || !parsed.pages.every((page) => isRecord(page) && typeof page.slug === 'string' && typeof page.title === 'string' && Array.isArray(page.blocks))) {
+    if (!isRecord(parsed) || !Array.isArray(parsed.pages) || !parsed.pages.every(isValidManagedPage)) {
       throw new Error('Structure de pages invalide.');
     }
     return parsed.pages as ManagedPage[];
@@ -419,7 +419,22 @@ const Admin = () => {
                   {pages[selectedPage] && (
                     <div className="space-y-4 rounded-lg border p-4">
                       <div className="grid gap-2"><Label>Chemin URL</Label><Input value={pages[selectedPage].slug} onChange={(event) => updatePage('slug', normalizePageSlug(event.target.value))} placeholder="/mon-chemin" /><p className="text-xs text-slate-500">Adresse publique : <a className="text-french-blue underline" href={pages[selectedPage].slug} target="_blank" rel="noreferrer"><Eye className="mr-1 inline h-3 w-3" />prévisualiser cette page</a></p></div>
-                      <div className="grid gap-2"><Label>Page parente (optionnel)</Label><Input value={pages[selectedPage].parent || ''} onChange={(event) => updatePage('parent', event.target.value)} placeholder="/plan-strategique" /></div>
+                      <div className="grid gap-2">
+                        <Label>Page parente (optionnel)</Label>
+                        <select
+                          className="h-10 rounded-md border px-3"
+                          value={pages[selectedPage].parent || ''}
+                          onChange={(event) => updatePage('parent', event.target.value)}
+                        >
+                          <option value="">Aucune (page racine)</option>
+                          {pages.filter((_, index) => index !== selectedPage).map((candidate) => (
+                            <option key={candidate.slug} value={normalizePageSlug(candidate.slug)}>
+                              {candidate.title} — {candidate.slug}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-slate-500">Vous pouvez rattacher cette page à n’importe quelle autre page pour créer plusieurs niveaux de sous-rubriques.</p>
+                      </div>
                       <div className="grid gap-2"><Label>Titre</Label><Input value={pages[selectedPage].title} onChange={(event) => updatePage('title', event.target.value)} /></div>
                       <div className="grid gap-2"><Label>Description</Label><Textarea value={pages[selectedPage].description || ''} onChange={(event) => updatePage('description', event.target.value)} /></div>
                       <div className="grid gap-2"><Label>Nom dans le menu</Label><Input value={pages[selectedPage].menuLabel || ''} onChange={(event) => updatePage('menuLabel', event.target.value)} placeholder="Laisser vide pour utiliser le titre" /></div>
