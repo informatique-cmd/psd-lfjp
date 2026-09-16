@@ -3,11 +3,11 @@
     {
       "slug": "/page-test",
       "title": "Page test",
-      "description": "",
+      "description": "Bienvenue sur la page TEST",
       "blocks": [
         {
           "type": "paragraph",
-          "text": "Écrivez votre contenu ici."
+          "text": "BONJOUR"
         }
       ],
       "parent": ""
