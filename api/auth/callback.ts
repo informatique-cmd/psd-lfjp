@@ -1,4 +1,4 @@
-import { getCookies, encryptToken, setCookie, type ApiRequest, type ApiResponse } from '../_github';
+import { getCookies, encryptToken, setCookie, type ApiRequest, type ApiResponse } from '../_github.js';
 
 export const runtime = 'nodejs';
 

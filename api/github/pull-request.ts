@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { getSessionToken, githubRequest, repositoryName, repositoryOwner, type ApiRequest, type ApiResponse } from '../_github';
+import { getSessionToken, githubRequest, repositoryName, repositoryOwner, type ApiRequest, type ApiResponse } from '../_github.js';
 
 export const runtime = 'nodejs';
 

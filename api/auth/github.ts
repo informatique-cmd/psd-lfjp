@@ -1,4 +1,4 @@
-import type { ApiRequest, ApiResponse } from '../_github';
+import type { ApiRequest, ApiResponse } from '../_github.js';
 
 export const runtime = 'nodejs';
 

@@ -1,4 +1,4 @@
-import { githubRequest, getSessionToken, type ApiRequest, type ApiResponse } from '../_github';
+import { githubRequest, getSessionToken, type ApiRequest, type ApiResponse } from '../_github.js';
 
 export const runtime = 'nodejs';
 
