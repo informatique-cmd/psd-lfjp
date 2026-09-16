@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
-import type { ManagedPage } from '@/content/pageTypes';
+import type { ContentBlock, ManagedPage } from '@/content/pageTypes';
 
 type Content = typeof siteContent;
 const draftStorageKey = 'lfjp-admin-draft';
@@ -188,14 +188,90 @@ const Admin = () => {
     setPages((current) => current.map((page, index) => index === selectedPage ? { ...page, [field]: value } : page));
   };
 
-  const updatePageBlocks = (value: string) => {
-    try {
-      const blocks = JSON.parse(value);
-      if (!Array.isArray(blocks)) throw new Error('Les blocs doivent être un tableau JSON.');
-      setPages((current) => current.map((page, index) => index === selectedPage ? { ...page, blocks } : page));
-      setStatus('');
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Blocs JSON invalides.');
+  const updateBlock = (blockIndex: number, patch: Partial<ContentBlock>) => {
+    setPages((current) => current.map((page, pageIndex) => pageIndex === selectedPage
+      ? { ...page, blocks: page.blocks.map((block, index) => index === blockIndex ? { ...block, ...patch } as ContentBlock : block) }
+      : page));
+  };
+
+  const addBlock = (type: ContentBlock['type']) => {
+    const defaults: Record<ContentBlock['type'], ContentBlock> = {
+      heading: { type: 'heading', level: 2, text: 'Nouveau titre' },
+      paragraph: { type: 'paragraph', text: 'Écrivez votre texte ici.' },
+      image: { type: 'image', src: '', alt: '', caption: '' },
+      gallery: { type: 'gallery', images: [{ src: '', alt: '' }] },
+      video: { type: 'video', src: '', title: '' },
+      embed: { type: 'embed', src: '', title: 'Contenu intégré', height: 420 },
+      quote: { type: 'quote', text: 'Citation', author: '' },
+      list: { type: 'list', items: ['Élément de liste'] },
+      callout: { type: 'callout', title: 'À retenir', text: '', tone: 'blue' },
+      table: { type: 'table', headers: ['Colonne 1', 'Colonne 2'], rows: [['', '']] },
+      chart: { type: 'chart', title: 'Graphique', labels: ['Valeur'], values: [50] },
+      button: { type: 'button', label: 'En savoir plus', href: '/' },
+      divider: { type: 'divider' },
+    };
+    setPages((current) => current.map((page, index) => index === selectedPage ? { ...page, blocks: [...page.blocks, defaults[type]] } : page));
+  };
+
+  const removeBlock = (blockIndex: number) => {
+    setPages((current) => current.map((page, index) => index === selectedPage ? { ...page, blocks: page.blocks.filter((_, blockIndexValue) => blockIndexValue !== blockIndex) } : page));
+  };
+
+  const moveBlock = (blockIndex: number, direction: -1 | 1) => {
+    setPages((current) => current.map((page, index) => {
+      if (index !== selectedPage) return page;
+      const target = blockIndex + direction;
+      if (target < 0 || target >= page.blocks.length) return page;
+      const blocks = [...page.blocks];
+      [blocks[blockIndex], blocks[target]] = [blocks[target], blocks[blockIndex]];
+      return { ...page, blocks };
+    }));
+  };
+
+  const updateBlockText = (blockIndex: number, field: 'text' | 'title' | 'src' | 'alt' | 'caption' | 'author' | 'label' | 'href' | 'tone', value: string) => {
+    updateBlock(blockIndex, { [field]: value });
+  };
+
+  const renderBlockEditor = (block: ContentBlock, blockIndex: number) => {
+    const textField = (field: Parameters<typeof updateBlockText>[1], label: string, value: string, multiline = false) => (
+      <div className="grid gap-2">
+        <Label>{label}</Label>
+        {multiline
+          ? <Textarea value={value} onChange={(event) => updateBlockText(blockIndex, field, event.target.value)} />
+          : <Input value={value} onChange={(event) => updateBlockText(blockIndex, field, event.target.value)} />}
+      </div>
+    );
+    switch (block.type) {
+      case 'heading':
+        return <>{textField('text', 'Titre', block.text)}<div className="grid gap-2"><Label>Niveau</Label><select className="h-10 rounded-md border px-3" value={block.level || 2} onChange={(event) => updateBlock(blockIndex, { level: Number(event.target.value) as 2 | 3 })}><option value="2">Titre 2</option><option value="3">Titre 3</option></select></div></>;
+      case 'paragraph':
+        return textField('text', 'Texte', block.text, true);
+      case 'quote':
+        return <>{textField('text', 'Citation', block.text, true)}{textField('author', 'Auteur', block.author || '')}</>;
+      case 'button':
+        return <>{textField('label', 'Libellé', block.label)}{textField('href', 'Lien', block.href)}</>;
+      case 'image':
+        return <>{textField('src', 'URL de l’image', block.src)}{textField('alt', 'Texte alternatif', block.alt)}{textField('caption', 'Légende', block.caption || '')}</>;
+      case 'video':
+        return <>{textField('src', 'URL de la vidéo', block.src)}{textField('title', 'Titre de la vidéo', block.title || '')}</>;
+      case 'embed':
+        return <>{textField('src', 'URL intégrée', block.src)}{textField('title', 'Titre accessible', block.title)}<div className="grid gap-2"><Label>Hauteur (pixels)</Label><Input type="number" value={block.height || 420} onChange={(event) => updateBlock(blockIndex, { height: Number(event.target.value) || 420 })} /></div></>;
+      case 'callout':
+        return <>{textField('title', 'Titre', block.title)}{textField('text', 'Contenu', block.text, true)}<div className="grid gap-2"><Label>Style</Label><select className="h-10 rounded-md border px-3" value={block.tone || 'blue'} onChange={(event) => updateBlockText(blockIndex, 'tone', event.target.value)}><option value="blue">Bleu</option><option value="gold">Or</option><option value="green">Vert</option></select></div></>;
+      case 'list':
+      case 'gallery':
+      case 'table':
+      case 'chart':
+        return <div className="grid gap-2"><Label>Données du bloc</Label><Textarea className="min-h-[140px] font-mono text-xs" value={JSON.stringify(block, null, 2)} onChange={(event) => {
+          try {
+            const parsed = JSON.parse(event.target.value);
+            if (parsed.type === block.type) updateBlock(blockIndex, parsed);
+          } catch {
+            // Keep the editor usable while the JSON is being typed.
+          }
+        }} /><p className="text-xs text-slate-500">Vous pouvez modifier les éléments, URLs et valeurs dans ce JSON.</p></div>;
+      case 'divider':
+        return <p className="text-sm text-slate-500">Séparateur visuel sans contenu.</p>;
     }
   };
 
@@ -254,8 +330,17 @@ const Admin = () => {
                       <div className="grid gap-2"><Label>Page parente (optionnel)</Label><Input value={pages[selectedPage].parent || ''} onChange={(event) => updatePage('parent', event.target.value)} placeholder="/plan-strategique" /></div>
                       <div className="grid gap-2"><Label>Titre</Label><Input value={pages[selectedPage].title} onChange={(event) => updatePage('title', event.target.value)} /></div>
                       <div className="grid gap-2"><Label>Description</Label><Textarea value={pages[selectedPage].description || ''} onChange={(event) => updatePage('description', event.target.value)} /></div>
-                      <div className="grid gap-2"><Label>Blocs de contenu (JSON)</Label><Textarea className="min-h-[260px] font-mono text-xs" value={JSON.stringify(pages[selectedPage].blocks, null, 2)} onChange={(event) => updatePageBlocks(event.target.value)} /></div>
-                      <p className="text-xs text-slate-500">Types disponibles : heading, paragraph, image, gallery, quote, list, button, divider.</p>
+                      <div className="grid gap-2"><Label>Nom dans le menu</Label><Input value={pages[selectedPage].menuLabel || ''} onChange={(event) => updatePage('menuLabel', event.target.value)} placeholder="Laisser vide pour utiliser le titre" /></div>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pages[selectedPage].showInNavigation !== false} onChange={(event) => setPages((current) => current.map((page, index) => index === selectedPage ? { ...page, showInNavigation: event.target.checked } : page))} /> Afficher cette page dans la navigation</label>
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2"><div><Label>Contenu de la page</Label><p className="text-xs text-slate-500">Ajoutez les blocs dans l’ordre souhaité, sans écrire de JSON.</p></div><div className="flex flex-wrap gap-2">{(['heading', 'paragraph', 'image', 'gallery', 'video', 'embed', 'quote', 'list', 'callout', 'table', 'chart', 'button', 'divider'] as ContentBlock['type'][]).map((type) => <Button key={type} type="button" size="sm" variant="outline" onClick={() => addBlock(type)}>+ {type}</Button>)}</div></div>
+                        {pages[selectedPage].blocks.map((block, blockIndex) => (
+                          <div key={`block-${blockIndex}`} className="space-y-3 rounded-lg border bg-slate-50 p-4">
+                            <div className="flex items-center justify-between gap-2"><p className="font-semibold capitalize text-french-blue">{block.type}</p><div className="flex gap-1"><Button type="button" size="sm" variant="ghost" onClick={() => moveBlock(blockIndex, -1)} disabled={blockIndex === 0}>↑</Button><Button type="button" size="sm" variant="ghost" onClick={() => moveBlock(blockIndex, 1)} disabled={blockIndex === pages[selectedPage].blocks.length - 1}>↓</Button><Button type="button" size="sm" variant="ghost" onClick={() => removeBlock(blockIndex)}>Supprimer</Button></div></div>
+                            {renderBlockEditor(block, blockIndex)}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </>
