@@ -10,6 +10,9 @@ import type { ManagedPage } from '@/content/pageTypes';
 const managedNavigation = (pagesFile.pages as ManagedPage[])
   .filter((page) => page.showInNavigation !== false && !page.parent)
   .sort((a, b) => (a.order || 0) - (b.order || 0));
+const childNavigation = (pagesFile.pages as ManagedPage[])
+  .filter((page) => page.showInNavigation !== false && page.parent)
+  .sort((a, b) => (a.order || 0) - (b.order || 0));
 
 interface DesktopMenuProps {
   isActive: (path: string) => boolean;
@@ -42,6 +45,11 @@ const DesktopMenu = ({ isActive }: DesktopMenuProps) => {
         {managedNavigation.map((page) => (
           <DesktopNavItem key={page.slug} to={page.slug} isActive={isActive(page.slug)}>
             {page.menuLabel || page.title}
+          </DesktopNavItem>
+        ))}
+        {childNavigation.map((page) => (
+          <DesktopNavItem key={page.slug} to={page.slug} isActive={isActive(page.slug)}>
+            <span className="text-xs">↳ {page.menuLabel || page.title}</span>
           </DesktopNavItem>
         ))}
       </NavigationMenuList>

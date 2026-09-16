@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Target } from 'lucide-react';
+import siteContent from '@/content/siteContent.json';
 
 const Vision = () => {
   return (
@@ -21,17 +22,7 @@ const Vision = () => {
           <div className="w-full md:w-2/3">
             
             <div className="space-y-4 font-raleway">
-              <p className="text-gray-700 leading-relaxed">
-                Devenir un acteur incontournable de l'éducation francophone en Afrique de l'Ouest, conventionné AEFE, 
-                reconnu pour son innovation pédagogique et son engagement éthique qui forge des citoyens du monde avec 
-                un profond ancrage local propre à la Petite Côte sénégalaise.
-              </p>
-              
-              <p className="text-gray-700 leading-relaxed">
-                D'ici 2030, le Lycée français Jacques Prévert (LFJP) sera une référence en matière d'acquisition de 
-                connaissances, de valeurs inclusives et de développement de compétences, qu'elles soient humaines, 
-                citoyennes ou environnementales, afin de s'adapter à un monde en perpétuelle évolution.
-              </p>
+              {siteContent.visionMissionsValeurs.vision.map((paragraph) => <p key={paragraph} className="text-gray-700 leading-relaxed">{paragraph}</p>)}
             </div>
           </div>
         </div>

@@ -8,6 +8,9 @@ import type { ManagedPage } from '@/content/pageTypes';
 const managedNavigation = (pagesFile.pages as ManagedPage[])
   .filter((page) => page.showInNavigation !== false && !page.parent)
   .sort((a, b) => (a.order || 0) - (b.order || 0));
+const childNavigation = (pagesFile.pages as ManagedPage[])
+  .filter((page) => page.showInNavigation !== false && page.parent)
+  .sort((a, b) => (a.order || 0) - (b.order || 0));
 
 interface MobileMenuProps {
   id?: string;
@@ -81,6 +84,17 @@ const MobileMenu = ({ id, mobileMenuOpen, setMobileMenuOpen, isActive }: MobileM
             to={page.slug}
             isActive={isActive(page.slug)}
             onClick={() => setMobileMenuOpen(false)}
+          >
+            {page.menuLabel || page.title}
+          </MobileNavItem>
+        ))}
+        {childNavigation.map((page) => (
+          <MobileNavItem
+            key={page.slug}
+            to={page.slug}
+            isActive={isActive(page.slug)}
+            onClick={() => setMobileMenuOpen(false)}
+            className="ml-4 border-l-2 border-french-blue/20 pl-6 text-sm"
           >
             {page.menuLabel || page.title}
           </MobileNavItem>

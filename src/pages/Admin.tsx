@@ -21,7 +21,7 @@ const loadContentDraft = (): Content => {
   if (!savedDraft) return siteContent;
   try {
     const parsed: unknown = JSON.parse(savedDraft);
-    if (!isRecord(parsed) || !isRecord(parsed.home) || !Array.isArray(parsed.home.cards) || !Array.isArray(parsed.home.messages)) {
+    if (!isRecord(parsed) || !isRecord(parsed.site) || typeof parsed.site.name !== 'string' || typeof parsed.site.tagline !== 'string' || typeof parsed.site.logoUrl !== 'string' || typeof parsed.site.logoAlt !== 'string' || typeof parsed.site.footerPlan !== 'string' || typeof parsed.site.footerCopyright !== 'string' || !isRecord(parsed.visionMissionsValeurs) || !Array.isArray(parsed.visionMissionsValeurs.vision) || !Array.isArray(parsed.visionMissionsValeurs.missions) || !Array.isArray(parsed.visionMissionsValeurs.values) || !isRecord(parsed.home) || !Array.isArray(parsed.home.cards) || !Array.isArray(parsed.home.messages)) {
       throw new Error('Structure de brouillon invalide.');
     }
     return parsed as Content;
@@ -67,6 +67,40 @@ const Admin = () => {
 
   const updateHome = (field: keyof Content['home'], value: string) => {
     setContent((current) => ({ ...current, home: { ...current.home, [field]: value } }));
+  };
+
+  const updateSite = (field: keyof Content['site'], value: string) => {
+    setContent((current) => ({ ...current, site: { ...current.site, [field]: value } }));
+  };
+
+  const updateVisionParagraph = (index: number, value: string) => {
+    setContent((current) => ({
+      ...current,
+      visionMissionsValeurs: {
+        ...current.visionMissionsValeurs,
+        vision: current.visionMissionsValeurs.vision.map((item, itemIndex) => itemIndex === index ? value : item),
+      },
+    }));
+  };
+
+  const updateMission = (index: number, value: string) => {
+    setContent((current) => ({
+      ...current,
+      visionMissionsValeurs: {
+        ...current.visionMissionsValeurs,
+        missions: current.visionMissionsValeurs.missions.map((item, itemIndex) => itemIndex === index ? value : item),
+      },
+    }));
+  };
+
+  const updateValue = (index: number, field: 'name' | 'description', value: string) => {
+    setContent((current) => ({
+      ...current,
+      visionMissionsValeurs: {
+        ...current.visionMissionsValeurs,
+        values: current.visionMissionsValeurs.values.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item),
+      },
+    }));
   };
 
   const updateCard = (index: number, field: keyof Content['home']['cards'][number], value: string) => {
@@ -366,6 +400,61 @@ const Admin = () => {
 
       <main className="container mx-auto grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Identité, en-tête et pied de page</CardTitle>
+              <CardDescription>Ces informations sont partagées par toutes les pages et conservent la mise en forme actuelle du site.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2"><Label>Nom du site</Label><Input value={content.site.name} onChange={(event) => updateSite('name', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Sous-titre</Label><Input value={content.site.tagline} onChange={(event) => updateSite('tagline', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>URL du logo</Label><Input value={content.site.logoUrl} onChange={(event) => updateSite('logoUrl', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Texte alternatif du logo</Label><Input value={content.site.logoAlt} onChange={(event) => updateSite('logoAlt', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Texte du copyright</Label><Input value={content.site.footerCopyright} onChange={(event) => updateSite('footerCopyright', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Texte complémentaire du pied de page</Label><Input value={content.site.footerPlan} onChange={(event) => updateSite('footerPlan', event.target.value)} /></div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Vision, missions et valeurs</CardTitle>
+              <CardDescription>Modifiez cette page spécialisée sans modifier son design, ses icônes ou ses animations.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label>Notre vision</Label>
+                {content.visionMissionsValeurs.vision.map((paragraph, index) => (
+                  <div key={`vision-${index}`} className="flex gap-2">
+                    <Textarea value={paragraph} onChange={(event) => updateVisionParagraph(index, event.target.value)} />
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setContent((current) => ({ ...current, visionMissionsValeurs: { ...current.visionMissionsValeurs, vision: current.visionMissionsValeurs.vision.filter((_, itemIndex) => itemIndex !== index) } }))}>Supprimer</Button>
+                  </div>
+                ))}
+                <Button type="button" size="sm" variant="outline" onClick={() => setContent((current) => ({ ...current, visionMissionsValeurs: { ...current.visionMissionsValeurs, vision: [...current.visionMissionsValeurs.vision, 'Nouveau paragraphe de vision.'] } }))}>Ajouter un paragraphe</Button>
+              </div>
+              <div className="space-y-3">
+                <Label>Nos missions</Label>
+                {content.visionMissionsValeurs.missions.map((mission, index) => (
+                  <div key={`mission-${index}`} className="flex gap-2">
+                    <Textarea value={mission} onChange={(event) => updateMission(index, event.target.value)} />
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setContent((current) => ({ ...current, visionMissionsValeurs: { ...current.visionMissionsValeurs, missions: current.visionMissionsValeurs.missions.filter((_, itemIndex) => itemIndex !== index) } }))}>Supprimer</Button>
+                  </div>
+                ))}
+                <Button type="button" size="sm" variant="outline" onClick={() => setContent((current) => ({ ...current, visionMissionsValeurs: { ...current.visionMissionsValeurs, missions: [...current.visionMissionsValeurs.missions, 'Nouvelle mission.'] } }))}>Ajouter une mission</Button>
+              </div>
+              <div className="space-y-3">
+                <Label>Nos valeurs</Label>
+                {content.visionMissionsValeurs.values.map((value, index) => (
+                  <div key={`value-${index}`} className="grid gap-2 rounded-lg border p-4 md:grid-cols-[minmax(0,1fr)_2fr_auto]">
+                    <Input value={value.name} onChange={(event) => updateValue(index, 'name', event.target.value)} aria-label={`Nom de la valeur ${index + 1}`} />
+                    <Textarea value={value.description} onChange={(event) => updateValue(index, 'description', event.target.value)} aria-label={`Description de la valeur ${index + 1}`} />
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setContent((current) => ({ ...current, visionMissionsValeurs: { ...current.visionMissionsValeurs, values: current.visionMissionsValeurs.values.filter((_, itemIndex) => itemIndex !== index) } }))}>Supprimer</Button>
+                  </div>
+                ))}
+                <Button type="button" size="sm" variant="outline" onClick={() => setContent((current) => ({ ...current, visionMissionsValeurs: { ...current.visionMissionsValeurs, values: [...current.visionMissionsValeurs.values, { name: 'Nouvelle valeur', description: 'Description de la valeur.' }] } }))}>Ajouter une valeur</Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Accueil</CardTitle>
