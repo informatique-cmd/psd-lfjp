@@ -23,7 +23,7 @@ const loadContentDraft = (): Content => {
   if (!savedDraft) return siteContent;
   try {
     const parsed: unknown = JSON.parse(savedDraft);
-    if (!isRecord(parsed) || !isRecord(parsed.site) || typeof parsed.site.name !== 'string' || typeof parsed.site.tagline !== 'string' || typeof parsed.site.logoUrl !== 'string' || typeof parsed.site.logoAlt !== 'string' || typeof parsed.site.footerPlan !== 'string' || typeof parsed.site.footerCopyright !== 'string' || !isRecord(parsed.visionMissionsValeurs) || !Array.isArray(parsed.visionMissionsValeurs.vision) || !Array.isArray(parsed.visionMissionsValeurs.missions) || !Array.isArray(parsed.visionMissionsValeurs.values) || !isRecord(parsed.home) || !Array.isArray(parsed.home.cards) || !Array.isArray(parsed.home.messages)) {
+    if (!isRecord(parsed) || !isRecord(parsed.site) || typeof parsed.site.name !== 'string' || typeof parsed.site.tagline !== 'string' || typeof parsed.site.logoUrl !== 'string' || typeof parsed.site.logoAlt !== 'string' || typeof parsed.site.footerPlan !== 'string' || typeof parsed.site.footerCopyright !== 'string' || typeof parsed.site.footerCopyrightPrefix !== 'string' || typeof parsed.site.footerYear !== 'number' || !isRecord(parsed.visionMissionsValeurs) || !Array.isArray(parsed.visionMissionsValeurs.vision) || !Array.isArray(parsed.visionMissionsValeurs.missions) || !Array.isArray(parsed.visionMissionsValeurs.values) || !isRecord(parsed.home) || !Array.isArray(parsed.home.cards) || !Array.isArray(parsed.home.messages)) {
       throw new Error('Structure de brouillon invalide.');
     }
     return parsed as Content;
@@ -99,6 +99,7 @@ const Admin = () => {
   const [pages, setPages] = useState<ManagedPage[]>(loadPagesDraft);
   const [selectedPage, setSelectedPage] = useState(0);
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [status, setStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [pullRequest, setPullRequest] = useState<{ number: number; url: string } | null>(null);
@@ -107,7 +108,8 @@ const Admin = () => {
     fetch('/api/auth/me')
       .then(async (response) => response.ok ? response.json() : null)
       .then((data) => setUser(data?.user ?? null))
-      .catch(() => setUser(null));
+      .catch(() => setUser(null))
+      .finally(() => setAuthChecked(true));
   }, []);
 
   useEffect(() => {
@@ -135,8 +137,8 @@ const Admin = () => {
     setContent((current) => ({ ...current, home: { ...current.home, [field]: value } }));
   };
 
-  const updateSite = (field: keyof Content['site'], value: string) => {
-    setContent((current) => ({ ...current, site: { ...current.site, [field]: field === 'logoUrl' ? normalizeMediaUrl(value) : value } }));
+  const updateSite = (field: keyof Content['site'], value: string | number) => {
+    setContent((current) => ({ ...current, site: { ...current.site, [field]: field === 'logoUrl' && typeof value === 'string' ? normalizeMediaUrl(value) : value } }));
   };
 
   const updateVisionParagraph = (index: number, value: string) => {
@@ -175,6 +177,16 @@ const Admin = () => {
       home: {
         ...current.home,
         cards: current.home.cards.map((card, cardIndex) => cardIndex === index ? { ...card, [field]: field === 'image' ? normalizeMediaUrl(value) : value } : card),
+      },
+    }));
+  };
+
+  const updateCardStyle = (index: number, patch: Partial<TextStyle>) => {
+    setContent((current) => ({
+      ...current,
+      home: {
+        ...current.home,
+        cards: current.home.cards.map((card, cardIndex) => cardIndex === index ? { ...card, style: { ...card.style, ...patch } } : card),
       },
     }));
   };
@@ -512,6 +524,12 @@ const Admin = () => {
     }
   };
 
+  if (!authChecked) {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6"><Card className="w-full max-w-md border-0 shadow-2xl"><CardContent className="space-y-4 p-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-french-blue text-2xl font-bold text-white">L</div><h1 className="font-playfair text-2xl font-bold text-french-blue">Vérification de sécurité</h1><p className="text-sm text-slate-600">Connexion sécurisée à l’espace de gestion LFJP…</p></CardContent></Card></div>;
+  }
+  if (!user) {
+    return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-french-blue to-blue-700 p-6"><Card className="w-full max-w-md border-0 shadow-2xl"><CardContent className="space-y-6 p-8 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-french-blue text-3xl font-bold text-white shadow-lg">L</div><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-french-blue">LFJP</p><h1 className="mt-2 font-playfair text-3xl font-bold text-slate-900">Espace d’administration</h1><p className="mt-3 text-sm leading-relaxed text-slate-600">Cette interface est privée. Connectez-vous avec le compte GitHub autorisé pour gérer les contenus et les publications.</p></div><Button asChild className="w-full"><a href="/api/auth/github"><Github /> Se connecter avec GitHub</a></Button><Button asChild variant="ghost" className="w-full"><Link to="/">Retour au site public</Link></Button></CardContent></Card></div>;
+  }
   return (
     <div className="min-h-screen bg-slate-50 font-raleway">
       <header className="border-b border-blue-900/20 bg-gradient-to-r from-french-blue via-blue-900 to-slate-900 text-white shadow-lg">
@@ -548,6 +566,8 @@ const Admin = () => {
               <div className="grid gap-2"><Label>Sous-titre</Label><Input value={content.site.tagline} onChange={(event) => updateSite('tagline', event.target.value)} /></div>
               <div className="grid gap-2"><Label>URL du logo ou lien Google Drive public</Label><Input value={content.site.logoUrl} onChange={(event) => updateSite('logoUrl', event.target.value)} /><MediaPreview src={content.site.logoUrl} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer le logo<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateSite('logoUrl', src))} /></label></div>
               <div className="grid gap-2"><Label>Texte alternatif du logo</Label><Input value={content.site.logoAlt} onChange={(event) => updateSite('logoAlt', event.target.value)} /></div>
+              <div className="grid gap-2"><Label>Symbole du copyright</Label><Input value={content.site.footerCopyrightPrefix} onChange={(event) => updateSite('footerCopyrightPrefix', event.target.value)} placeholder="©" /></div>
+              <div className="grid gap-2"><Label>Année du copyright</Label><Input type="number" value={content.site.footerYear} onChange={(event) => updateSite('footerYear', Number(event.target.value) || new Date().getFullYear())} /></div>
               <div className="grid gap-2"><Label>Texte du copyright</Label><Input value={content.site.footerCopyright} onChange={(event) => updateSite('footerCopyright', event.target.value)} /></div>
               <div className="grid gap-2"><Label>Texte complémentaire du pied de page</Label><Input value={content.site.footerPlan} onChange={(event) => updateSite('footerPlan', event.target.value)} /></div>
             </CardContent>
@@ -627,6 +647,7 @@ const Admin = () => {
                   <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea value={card.description} onChange={(event) => updateCard(index, 'description', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>Texte du lien</Label><Input value={card.linkLabel} onChange={(event) => updateCard(index, 'linkLabel', event.target.value)} /></div>
                   <div className="grid gap-2"><Label>Image de la rubrique</Label><Input value={card.image || ''} onChange={(event) => updateCard(index, 'image', event.target.value)} /><MediaPreview src={card.image || ''} /><label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold text-french-blue"><Upload size={16} /> Importer une image<input className="sr-only" type="file" accept="image/*" onChange={(event) => importContentImage(event.target.files?.[0], (src) => updateCard(index, 'image', src))} /></label></div>
+                  <div className="md:col-span-2"><TextStyleToolbar style={card.style} onChange={(patch) => updateCardStyle(index, patch)} /></div>
                   <div className="flex items-end justify-end"><Button type="button" size="sm" variant="ghost" onClick={() => removeCard(index)}>Supprimer cette rubrique</Button></div>
                 </div>
               ))}

@@ -8,6 +8,19 @@ import BackToTop from '../components/BackToTop';
 import { Card, CardContent } from '@/components/ui/card';
 import siteContent from '@/content/siteContent.json';
 import { normalizeMediaUrl } from '@/lib/media';
+import type { TextStyle } from '@/content/pageTypes';
+
+const cardTextStyle = (style?: TextStyle): React.CSSProperties => ({
+  fontFamily: style?.fontFamily === 'serif' ? 'Georgia, serif' : style?.fontFamily === 'playfair' ? 'Playfair Display, serif' : style?.fontFamily === 'mono' ? 'ui-monospace, monospace' : style?.fontFamily === 'raleway' ? 'Raleway, sans-serif' : undefined,
+  fontSize: style?.fontSize === 'small' ? '0.9rem' : style?.fontSize === 'large' ? '1.2rem' : style?.fontSize === 'xlarge' ? '1.5rem' : undefined,
+  textAlign: style?.align,
+  color: style?.color || undefined,
+  backgroundColor: style?.backgroundColor || undefined,
+  fontWeight: style?.bold ? 700 : undefined,
+  fontStyle: style?.italic ? 'italic' : undefined,
+  textDecoration: style?.underline ? 'underline' : undefined,
+  lineHeight: style?.lineHeight === 'loose' ? 2 : style?.lineHeight === 'normal' ? 1.5 : 1.75,
+});
 
 const Index = () => {
   const { home } = siteContent;
@@ -30,8 +43,10 @@ const Index = () => {
               >
                 <CardContent className="p-8 flex flex-col h-full">
                   {card.image && <img src={normalizeMediaUrl(card.image)} alt="" className="mb-6 h-40 w-full rounded-lg object-cover" />}
-                  <h3 className="text-2xl font-playfair font-bold mb-4 text-french-blue">{card.title}</h3>
-                  <p className="text-gray-600 mb-6">{card.description}</p>
+                  <div style={cardTextStyle(card.style)}>
+                    <h3 className="text-2xl font-playfair font-bold mb-4 text-french-blue">{card.title}</h3>
+                    <p className="text-gray-600 mb-6">{card.description}</p>
+                  </div>
                   <Link to={card.path} className="inline-flex items-center text-french-blue font-medium hover:underline group mt-auto pt-4">
                     {card.linkLabel}
                     <ArrowRight size={16} className="ml-2 transition-transform duration-300 group-hover:translate-x-1" />
