@@ -11,24 +11,10 @@
   },
   "visionMissionsValeurs": {
     "vision": [
-      "Devenir un acteur incontournable de l'éducation francophone en Afrique de l'Ouest, conventionné AEFE, reconnu pour son innovation pédagogique et son engagement éthique qui forge des citoyens du monde avec un profond ancrage local propre à la Petite Côte sénégalaise.",
-      "D'ici 2030, le Lycée français Jacques Prévert (LFJP) sera une référence en matière d'acquisition de connaissances, de valeurs inclusives et de développement de compétences, qu'elles soient humaines, citoyennes ou environnementales, afin de s'adapter à un monde en perpétuelle évolution."
+      "Devenir un acteur incontournable de l'éducation francophone en Afrique de l'Ouest, conventionné AEFE, reconnu pour son innovation pédagogique et son engagement éthique qui forge des citoyens du monde avec un profond ancrage local propre à la Petite Côte sénégalaise.\n\nD'ici 2030, le Lycée français Jacques Prévert (LFJP) sera une référence en matière d'acquisition de connaissances, de valeurs inclusives et de développement de compétences, qu'elles soient humaines, citoyennes ou environnementales, afin de s'adapter à un monde en perpétuelle évolution."
     ],
     "missions": [
-      "Assurer une continuité du service public d'éducation aux enfants français, et donner accès à l'enseignement français aux enfants d'autres nationalités",
-      "Contribuer au rayonnement de la langue et de la culture françaises",
-      "Veiller au respect des principes de l'école inclusive envers les élèves à besoins éducatifs particuliers",
-      "Former des citoyens multilingues, écoresponsables, ouverts au monde et capables de s'adapter à la digitalisation croissante de nos sociétés",
-      "Développer et faire vivre au sein de l'établissement les valeurs humanistes du vivre-ensemble et les principes de laïcité, d'inclusion et d'égalité",
-      "Assurer une coéducation en impliquant les parents d'élèves à la vie de l'établissement",
-      "Favoriser l'autonomie de l'élève afin de lui permettre d'élaborer son projet personnel, en se projetant vers l'enseignement supérieur et en se préparant à l'exercice de la citoyenneté",
-      "Développer la curiosité intellectuelle des élèves",
-      "Favoriser l'accès aux outils numériques et accompagner l'appropriation des dernières innovations technologiques",
-      "Offrir à nos élèves un corps enseignant compétent, passionné et reconnu pour son investissement",
-      "Créer un environnement favorable à l'épanouissement personnel de chaque élève au sein de l'établissement",
-      "Mettre à disposition des locaux modernes et adaptés, propices aux apprentissages",
-      "Développer des filières internationales, des coopérations éducatives locales et des partenariats extérieurs",
-      "Financer le Plan Stratégique de Développement et optimiser la gestion des ressources nécessaires à sa mise en œuvre"
+      "Assurer une continuité du service public d'éducation aux enfants français, et donner accès à l'enseignement français aux enfants d'autres nationalités\n\nContribuer au rayonnement de la langue et de la culture françaises\n\nVeiller au respect des principes de l'école inclusive envers les élèves à besoins éducatifs particuliers\n\nFormer des citoyens multilingues, écoresponsables, ouverts au monde et capables de s'adapter à la digitalisation croissante de nos sociétés\n\nDévelopper et faire vivre au sein de l'établissement les valeurs humanistes du vivre-ensemble et les principes de laïcité, d'inclusion et d'égalité\n\nAssurer une coéducation en impliquant les parents d'élèves à la vie de l'établissement\n\nFavoriser l'autonomie de l'élève afin de lui permettre d'élaborer son projet personnel, en se projetant vers l'enseignement supérieur et en se préparant à l'exercice de la citoyenneté\n\nDévelopper la curiosité intellectuelle des élèves\n\nFavoriser l'accès aux outils numériques et accompagner l'appropriation des dernières innovations technologiques\n\nOffrir à nos élèves un corps enseignant compétent, passionné et reconnu pour son investissement\n\nCréer un environnement favorable à l'épanouissement personnel de chaque élève au sein de l'établissement\n\nMettre à disposition des locaux modernes et adaptés, propices aux apprentissages\n\nDévelopper des filières internationales, des coopérations éducatives locales et des partenariats extérieurs\n\nFinancer le Plan Stratégique de Développement et optimiser la gestion des ressources nécessaires à sa mise en œuvre"
     ],
     "values": [
       {
@@ -63,7 +49,6 @@
         "description": "Parcourez la démarche en 7 étapes et la gouvernance participative qui cadrent l'élaboration du plan stratégique du LFJP.",
         "linkLabel": "Comprendre",
         "path": "/methode",
-        "image": "",
         "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
       },
       {
@@ -71,7 +56,6 @@
         "description": "Découvrez notre vision, nos missions éducatives et les valeurs qui guident quotidiennement notre établissement dans la formation des citoyens du monde.",
         "linkLabel": "Découvrir",
         "path": "/vision-missions-valeurs",
-        "image": "",
         "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
       },
       {
@@ -79,7 +63,6 @@
         "description": "Analysez la situation actuelle de notre établissement à travers les données des enquêtes et l'évaluation des besoins qui orientent notre développement.",
         "linkLabel": "Analyser",
         "path": "/diagnostic",
-        "image": "",
         "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
       },
       {
@@ -87,7 +70,6 @@
         "description": "Consultez notre Plan Stratégique de Développement 2026-2030 qui détaille nos objectifs, actions et indicateurs pour les années à venir.",
         "linkLabel": "Consulter",
         "path": "/plan-strategique",
-        "image": "",
         "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
       }
     ],
