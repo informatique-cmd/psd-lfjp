@@ -49,28 +49,48 @@
         "description": "Parcourez la démarche en 7 étapes et la gouvernance participative qui cadrent l'élaboration du plan stratégique du LFJP.",
         "linkLabel": "Comprendre",
         "path": "/methode",
-        "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
+        "style": {
+          "fontFamily": "default",
+          "fontSize": "normal",
+          "align": "left",
+          "lineHeight": "relaxed"
+        }
       },
       {
         "title": "Vision, Missions et Valeurs",
         "description": "Découvrez notre vision, nos missions éducatives et les valeurs qui guident quotidiennement notre établissement dans la formation des citoyens du monde.",
         "linkLabel": "Découvrir",
         "path": "/vision-missions-valeurs",
-        "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
+        "style": {
+          "fontFamily": "default",
+          "fontSize": "normal",
+          "align": "left",
+          "lineHeight": "relaxed"
+        }
       },
       {
         "title": "Diagnostic",
         "description": "Analysez la situation actuelle de notre établissement à travers les données des enquêtes et l'évaluation des besoins qui orientent notre développement.",
         "linkLabel": "Analyser",
         "path": "/diagnostic",
-        "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
+        "style": {
+          "fontFamily": "default",
+          "fontSize": "normal",
+          "align": "left",
+          "lineHeight": "relaxed"
+        }
       },
       {
         "title": "Plan Stratégique de Développement",
         "description": "Consultez notre Plan Stratégique de Développement 2026-2030 qui détaille nos objectifs, actions et indicateurs pour les années à venir.",
         "linkLabel": "Consulter",
         "path": "/plan-strategique",
-        "style": { "fontFamily": "default", "fontSize": "normal", "align": "left", "lineHeight": "relaxed" }
+        "style": {
+          "fontFamily": "default",
+          "fontSize": "normal",
+          "align": "left",
+          "lineHeight": "relaxed"
+        }
       }
     ],
     "messages": [
