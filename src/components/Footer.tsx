@@ -3,8 +3,6 @@ import React from 'react';
 import siteContent from '@/content/siteContent.json';
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear();
-
   return (
     <footer className="bg-french-blue text-white py-12">
       <div className="container mx-auto px-6">
@@ -15,7 +13,7 @@ const Footer = () => {
           </div>
           
           <div className="text-sm font-raleway text-center md:text-right">
-            <p>© {currentYear} {siteContent.site.footerCopyright}</p>
+            <p>{siteContent.site.footerCopyrightPrefix} {siteContent.site.footerYear} {siteContent.site.footerCopyright}</p>
             <p className="mt-1">{siteContent.site.footerPlan}</p>
           </div>
         </div>

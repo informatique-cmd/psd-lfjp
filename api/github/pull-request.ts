@@ -16,7 +16,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   }
   const user = await githubRequest(token, '/user');
   const allowedUsers = (process.env.ADMIN_GITHUB_USERS || '').split(',').map((item) => item.trim()).filter(Boolean);
-  if (allowedUsers.length > 0 && !allowedUsers.includes(user.login)) return res.status(403).json({ error: 'Ce compte GitHub n’est pas autorisé.' });
+  if (allowedUsers.length === 0 || !allowedUsers.includes(user.login)) return res.status(403).json({ error: 'La liste ADMIN_GITHUB_USERS doit contenir un compte autorisé.' });
 
   const base = process.env.GITHUB_BASE_BRANCH || 'main';
   const branch = `admin/content-${new Date().toISOString().slice(0, 10)}-${randomBytes(4).toString('hex')}`;

@@ -20,5 +20,5 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const tokenData = await tokenResponse.json();
   if (!tokenResponse.ok || !tokenData.access_token) return res.status(502).send('GitHub n’a pas délivré de jeton.');
   setCookie(res, encryptToken(tokenData.access_token), 60 * 60 * 8);
-  return res.redirect('/admin');
+  return res.redirect('/espace-direction');
 }

@@ -11,7 +11,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (!Number.isInteger(pullNumber) || pullNumber < 1) return res.status(400).json({ error: 'Numéro de Pull Request invalide.' });
   const user = await githubRequest(token, '/user');
   const allowedUsers = (process.env.ADMIN_GITHUB_USERS || '').split(',').map((item) => item.trim()).filter(Boolean);
-  if (allowedUsers.length > 0 && !allowedUsers.includes(user.login)) return res.status(403).json({ error: 'Ce compte GitHub n’est pas autorisé à publier.' });
+  if (allowedUsers.length === 0 || !allowedUsers.includes(user.login)) return res.status(403).json({ error: 'La liste ADMIN_GITHUB_USERS doit contenir un compte autorisé.' });
 
   const pullRequest = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/pulls/${pullNumber}`);
   if (pullRequest.state !== 'open') return res.status(409).json({ error: 'Cette Pull Request n’est plus ouverte.' });
