@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Copy, ExternalLink, Eye, Github, Image, Save, Send, Trash2, Upload } from 'lucide-react';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, Copy, ExternalLink, Eye, Github, Image, Italic, Save, Send, Trash2, Underline, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
 import breadcrumbRoutes from '@/data/breadcrumbRoutes.json';
-import { isValidManagedPage, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage } from '@/content/pageTypes';
+import { isValidManagedPage, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 
 type Content = typeof siteContent;
@@ -56,6 +56,42 @@ const MediaPreview = ({ src, type = 'image' }: { src: string; type?: 'image' | '
   return type === 'video'
     ? <video className="max-h-40 w-full rounded-md border bg-slate-100 object-contain" controls src={normalized} onError={() => setFailed(true)} />
     : <img className="max-h-40 w-full rounded-md border bg-slate-100 object-contain" src={normalized} alt="Aperçu du média" onError={() => setFailed(true)} />;
+};
+
+const TextStyleToolbar = ({ style = {}, onChange }: { style?: TextStyle; onChange: (patch: Partial<TextStyle>) => void }) => {
+  const toggle = (field: 'bold' | 'italic' | 'underline') => onChange({ [field]: !style[field] });
+  const alignments = [
+    ['left', AlignLeft],
+    ['center', AlignCenter],
+    ['right', AlignRight],
+    ['justify', AlignJustify],
+  ] as const;
+  return (
+    <div className="rounded-xl border bg-slate-50 p-3 shadow-inner">
+      <div className="mb-3 flex flex-wrap items-center gap-1">
+        <span className="mr-2 text-xs font-bold uppercase tracking-wide text-slate-500">Mise en forme</span>
+        {([['bold', Bold, 'Gras'], ['italic', Italic, 'Italique'], ['underline', Underline, 'Souligné']] as const).map(([field, Icon, label]) => (
+          <Button key={field} type="button" size="sm" variant={style[field] ? 'default' : 'outline'} title={label} aria-label={label} onClick={() => toggle(field)}><Icon size={15} /></Button>
+        ))}
+        {alignments.map(([value, Icon]) => <Button key={value} type="button" size="sm" variant={style.align === value ? 'default' : 'outline'} title={`Aligner à ${value}`} aria-label={`Aligner à ${value}`} onClick={() => onChange({ align: value })}><Icon size={15} /></Button>)}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <select className="h-9 rounded-md border bg-white px-2 text-sm" value={style.fontFamily || 'default'} onChange={(event) => onChange({ fontFamily: event.target.value as TextStyle['fontFamily'] })} aria-label="Police">
+          <option value="default">Police du site</option><option value="raleway">Raleway</option><option value="playfair">Playfair Display</option><option value="serif">Serif classique</option><option value="mono">Monospace</option>
+        </select>
+        <select className="h-9 rounded-md border bg-white px-2 text-sm" value={style.fontSize || 'normal'} onChange={(event) => onChange({ fontSize: event.target.value as TextStyle['fontSize'] })} aria-label="Taille du texte">
+          <option value="small">Petit</option><option value="normal">Normal</option><option value="large">Grand</option><option value="xlarge">Très grand</option>
+        </select>
+        <select className="h-9 rounded-md border bg-white px-2 text-sm" value={style.lineHeight || 'relaxed'} onChange={(event) => onChange({ lineHeight: event.target.value as TextStyle['lineHeight'] })} aria-label="Interligne">
+          <option value="normal">Interligne normal</option><option value="relaxed">Interligne confortable</option><option value="loose">Interligne large</option>
+        </select>
+      </div>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <label className="flex items-center gap-2 text-xs text-slate-600">Couleur du texte <input className="h-8 w-full cursor-pointer rounded border" type="color" value={style.color || '#334155'} onChange={(event) => onChange({ color: event.target.value })} /></label>
+        <label className="flex items-center gap-2 text-xs text-slate-600">Fond du texte <input className="h-8 w-full cursor-pointer rounded border" type="color" value={style.backgroundColor || '#ffffff'} onChange={(event) => onChange({ backgroundColor: event.target.value })} /></label>
+      </div>
+    </div>
+  );
 };
 
 const Admin = () => {
@@ -394,6 +430,10 @@ const Admin = () => {
     updateBlock(blockIndex, { [field]: mediaField ? normalizeMediaUrl(value, block.type) : value });
   };
 
+  const updateBlockStyle = (blockIndex: number, patch: Partial<TextStyle>) => {
+    updateBlock(blockIndex, { style: { ...(pages[selectedPage]?.blocks[blockIndex] as ContentBlock & { style?: TextStyle }).style, ...patch } });
+  };
+
   const importMedia = (file: File | undefined, onLoad: (dataUrl: string) => void) => {
     if (!file) return;
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
@@ -440,11 +480,11 @@ const Admin = () => {
     );
     switch (block.type) {
       case 'heading':
-        return <>{textField('text', 'Titre', block.text)}<div className="grid gap-2"><Label>Niveau</Label><select className="h-10 rounded-md border px-3" value={block.level || 2} onChange={(event) => updateBlock(blockIndex, { level: Number(event.target.value) as 2 | 3 })}><option value="2">Titre 2</option><option value="3">Titre 3</option></select></div></>;
+        return <>{textField('text', 'Titre', block.text)}<div className="grid gap-2"><Label>Niveau</Label><select className="h-10 rounded-md border px-3" value={block.level || 2} onChange={(event) => updateBlock(blockIndex, { level: Number(event.target.value) as 2 | 3 })}><option value="2">Titre 2</option><option value="3">Titre 3</option></select></div><TextStyleToolbar style={block.style} onChange={(patch) => updateBlockStyle(blockIndex, patch)} /></>;
       case 'paragraph':
-        return textField('text', 'Texte', block.text, true);
+        return <>{textField('text', 'Texte', block.text, true)}<TextStyleToolbar style={block.style} onChange={(patch) => updateBlockStyle(blockIndex, patch)} /></>;
       case 'quote':
-        return <>{textField('text', 'Citation', block.text, true)}{textField('author', 'Auteur', block.author || '')}</>;
+        return <>{textField('text', 'Citation', block.text, true)}{textField('author', 'Auteur', block.author || '')}<TextStyleToolbar style={block.style} onChange={(patch) => updateBlockStyle(blockIndex, patch)} /></>;
       case 'button':
         return <>{textField('label', 'Libellé', block.label)}{textField('href', 'Lien', block.href)}</>;
       case 'image':
@@ -454,7 +494,7 @@ const Admin = () => {
       case 'embed':
         return <>{textField('src', 'URL intégrée', block.src)}{textField('title', 'Titre accessible', block.title)}<div className="grid gap-2"><Label>Hauteur (pixels)</Label><Input type="number" value={block.height || 420} onChange={(event) => updateBlock(blockIndex, { height: Number(event.target.value) || 420 })} /></div></>;
       case 'callout':
-        return <>{textField('title', 'Titre', block.title)}{textField('text', 'Contenu', block.text, true)}<div className="grid gap-2"><Label>Style</Label><select className="h-10 rounded-md border px-3" value={block.tone || 'blue'} onChange={(event) => updateBlockText(blockIndex, 'tone', event.target.value)}><option value="blue">Bleu</option><option value="gold">Or</option><option value="green">Vert</option></select></div></>;
+        return <>{textField('title', 'Titre', block.title)}{textField('text', 'Contenu', block.text, true)}<div className="grid gap-2"><Label>Style</Label><select className="h-10 rounded-md border px-3" value={block.tone || 'blue'} onChange={(event) => updateBlockText(blockIndex, 'tone', event.target.value)}><option value="blue">Bleu</option><option value="gold">Or</option><option value="green">Vert</option></select></div><TextStyleToolbar style={block.style} onChange={(patch) => updateBlockStyle(blockIndex, patch)} /></>;
       case 'list':
       case 'gallery':
       case 'table':
@@ -474,15 +514,15 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-raleway">
-      <header className="border-b bg-white">
+      <header className="border-b border-blue-900/20 bg-gradient-to-r from-french-blue via-blue-900 to-slate-900 text-white shadow-lg">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-french-blue">Administration</p>
-            <h1 className="font-playfair text-2xl font-bold text-french-blue">Contenus du site LFJP</h1>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-100">LFJP · Administration</p>
+            <h1 className="font-playfair text-2xl font-bold">Contenus du site</h1>
           </div>
           <div className="flex items-center gap-3">
-            {user ? <span className="text-sm text-slate-600">Connecté : {user.login}</span> : <Button asChild variant="outline"><a href="/api/auth/github"><Github /> Se connecter avec GitHub</a></Button>}
-            <Button asChild variant="ghost"><Link to="/"><ArrowLeft /> Retour au site</Link></Button>
+            {user ? <span className="rounded-full bg-white/10 px-3 py-2 text-sm text-blue-50">Connecté : {user.login}</span> : <Button asChild className="border-white/30 bg-white/10 text-white hover:bg-white/20" variant="outline"><a href="/api/auth/github"><Github /> Se connecter avec GitHub</a></Button>}
+            <Button asChild className="text-white hover:bg-white/10 hover:text-white" variant="ghost"><Link to="/"><ArrowLeft /> Retour au site</Link></Button>
           </div>
         </div>
       </header>

@@ -9,19 +9,31 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NotFound from '@/pages/NotFound';
 import pagesData from '@/content/pages.json';
-import { isValidContentBlock, isValidManagedPage, type ContentBlock, type ManagedPage as ManagedPageData } from '@/content/pageTypes';
+import { isValidContentBlock, isValidManagedPage, type ContentBlock, type ManagedPage as ManagedPageData, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 
 const pages = pagesData.pages as ManagedPageData[];
+
+const textStyle = (style?: TextStyle): React.CSSProperties => ({
+  fontFamily: style?.fontFamily === 'serif' ? 'Georgia, serif' : style?.fontFamily === 'playfair' ? 'Playfair Display, serif' : style?.fontFamily === 'mono' ? 'ui-monospace, monospace' : style?.fontFamily === 'raleway' ? 'Raleway, sans-serif' : undefined,
+  fontSize: style?.fontSize === 'small' ? '0.9rem' : style?.fontSize === 'large' ? '1.2rem' : style?.fontSize === 'xlarge' ? '1.5rem' : undefined,
+  textAlign: style?.align,
+  color: style?.color || undefined,
+  backgroundColor: style?.backgroundColor || undefined,
+  fontWeight: style?.bold ? 700 : undefined,
+  fontStyle: style?.italic ? 'italic' : undefined,
+  textDecoration: style?.underline ? 'underline' : undefined,
+  lineHeight: style?.lineHeight === 'loose' ? 2 : style?.lineHeight === 'normal' ? 1.5 : 1.75,
+});
 
 const Block = ({ block }: { block: ContentBlock }) => {
   switch (block.type) {
     case 'heading':
       return block.level === 3
-        ? <h3 className="mt-8 text-2xl font-playfair font-bold text-french-blue">{block.text}</h3>
-        : <h2 className="mt-8 text-3xl font-playfair font-bold text-french-blue">{block.text}</h2>;
+        ? <h3 className="mt-8 text-2xl font-playfair font-bold text-french-blue" style={textStyle(block.style)}>{block.text}</h3>
+        : <h2 className="mt-8 text-3xl font-playfair font-bold text-french-blue" style={textStyle(block.style)}>{block.text}</h2>;
     case 'paragraph':
-      return <p className="whitespace-pre-line leading-relaxed text-gray-700">{block.text}</p>;
+      return <p className="whitespace-pre-line leading-relaxed text-gray-700" style={textStyle(block.style)}>{block.text}</p>;
     case 'image':
       return <figure><img src={normalizeMediaUrl(block.src)} alt={block.alt} className="max-h-[520px] w-full rounded-lg object-cover shadow-md" />{block.caption && <figcaption className="mt-2 text-center text-sm text-gray-500">{block.caption}</figcaption>}</figure>;
     case 'gallery':
@@ -31,11 +43,11 @@ const Block = ({ block }: { block: ContentBlock }) => {
     case 'embed':
       return <iframe className="w-full rounded-lg border-0 shadow-md" style={{ height: block.height || 420 }} src={block.src} title={block.title} loading="lazy" />;
     case 'quote':
-      return <blockquote className="border-l-4 border-french-blue pl-5 text-xl italic text-gray-700">{block.text}{block.author && <cite className="mt-2 block text-sm not-italic font-semibold text-french-blue">— {block.author}</cite>}</blockquote>;
+      return <blockquote className="border-l-4 border-french-blue pl-5 text-xl italic text-gray-700" style={textStyle(block.style)}>{block.text}{block.author && <cite className="mt-2 block text-sm not-italic font-semibold text-french-blue">— {block.author}</cite>}</blockquote>;
     case 'list':
       return <ul className="list-disc space-y-2 pl-6 text-gray-700">{block.items.map((item) => <li key={item}>{item}</li>)}</ul>;
     case 'callout':
-      return <aside className={`rounded-lg border-l-4 p-5 ${block.tone === 'gold' ? 'border-amber-500 bg-amber-50' : block.tone === 'green' ? 'border-emerald-600 bg-emerald-50' : 'border-french-blue bg-blue-50'}`}><h3 className="font-semibold text-french-blue">{block.title}</h3><p className="mt-2 text-gray-700">{block.text}</p></aside>;
+      return <aside className={`rounded-lg border-l-4 p-5 ${block.tone === 'gold' ? 'border-amber-500 bg-amber-50' : block.tone === 'green' ? 'border-emerald-600 bg-emerald-50' : 'border-french-blue bg-blue-50'}`} style={textStyle(block.style)}><h3 className="font-semibold text-french-blue">{block.title}</h3><p className="mt-2 text-gray-700">{block.text}</p></aside>;
     case 'table':
       return <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-sm"><thead><tr>{block.headers.map((header) => <th key={header} className="border bg-french-blue px-3 py-2 text-white">{header}</th>)}</tr></thead><tbody>{block.rows.map((row, rowIndex) => <tr key={`row-${rowIndex}`}>{row.map((cell, cellIndex) => <td key={`cell-${rowIndex}-${cellIndex}`} className="border px-3 py-2 text-gray-700">{cell}</td>)}</tr>)}</tbody></table></div>;
     case 'chart':

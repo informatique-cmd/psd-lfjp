@@ -1,13 +1,25 @@
+export type TextStyle = {
+  fontFamily?: 'default' | 'serif' | 'raleway' | 'playfair' | 'mono';
+  fontSize?: 'small' | 'normal' | 'large' | 'xlarge';
+  align?: 'left' | 'center' | 'right' | 'justify';
+  color?: string;
+  backgroundColor?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  lineHeight?: 'normal' | 'relaxed' | 'loose';
+};
+
 export type ContentBlock =
-  | { type: 'heading'; text: string; level?: 2 | 3 }
-  | { type: 'paragraph'; text: string }
+  | { type: 'heading'; text: string; level?: 2 | 3; style?: TextStyle }
+  | { type: 'paragraph'; text: string; style?: TextStyle }
   | { type: 'image'; src: string; alt: string; caption?: string }
   | { type: 'gallery'; images: { src: string; alt: string }[] }
   | { type: 'video'; src: string; title?: string }
   | { type: 'embed'; src: string; title: string; height?: number }
-  | { type: 'quote'; text: string; author?: string }
+  | { type: 'quote'; text: string; author?: string; style?: TextStyle }
   | { type: 'list'; items: string[] }
-  | { type: 'callout'; title: string; text: string; tone?: 'blue' | 'gold' | 'green' }
+  | { type: 'callout'; title: string; text: string; tone?: 'blue' | 'gold' | 'green'; style?: TextStyle }
   | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'chart'; title?: string; labels: string[]; values: number[] }
   | { type: 'button'; label: string; href: string }
@@ -37,14 +49,27 @@ export const normalizePageSlug = (slug: string) => {
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === 'string');
 const isNumberArray = (value: unknown): value is number[] => Array.isArray(value) && value.every((item) => typeof item === 'number' && Number.isFinite(item));
+const isTextStyle = (value: unknown): value is TextStyle => {
+  if (!isRecord(value)) return false;
+  const valid = (key: string, values: string[]) => value[key] === undefined || (typeof value[key] === 'string' && values.includes(value[key]));
+  return valid('fontFamily', ['default', 'serif', 'raleway', 'playfair', 'mono']) &&
+    valid('fontSize', ['small', 'normal', 'large', 'xlarge']) &&
+    valid('align', ['left', 'center', 'right', 'justify']) &&
+    valid('lineHeight', ['normal', 'relaxed', 'loose']) &&
+    (value.color === undefined || typeof value.color === 'string') &&
+    (value.backgroundColor === undefined || typeof value.backgroundColor === 'string') &&
+    (value.bold === undefined || typeof value.bold === 'boolean') &&
+    (value.italic === undefined || typeof value.italic === 'boolean') &&
+    (value.underline === undefined || typeof value.underline === 'boolean');
+};
 
 export const isValidContentBlock = (value: unknown): value is ContentBlock => {
   if (!isRecord(value) || typeof value.type !== 'string') return false;
   switch (value.type) {
     case 'heading':
-      return typeof value.text === 'string' && (value.level === undefined || value.level === 2 || value.level === 3);
+      return typeof value.text === 'string' && (value.level === undefined || value.level === 2 || value.level === 3) && (value.style === undefined || isTextStyle(value.style));
     case 'paragraph':
-      return typeof value.text === 'string';
+      return typeof value.text === 'string' && (value.style === undefined || isTextStyle(value.style));
     case 'image':
       return typeof value.src === 'string' && typeof value.alt === 'string' && (value.caption === undefined || typeof value.caption === 'string');
     case 'gallery':
@@ -54,11 +79,11 @@ export const isValidContentBlock = (value: unknown): value is ContentBlock => {
     case 'embed':
       return typeof value.src === 'string' && typeof value.title === 'string' && (value.height === undefined || typeof value.height === 'number');
     case 'quote':
-      return typeof value.text === 'string' && (value.author === undefined || typeof value.author === 'string');
+      return typeof value.text === 'string' && (value.author === undefined || typeof value.author === 'string') && (value.style === undefined || isTextStyle(value.style));
     case 'list':
       return isStringArray(value.items);
     case 'callout':
-      return typeof value.title === 'string' && typeof value.text === 'string' && (value.tone === undefined || value.tone === 'blue' || value.tone === 'gold' || value.tone === 'green');
+      return typeof value.title === 'string' && typeof value.text === 'string' && (value.tone === undefined || value.tone === 'blue' || value.tone === 'gold' || value.tone === 'green') && (value.style === undefined || isTextStyle(value.style));
     case 'table':
       return isStringArray(value.headers) && Array.isArray(value.rows) && value.rows.every(isStringArray);
     case 'chart':
