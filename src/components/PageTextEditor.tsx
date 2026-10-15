@@ -10,11 +10,30 @@ const PageTextEditor = () => {
   const isEditorRoute = location.pathname === '/espace-direction' || location.pathname === '/admin';
   const editingRequested = new URLSearchParams(location.search).get('edit') === '1';
   const embedded = new URLSearchParams(location.search).get('embedded') === '1';
-  const [isEditing, setIsEditing] = useState(editingRequested);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [overrides, setOverrides] = useState<PageTextOverrides>(loadPageTextOverrides);
   const [status, setStatus] = useState('');
+  const [selectedElement, setSelectedElement] = useState<(PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string; rect?: { left: number; top: number; width: number; height: number } }) | null>(null);
 
-  useEffect(() => setIsEditing(editingRequested), [editingRequested]);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!active) return;
+        setIsAdmin(Boolean(data?.user?.login));
+        setIsEditing(Boolean(data?.user?.login && (editingRequested || embedded)));
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsAdmin(false);
+        setIsEditing(false);
+      })
+      .finally(() => { if (active) setAuthChecked(true); });
+    return () => { active = false; };
+  }, [editingRequested, embedded]);
 
   useEffect(() => {
     const syncOverrides = (event: StorageEvent) => {
@@ -40,8 +59,8 @@ const PageTextEditor = () => {
   }, [isEditorRoute, location.pathname, overrides]);
 
   useEffect(() => {
-    if (!isEditing || isEditorRoute) return;
-    const handleClick = (event: MouseEvent) => {
+    if (!isAdmin || !isEditing || isEditorRoute) return;
+    const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
       const root = document.getElementById('root');
@@ -49,14 +68,24 @@ const PageTextEditor = () => {
 
       const element = target instanceof Element ? target : target.parentElement;
       if (!element || element.closest('[data-page-text-editor]')) return;
+      if (element.closest('button,input,textarea,select,[data-radix-collection-item]')) return;
 
-      let path: string | null = null;
-      let patch: PageElementOverride | null = null;
       const image = element.closest('img');
       const anchor = element.closest('a');
+      const findTextNode = (node: Node): Text | null => {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) return node as Text;
+        for (const child of Array.from(node.childNodes)) {
+          const match = findTextNode(child);
+          if (match) return match;
+        }
+        return null;
+      };
+      const rangeNode = document.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer || null;
       const textNode = target.nodeType === Node.TEXT_NODE
-        ? target
-        : document.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer || null;
+        ? target as Text
+        : rangeNode?.nodeType === Node.TEXT_NODE
+          ? rangeNode as Text
+          : findTextNode(element);
 
       if (embedded) {
         if (element.closest('button,[role="tab"],input,textarea,select,[data-radix-collection-item]')) return;
@@ -84,80 +113,87 @@ const PageTextEditor = () => {
         return;
       }
 
+      let selection: (PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string; rect?: { left: number; top: number; width: number; height: number } }) | null = null;
+      if (image instanceof HTMLImageElement) {
+        const imagePath = getNodePath(root, image);
+        const rect = image.getBoundingClientRect();
+        if (imagePath) selection = { kind: 'image', path: imagePath, src: image.getAttribute('src') || '', alt: image.alt, rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
+      } else if (target.nodeType === Node.TEXT_NODE) {
+        const textPath = getNodePath(root, target);
+        const textAnchor = target.parentElement?.closest('a');
+        const rect = target.parentElement?.getBoundingClientRect();
+        if (textPath) selection = { kind: 'text', path: textPath, text: target.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath: textAnchor ? getNodePath(root, textAnchor) || undefined : undefined, rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined };
+      } else if (anchor instanceof HTMLAnchorElement && element === anchor) {
+        const anchorPath = getNodePath(root, anchor);
+        const rect = anchor.getBoundingClientRect();
+        if (anchorPath) selection = { kind: 'link', path: anchorPath, href: anchor.getAttribute('href') || '', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
+      } else {
+        if (textNode?.nodeType !== Node.TEXT_NODE || !textNode.textContent?.trim()) return;
+        const textPath = getNodePath(root, textNode);
+        const textAnchor = textNode.parentElement?.closest('a');
+        const rect = textNode.parentElement?.getBoundingClientRect();
+        if (textPath) selection = { kind: 'text', path: textPath, text: textNode.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath: textAnchor ? getNodePath(root, textAnchor) || undefined : undefined, rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined };
+      }
+      if (!selection) return;
       event.preventDefault();
       event.stopPropagation();
-
-      const editTextNode = (textNode: Node | null) => {
-        if (!textNode || textNode.nodeType !== Node.TEXT_NODE || !textNode.textContent?.trim()) return false;
-        path = getNodePath(root, textNode);
-        const text = window.prompt('Modifier ce texte', textNode.textContent);
-        if (text === null) return true;
-        patch = { text };
-        return true;
-      };
-
-      if (image instanceof HTMLImageElement) {
-        path = getNodePath(root, image);
-        const src = window.prompt('URL ou chemin de l’image', image.currentSrc || image.src);
-        if (src === null) return;
-        const alt = window.prompt('Texte alternatif de l’image', image.alt);
-        if (alt === null) return;
-        patch = { src, alt };
-      } else if (target.nodeType === Node.TEXT_NODE) {
-        if (!editTextNode(target) || !patch) return;
-      } else if (anchor instanceof HTMLAnchorElement && element === anchor) {
-        path = getNodePath(root, anchor);
-        const href = window.prompt('Adresse du lien', anchor.getAttribute('href') || '');
-        if (href === null) return;
-        if (href && !href.startsWith('/') && !/^https?:\/\//i.test(href)) {
-          setStatus('Le lien doit être une adresse http(s) ou un chemin interne commençant par /.');
-          return;
-        }
-        patch = { href };
-      } else {
-        if (!editTextNode(textNode) || !patch) return;
-      }
-
-      if (!path || !patch) return;
-      const next = {
-        ...overrides,
-        [location.pathname]: {
-          ...overrides[location.pathname],
-          [path]: { ...overrides[location.pathname]?.[path], ...patch },
-        },
-      };
-      setOverrides(next);
-      window.localStorage.setItem(pageTextDraftStorageKey, JSON.stringify(next));
-      setStatus('Modification enregistrée dans le brouillon de ce navigateur.');
+      setSelectedElement(selection);
     };
 
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [embedded, isEditing, isEditorRoute, location.pathname, overrides]);
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [embedded, isAdmin, isEditing, isEditorRoute, location.pathname, overrides]);
+
+  const saveSelectedElement = (field: 'text' | 'src' | 'alt' | 'href', value: string) => {
+    if (!selectedElement) return;
+    if (field === 'href' && value && !value.startsWith('/') && !/^https?:\/\//i.test(value)) {
+      setStatus('Le lien doit être une adresse http(s) ou un chemin interne commençant par /.');
+      return;
+    }
+    const path = field === 'href' ? selectedElement.linkPath || selectedElement.path : selectedElement.path;
+    const next = { ...overrides, [location.pathname]: { ...overrides[location.pathname], [path]: { ...overrides[location.pathname]?.[path], [field]: value } } };
+    setOverrides(next);
+    window.localStorage.setItem(pageTextDraftStorageKey, JSON.stringify(next));
+    setSelectedElement((current) => current ? { ...current, [field]: value } : current);
+    setStatus('Brouillon mis à jour.');
+  };
 
   const resetCurrentPage = () => {
     const next = { ...overrides };
     delete next[location.pathname];
     setOverrides(next);
+    setSelectedElement(null);
     window.localStorage.setItem(pageTextDraftStorageKey, JSON.stringify(next));
     setStatus('Les modifications de cette page ont été retirées du brouillon.');
   };
 
-  if (!editingRequested || isEditorRoute || embedded) return null;
+  if (!authChecked || !isAdmin || isEditorRoute) return null;
 
   return createPortal(
-    <div data-page-text-editor className="fixed bottom-4 right-4 z-[100] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-md border bg-white p-2 shadow-xl">
-      <Button type="button" size="sm" variant={isEditing ? 'default' : 'outline'} onClick={() => setIsEditing((value) => !value)}>
-        {isEditing ? <X /> : <Pencil />}
-        {isEditing ? 'Terminer' : 'Modifier la page'}
-      </Button>
-      <Button type="button" size="icon" variant="ghost" title="Ouvrir la page sans mode édition" aria-label="Ouvrir la page sans mode édition" onClick={() => window.location.assign(location.pathname + '?draft=1')}>
-        <Eye />
-      </Button>
-      <Button type="button" size="icon" variant="ghost" title="Annuler les changements de cette page" aria-label="Annuler les changements de cette page" onClick={resetCurrentPage}>
-        <RotateCcw />
-      </Button>
-      {status && <span className="max-w-56 text-xs text-slate-600">{status}</span>}
+    <div data-page-text-editor className="fixed inset-0 z-[100] pointer-events-none">
+      <div className="pointer-events-auto fixed bottom-4 right-4 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-md border bg-white p-2 shadow-xl">
+      {embedded ? <span className="px-2 text-xs font-semibold text-french-blue">Sélectionnez un élément à modifier</span> : <>
+        <Button type="button" size="sm" variant={isEditing ? 'default' : 'outline'} onClick={() => setIsEditing((value) => !value)}>
+          {isEditing ? <X /> : <Pencil />}
+          {isEditing ? 'Terminer' : 'Modifier cette page'}
+        </Button>
+        {isEditing && <>
+          <Button type="button" size="icon" variant="ghost" title="Ouvrir la page en aperçu" aria-label="Ouvrir la page en aperçu" onClick={() => setIsEditing(false)}><Eye /></Button>
+          <Button type="button" size="icon" variant="ghost" title="Annuler les changements de cette page" aria-label="Annuler les changements de cette page" onClick={resetCurrentPage}><RotateCcw /></Button>
+        </>}
+        {status && <span className="max-w-56 text-xs text-slate-600">{status}</span>}
+      </>}
+      </div>
+      {!embedded && isEditing && selectedElement?.rect && <Button type="button" size="icon" className="pointer-events-auto fixed h-9 w-9 rounded-md shadow-lg ring-2 ring-white" style={{ left: Math.max(8, selectedElement.rect.left), top: Math.max(8, selectedElement.rect.top - 44) }} title="Modifier cet élément" aria-label="Modifier cet élément" onClick={() => document.getElementById('page-element-editor')?.focus()}><Pencil className="h-4 w-4" /></Button>}
+      {!embedded && isEditing && selectedElement && <section className="pointer-events-auto fixed bottom-20 right-4 z-[101] max-h-[70vh] w-[min(380px,calc(100vw-2rem))] overflow-y-auto rounded-md border bg-white p-4 shadow-2xl" aria-label="Propriétés de l’élément sélectionné">
+        <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase text-slate-500">Inspecteur de page</p><h2 className="font-semibold text-slate-900">{selectedElement.kind === 'image' ? 'Image' : selectedElement.kind === 'link' ? 'Lien' : 'Texte sélectionné'}</h2></div><Button type="button" size="icon" variant="ghost" title="Désélectionner" aria-label="Désélectionner" onClick={() => setSelectedElement(null)}><X className="h-4 w-4" /></Button></div>
+        {selectedElement.kind === 'text' && <div className="grid gap-2"><label htmlFor="page-element-editor" className="text-sm font-medium">Contenu</label><textarea id="page-element-editor" autoFocus className="min-h-28 w-full rounded-md border p-2 text-sm" value={selectedElement.text || ''} onChange={(event) => saveSelectedElement('text', event.target.value)} /></div>}
+        {selectedElement.kind === 'image' && <div className="grid gap-3"><div className="grid gap-1"><label htmlFor="page-image-source" className="text-sm font-medium">Source de l’image</label><input id="page-image-source" className="h-10 rounded-md border px-3 text-sm" value={selectedElement.src || ''} onChange={(event) => saveSelectedElement('src', event.target.value)} /></div><div className="grid gap-1"><label htmlFor="page-image-alt" className="text-sm font-medium">Texte alternatif</label><input id="page-image-alt" className="h-10 rounded-md border px-3 text-sm" value={selectedElement.alt || ''} onChange={(event) => saveSelectedElement('alt', event.target.value)} /></div></div>}
+        {selectedElement.kind === 'link' && <div className="grid gap-1"><label htmlFor="page-link-href" className="text-sm font-medium">Adresse du lien</label><input id="page-link-href" className="h-10 rounded-md border px-3 text-sm" value={selectedElement.href || ''} onChange={(event) => saveSelectedElement('href', event.target.value)} /></div>}
+        {selectedElement.kind === 'text' && selectedElement.linkPath && <div className="mt-3 grid gap-1"><label htmlFor="page-text-link-href" className="text-sm font-medium">Adresse du lien</label><input id="page-text-link-href" className="h-10 rounded-md border px-3 text-sm" value={selectedElement.href || ''} onChange={(event) => saveSelectedElement('href', event.target.value)} /></div>}
+        {status && <p className="mt-3 text-xs text-slate-600">{status}</p>}
+        <p className="mt-3 text-xs text-slate-500">Les modifications sont enregistrées dans le brouillon de ce navigateur.</p>
+      </section>}
     </div>,
     document.body,
   );
