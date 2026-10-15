@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, ChartNoAxesCombined, Copy, ExternalLink, Eye, FileText, Github, Globe2, Heart, Home as HomeIcon, Image, Italic, Layers3, MessageSquareText, Pencil, Save, Send, Settings2, ShieldCheck, Trash2, Underline, Upload, UsersRound } from 'lucide-react';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, ChartNoAxesCombined, Copy, ExternalLink, Eye, FileText, Github, Globe2, Heart, Home as HomeIcon, Image, Italic, Layers3, Maximize2, MessageSquareText, Minimize2, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Pencil, Save, Send, Settings2, ShieldCheck, Smartphone, Tablet, Trash2, Underline, Upload, UsersRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -179,8 +179,14 @@ const Admin = () => {
   });
   const [visualRoute, setVisualRoute] = useState('/methode');
   const [activeSection, setActiveSection] = useState('identite');
-  const [selectedVisualElement, setSelectedVisualElement] = useState<{ path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string } | null>(null);
+  const [selectedVisualElement, setSelectedVisualElement] = useState<{ path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string; rect?: { left: number; top: number; width: number; height: number } } | null>(null);
   const previewFrame = useRef<HTMLIFrameElement>(null);
+  const [visualExpanded, setVisualExpanded] = useState(false);
+  const [treeCollapsed, setTreeCollapsed] = useState(false);
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+  const [previewViewport, setPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [focusInspector, setFocusInspector] = useState(false);
+  const previewCanvas = useRef<HTMLDivElement>(null);
   const [selectedPage, setSelectedPage] = useState(0);
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
   const [authorizedUsers, setAuthorizedUsers] = useState<string[]>([]);
@@ -206,7 +212,15 @@ const Admin = () => {
       if (event.data?.type !== 'lfjp-cms-select' || event.data.page !== visualRoute || !isRecord(event.data.selection)) return;
       const selection = event.data.selection;
       if (typeof selection.path !== 'string' || !['text', 'image', 'link'].includes(String(selection.kind))) return;
-      setSelectedVisualElement(selection as { path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string });
+      const rect = selection.rect as { left: number; top: number; width: number; height: number } | undefined;
+      const frameRect = previewFrame.current?.getBoundingClientRect();
+      const canvasRect = previewCanvas.current?.getBoundingClientRect();
+      const relativeRect = rect && frameRect && canvasRect ? {
+        ...rect,
+        left: rect.left + frameRect.left - canvasRect.left,
+        top: rect.top + frameRect.top - canvasRect.top,
+      } : rect;
+      setSelectedVisualElement({ ...selection, rect: relativeRect } as { path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string; rect?: { left: number; top: number; width: number; height: number } });
     };
     window.addEventListener('message', receiveSelection);
     return () => window.removeEventListener('message', receiveSelection);
@@ -495,6 +509,10 @@ const Admin = () => {
     if (!saveDraft()) return;
     setSelectedVisualElement(null);
   };
+
+  const editorGridClass = `grid min-h-0 flex-1 grid-cols-1 gap-0 p-0 ${treeCollapsed
+    ? inspectorCollapsed ? 'xl:grid-cols-[42px_minmax(0,1fr)_42px]' : 'xl:grid-cols-[42px_minmax(0,1fr)_320px]'
+    : inspectorCollapsed ? 'xl:grid-cols-[270px_minmax(0,1fr)_42px]' : 'xl:grid-cols-[270px_minmax(0,1fr)_320px]'}`;
 
   const updateVisualElement = (field: 'text' | 'src' | 'alt' | 'href', value: string) => {
     if (!selectedVisualElement) return;
@@ -1139,16 +1157,29 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="admin-panel-edition-visuelle" role="tabpanel" aria-labelledby="admin-tab-edition-visuelle" hidden={activeSection !== 'edition-visuelle'}>
-            <CardHeader className="flex-row items-start justify-between gap-4">
-              <div>
-              <CardTitle>Modifier les pages du site</CardTitle>
-              <CardDescription>Choisissez une page, cliquez sur un élément dans l’aperçu, puis modifiez-le ici. Les changements restent dans le brouillon.</CardDescription>
+          <Card id="admin-panel-edition-visuelle" role="tabpanel" aria-labelledby="admin-tab-edition-visuelle" hidden={activeSection !== 'edition-visuelle'} className={visualExpanded ? 'fixed inset-2 z-50 flex flex-col overflow-hidden bg-white shadow-2xl' : 'overflow-hidden'}>
+            <CardHeader className="shrink-0 border-b bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="min-w-0"><CardTitle className="text-lg">Aperçu & édition</CardTitle><CardDescription className="truncate">{visualRoute} · cliquez sur un élément puis utilisez le crayon</CardDescription></div>
+                  <div className="hidden h-8 w-px bg-slate-200 sm:block" />
+                  <div className="flex items-center gap-1 rounded-md border bg-slate-50 p-1" aria-label="Panneaux de l’atelier">
+                    <Button type="button" size="icon" variant="ghost" title={treeCollapsed ? 'Afficher l’arborescence' : 'Masquer l’arborescence'} aria-label={treeCollapsed ? 'Afficher l’arborescence' : 'Masquer l’arborescence'} onClick={() => setTreeCollapsed((collapsed) => !collapsed)}>{treeCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}</Button>
+                    <Button type="button" size="icon" variant="ghost" title={inspectorCollapsed ? 'Afficher les propriétés' : 'Masquer les propriétés'} aria-label={inspectorCollapsed ? 'Afficher les propriétés' : 'Masquer les propriétés'} onClick={() => setInspectorCollapsed((collapsed) => !collapsed)}>{inspectorCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}</Button>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-md border bg-slate-50 p-1" aria-label="Format d’aperçu">
+                    {([{ id: 'desktop', label: 'Ordinateur', Icon: Monitor }, { id: 'tablet', label: 'Tablette', Icon: Tablet }, { id: 'mobile', label: 'Mobile', Icon: Smartphone }] as const).map(({ id, label, Icon }) => <Button key={id} type="button" size="icon" variant={previewViewport === id ? 'default' : 'ghost'} title={label} aria-label={label} onClick={() => setPreviewViewport(id)}><Icon className="h-4 w-4" /></Button>)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => saveDraft()}><Save className="h-4 w-4" /> Brouillon</Button>
+                  <Button type="button" variant="outline" size="icon" title={visualExpanded ? 'Réduire l’éditeur' : 'Agrandir l’éditeur'} aria-label={visualExpanded ? 'Réduire l’éditeur' : 'Agrandir l’éditeur'} onClick={() => setVisualExpanded((expanded) => !expanded)}>{visualExpanded ? <Minimize2 /> : <Maximize2 />}</Button>
+                </div>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={openVisualEditor}><Save /> Enregistrer le brouillon</Button>
             </CardHeader>
-            <CardContent className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
-              <nav className="max-h-[72vh] space-y-1 overflow-y-auto border-r pr-3" aria-label="Arborescence des pages">
+            <CardContent className={editorGridClass}>
+              {!treeCollapsed ? <nav className="max-h-32 space-y-1 overflow-y-auto border-b bg-slate-50 p-3 xl:max-h-none xl:border-b-0 xl:border-r" aria-label="Arborescence des pages">
+                <div className="sticky top-0 z-10 mb-2 flex items-center justify-between bg-slate-50 pb-2"><h3 className="text-xs font-semibold uppercase text-slate-500">Arborescence</h3><Button type="button" size="icon" variant="ghost" title="Masquer l’arborescence" aria-label="Masquer l’arborescence" onClick={() => setTreeCollapsed(true)}><PanelLeftClose className="h-4 w-4" /></Button></div>
                 <h3 className="mb-2 text-xs font-semibold uppercase text-slate-500">Pages et rubriques</h3>
                 {Object.entries(breadcrumbRoutes)
                   .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
@@ -1167,27 +1198,33 @@ const Admin = () => {
                 {Object.keys((getEditablePageData().filmAnnuelData as Record<string, unknown>)).filter((level) => !(breadcrumbRoutes as Record<string, unknown>)[`/film-annuel/${level}`]).map((level) => (
                   <button key={`film-${level}`} type="button" onClick={() => { setVisualRoute(`/film-annuel/${level}`); setSelectedVisualElement(null); }} className={`block w-full truncate rounded px-2 py-1.5 pl-8 text-left text-sm ${visualRoute === `/film-annuel/${level}` ? 'bg-french-blue text-white' : 'text-slate-700 hover:bg-blue-50'}`}>Film annuel — {level}</button>
                 ))}
-              </nav>
-              <div className="min-w-0 overflow-hidden rounded border bg-slate-100">
-                <div className="flex items-center justify-between border-b bg-white px-3 py-2 text-xs text-slate-600">
-                  <span>{visualRoute}</span>
-                  <span>Mode aperçu avec sélection</span>
+              </nav> : <div className="hidden flex-col items-center gap-2 border-r bg-slate-50 py-3 xl:flex"><Button type="button" size="icon" variant="ghost" title="Afficher l’arborescence" aria-label="Afficher l’arborescence" onClick={() => setTreeCollapsed(false)}><PanelLeftOpen className="h-4 w-4" /></Button><span className="[writing-mode:vertical-rl] text-[10px] font-semibold uppercase text-slate-400">Pages</span></div>}
+              <div className="flex min-h-[72vh] min-w-0 flex-col overflow-hidden bg-slate-200 xl:min-h-0">
+                <div className="flex shrink-0 items-center justify-between border-b bg-white px-3 py-2 text-xs text-slate-600">
+                  <span className="truncate">{visualRoute}</span>
+                  <span className="ml-2">{previewViewport === 'desktop' ? 'Ordinateur' : previewViewport === 'tablet' ? 'Tablette' : 'Mobile'} · brouillon</span>
                 </div>
+                <div ref={previewCanvas} className="relative flex min-h-0 flex-1 justify-center overflow-auto p-3 sm:p-5">
+                  <div className="relative min-h-full bg-white shadow-lg transition-[width] duration-200" style={{ width: previewViewport === 'desktop' ? '100%' : previewViewport === 'tablet' ? '820px' : '390px', maxWidth: '100%' }}>
                 <iframe
                   ref={previewFrame}
                   key={visualRoute}
                   title={`Aperçu ${visualRoute}`}
                   src={`${visualRoute}?draft=1&edit=1&embedded=1`}
-                  className="h-[72vh] min-h-[560px] w-full bg-white"
+                  className={`block min-h-[640px] bg-white ${visualExpanded ? 'h-full' : 'h-[72vh]'} w-full`}
+                  style={{ height: visualExpanded ? 'calc(100vh - 126px)' : undefined }}
                 />
+                    {selectedVisualElement?.rect && <button type="button" className="absolute z-20 inline-flex h-9 w-9 items-center justify-center rounded-md bg-french-blue text-white shadow-lg ring-2 ring-white hover:bg-blue-800" style={{ left: Math.max(4, selectedVisualElement.rect.left), top: Math.max(4, selectedVisualElement.rect.top - 42) }} title="Modifier cet élément" aria-label="Modifier cet élément" onClick={() => { setInspectorCollapsed(false); setFocusInspector(true); }}><Pencil className="h-4 w-4" /></button>}
+                  </div>
+                </div>
               </div>
-              <aside className="space-y-3" aria-label="Propriétés de l’élément sélectionné">
-                <h3 className="text-xs font-semibold uppercase text-slate-500">Inspecteur</h3>
+              {!inspectorCollapsed && <aside className="min-h-0 space-y-3 overflow-y-auto border-l bg-white p-4" aria-label="Propriétés de l’élément sélectionné">
+                <div className="flex items-center justify-between"><h3 className="text-xs font-semibold uppercase text-slate-500">Inspecteur</h3><Button type="button" size="icon" variant="ghost" title="Masquer l’inspecteur" aria-label="Masquer l’inspecteur" onClick={() => setInspectorCollapsed(true)}><PanelRightClose className="h-4 w-4" /></Button></div>
                 {!selectedVisualElement ? <p className="text-sm text-slate-500">Sélectionnez un texte, un lien ou une image dans l’aperçu.</p> : (
                   <>
                     <p className="text-xs text-slate-500">{selectedVisualElement.kind === 'image' ? 'Image' : selectedVisualElement.kind === 'link' ? 'Lien' : 'Texte'}</p>
                     {selectedVisualElement.kind === 'text' && <>
-                      <div className="grid gap-1"><Label htmlFor="selected-text">Contenu</Label><Textarea id="selected-text" value={selectedVisualElement.text || ''} onChange={(event) => updateVisualElement('text', event.target.value)} /></div>
+                      <div className="grid gap-1"><Label htmlFor="selected-text"><Pencil className="mr-1 inline h-3.5 w-3.5" />Contenu</Label><Textarea autoFocus={focusInspector} id="selected-text" value={selectedVisualElement.text || ''} onFocus={() => setFocusInspector(false)} onChange={(event) => updateVisualElement('text', event.target.value)} /></div>
                       {selectedVisualElement.linkPath && <div className="grid gap-1"><Label htmlFor="selected-text-link">Adresse du lien</Label><Input id="selected-text-link" value={selectedVisualElement.href || ''} onChange={(event) => updateVisualElement('href', event.target.value)} /></div>}
                     </>}
                     {selectedVisualElement.kind === 'image' && <>
@@ -1199,8 +1236,9 @@ const Admin = () => {
                     <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedVisualElement(null)}>Désélectionner</Button>
                   </>
                 )}
-                <p className="text-xs text-slate-500">Les données de graphiques se règlent dans leurs tableaux de données structurés; l’édition d’un chiffre affiché seul ne recalcule pas un graphique.</p>
-              </aside>
+                <p className="text-xs text-slate-500">Les textes, médias et liens de la page s’éditent depuis le crayon; les graphiques utilisent les séries dans Données & graphes.</p>
+              </aside>}
+              {inspectorCollapsed && <div className="hidden items-start justify-center border-l bg-white p-2 xl:flex"><Button type="button" size="icon" variant="ghost" title="Afficher l’inspecteur" aria-label="Afficher l’inspecteur" onClick={() => setInspectorCollapsed(false)}><PanelRightOpen className="h-4 w-4" /></Button></div>}
             </CardContent>
           </Card>
 

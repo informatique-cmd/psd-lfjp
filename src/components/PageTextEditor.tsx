@@ -61,18 +61,21 @@ const PageTextEditor = () => {
       if (embedded) {
         if (element.closest('button,[role="tab"],input,textarea,select,[data-radix-collection-item]')) return;
         let selectedPath: string | null = null;
-        let selected: PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string } | null = null;
+        let selected: PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string; rect?: { left: number; top: number; width: number; height: number } } | null = null;
         if (image instanceof HTMLImageElement) {
           selectedPath = getNodePath(root, image);
-          if (selectedPath) selected = { kind: 'image', path: selectedPath, src: image.getAttribute('src') || '', alt: image.alt };
+          const rect = image.getBoundingClientRect();
+          if (selectedPath) selected = { kind: 'image', path: selectedPath, src: image.getAttribute('src') || '', alt: image.alt, rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
         } else if (target === anchor && anchor instanceof HTMLAnchorElement) {
           selectedPath = getNodePath(root, anchor);
-          if (selectedPath) selected = { kind: 'link', path: selectedPath, href: anchor.getAttribute('href') || '' };
+          const rect = anchor.getBoundingClientRect();
+          if (selectedPath) selected = { kind: 'link', path: selectedPath, href: anchor.getAttribute('href') || '', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
         } else if (textNode?.nodeType === Node.TEXT_NODE && textNode.textContent?.trim()) {
           selectedPath = getNodePath(root, textNode);
           const textAnchor = textNode.parentElement?.closest('a');
           const linkPath = textAnchor ? getNodePath(root, textAnchor) || undefined : undefined;
-          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: textNode.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath };
+          const rect = (textNode as Text).parentElement?.getBoundingClientRect();
+          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: textNode.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath, rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined };
         }
         if (!selected) return;
         event.preventDefault();
