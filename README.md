@@ -13,6 +13,10 @@ Le site public reste statique et son design existant est conservé. Les contenus
 
 La production ne lit jamais un brouillon non fusionné. Aucun service de base de données actif en permanence n'est nécessaire.
 
+### Accès des collaborateurs
+
+Les personnes autorisées à ouvrir l’administration sont définies par la variable Vercel `ADMIN_GITHUB_USERS`, avec les logins GitHub séparés par des virgules (par exemple `compte-direction,compte-web`). Pour ajouter ou retirer une personne, un administrateur du projet met à jour cette variable dans **Vercel → Project Settings → Environment Variables**, puis redéploie l’environnement concerné. Chacun utilise son propre compte GitHub. Les routes API vérifient la liste côté serveur; elle ne peut pas être modifiée depuis le CMS.
+
 L’administration permet aussi de créer des pages personnalisées et des sous-pages dans [`src/content/pages.json`](./src/content/pages.json). Une page peut contenir les blocs `heading`, `paragraph`, `image`, `gallery`, `quote`, `list`, `button` et `divider`. Les routes déjà codées restent inchangées et continuent d’utiliser leur design spécialisé ; les nouvelles pages utilisent le gabarit public cohérent du site.
 
 ### Variables d'environnement

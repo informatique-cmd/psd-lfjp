@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, Copy, ExternalLink, Eye, Github, Image, Italic, Pencil, Save, Send, Trash2, Underline, Upload } from 'lucide-react';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, ChartNoAxesCombined, Copy, ExternalLink, Eye, FileText, Github, Globe2, Heart, Home as HomeIcon, Image, Italic, Layers3, MessageSquareText, Pencil, Save, Send, Settings2, ShieldCheck, Trash2, Underline, Upload, UsersRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,18 @@ import publishedPageText from '@/content/pageText.json';
 import { pageTextDraftStorageKey } from '@/lib/pageOverrides';
 
 type Content = typeof siteContent;
+const adminTabs = [
+  { id: 'identite', label: 'Identité', description: 'Nom, logo et pied de page', Icon: Globe2 },
+  { id: 'vision', label: 'Vision & valeurs', description: 'Vision, missions et valeurs', Icon: Heart },
+  { id: 'accueil', label: 'Accueil', description: 'Titre et présentation', Icon: HomeIcon },
+  { id: 'rubriques', label: 'Rubriques', description: 'Cartes de la page d’accueil', Icon: Layers3 },
+  { id: 'pages', label: 'Pages', description: 'Arborescence et pages personnalisées', Icon: FileText },
+  { id: 'messages', label: 'Messages', description: 'Témoignages et médias', Icon: MessageSquareText },
+  { id: 'edition-visuelle', label: 'Aperçu & édition', description: 'Édition dans le rendu du site', Icon: Pencil },
+  { id: 'donnees-pages', label: 'Données & graphes', description: 'Statistiques, plannings et frises', Icon: ChartNoAxesCombined },
+  { id: 'acces', label: 'Accès', description: 'Collaborateurs autorisés', Icon: UsersRound },
+  { id: 'publication', label: 'Publication', description: 'Brouillon, Preview et GitHub', Icon: Send },
+] as const;
 const draftStorageKey = 'lfjp-admin-draft';
 const pagesDraftStorageKey = 'lfjp-admin-pages-draft';
 const pageDataDraftStorageKey = 'lfjp-admin-page-data-draft';
@@ -166,10 +178,12 @@ const Admin = () => {
     }
   });
   const [visualRoute, setVisualRoute] = useState('/methode');
+  const [activeSection, setActiveSection] = useState('identite');
   const [selectedVisualElement, setSelectedVisualElement] = useState<{ path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string } | null>(null);
   const previewFrame = useRef<HTMLIFrameElement>(null);
   const [selectedPage, setSelectedPage] = useState(0);
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
+  const [authorizedUsers, setAuthorizedUsers] = useState<string[]>([]);
   const [authChecked, setAuthChecked] = useState(false);
   const [status, setStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -178,7 +192,10 @@ const Admin = () => {
   useEffect(() => {
     fetch('/api/auth/me')
       .then(async (response) => response.ok ? response.json() : null)
-      .then((data) => setUser(data?.user ?? null))
+      .then((data) => {
+        setUser(data?.user ?? null);
+        setAuthorizedUsers(Array.isArray(data?.authorizedUsers) ? data.authorizedUsers : []);
+      })
       .catch(() => setUser(null))
       .finally(() => setAuthChecked(true));
   }, []);
@@ -912,6 +929,7 @@ const Admin = () => {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-100">LFJP · Administration</p>
             <h1 className="font-playfair text-2xl font-bold">Contenus du site</h1>
+            <p className="mt-1 text-sm text-blue-100">Chaque espace est séparé. Vos modifications restent en brouillon jusqu’à validation.</p>
           </div>
           <div className="flex items-center gap-3">
             {user ? <span className="rounded-full bg-white/10 px-3 py-2 text-sm text-blue-50">Connecté : {user.login}</span> : <Button asChild className="border-white/30 bg-white/10 text-white hover:bg-white/20" variant="outline"><a href="/api/auth/github"><Github /> Se connecter avec GitHub</a></Button>}
@@ -922,18 +940,21 @@ const Admin = () => {
 
       <main className="container mx-auto grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
-          <nav className="sticky top-2 z-10 flex flex-wrap gap-2 rounded-lg border bg-white/95 p-3 shadow-sm backdrop-blur" aria-label="Sections de l’administration">
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#identite">Identité du site</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#vision">Vision & valeurs</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#accueil">Accueil</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#rubriques">Rubriques de l’accueil</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#pages">Pages & hiérarchie</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#messages">Messages & médias</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#edition-visuelle">Modifier les pages</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#donnees-pages">Données des pages</a>
-            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#publication">Enregistrer & publier</a>
+          <nav className="sticky top-2 z-20 flex gap-1 overflow-x-auto rounded-lg border bg-white/95 p-2 shadow-sm backdrop-blur" aria-label="Sections de l’administration" role="tablist">
+            {adminTabs.map(({ id, label, Icon }, index) => (
+              <button key={id} id={`admin-tab-${id}`} type="button" role="tab" aria-selected={activeSection === id} aria-controls={`admin-panel-${id}`} tabIndex={activeSection === id ? 0 : -1} onClick={() => setActiveSection(id)} onKeyDown={(event) => {
+                if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? adminTabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + adminTabs.length) % adminTabs.length;
+                const nextTab = adminTabs[nextIndex];
+                setActiveSection(nextTab.id);
+                document.getElementById(`admin-tab-${nextTab.id}`)?.focus();
+              }} className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${activeSection === id ? 'bg-french-blue text-white shadow-sm' : 'text-slate-600 hover:bg-blue-50 hover:text-french-blue'}`}>
+                <Icon className="h-4 w-4" aria-hidden="true" />{label}
+              </button>
+            ))}
           </nav>
-          <Card id="identite">
+          <Card id="admin-panel-identite" role="tabpanel" aria-labelledby="admin-tab-identite" hidden={activeSection !== 'identite'}>
             <CardHeader>
               <CardTitle>Identité, en-tête et pied de page</CardTitle>
               <CardDescription>Ces informations sont partagées par toutes les pages et conservent la mise en forme actuelle du site.</CardDescription>
@@ -950,7 +971,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="vision">
+          <Card id="admin-panel-vision" role="tabpanel" aria-labelledby="admin-tab-vision" hidden={activeSection !== 'vision'}>
             <CardHeader>
               <CardTitle>Vision, missions et valeurs</CardTitle>
               <CardDescription>Modifiez cette page spécialisée sans modifier son design, ses icônes ou ses animations.</CardDescription>
@@ -990,7 +1011,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="accueil">
+          <Card id="admin-panel-accueil" role="tabpanel" aria-labelledby="admin-tab-accueil" hidden={activeSection !== 'accueil'}>
             <CardHeader>
               <CardTitle>Accueil</CardTitle>
               <CardDescription>Ces champs alimentent le contenu public sans modifier sa mise en page.</CardDescription>
@@ -1011,7 +1032,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="rubriques">
+          <Card id="admin-panel-rubriques" role="tabpanel" aria-labelledby="admin-tab-rubriques" hidden={activeSection !== 'rubriques'}>
             <CardHeader className="flex-row items-center justify-between">
               <div><CardTitle>Rubriques de l’accueil</CardTitle><CardDescription>Gérez les cartes affichées sous le titre principal.</CardDescription></div>
               <Button type="button" size="sm" variant="outline" onClick={addCard}>Ajouter une rubrique</Button>
@@ -1031,7 +1052,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="pages">
+          <Card id="admin-panel-pages" role="tabpanel" aria-labelledby="admin-tab-pages" hidden={activeSection !== 'pages'}>
             <CardHeader className="flex-row items-center justify-between">
               <div><CardTitle>Pages & hiérarchie</CardTitle><CardDescription>Créez des pages, sous-pages et sous-sous-pages avec des blocs de contenu.</CardDescription></div>
               <Button onClick={addPage} size="sm">Nouvelle page</Button>
@@ -1082,7 +1103,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="messages">
+          <Card id="admin-panel-messages" role="tabpanel" aria-labelledby="admin-tab-messages" hidden={activeSection !== 'messages'}>
             <CardHeader>
               <CardTitle>Messages et images</CardTitle>
               <CardDescription>Les images doivent être publiquement accessibles par URL. L’ajout de fichiers dans Git sera ajouté dans l’étape suivante.</CardDescription>
@@ -1118,7 +1139,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="edition-visuelle">
+          <Card id="admin-panel-edition-visuelle" role="tabpanel" aria-labelledby="admin-tab-edition-visuelle" hidden={activeSection !== 'edition-visuelle'}>
             <CardHeader className="flex-row items-start justify-between gap-4">
               <div>
               <CardTitle>Modifier les pages du site</CardTitle>
@@ -1183,7 +1204,7 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <Card id="donnees-pages">
+          <Card id="admin-panel-donnees-pages" role="tabpanel" aria-labelledby="admin-tab-donnees-pages" hidden={activeSection !== 'donnees-pages'}>
             <CardHeader>
               <CardTitle>Données des pages et graphiques</CardTitle>
               <CardDescription>Éditez les plannings, parcours annuels et séries du diagnostic dans des champs adaptés. L’aperçu suit les données du brouillon.</CardDescription>
@@ -1313,15 +1334,47 @@ const Admin = () => {
             </CardContent>
           </Card>
 
-          <div id="publication" className="flex scroll-mt-24 flex-wrap items-center gap-3">
+          <Card id="admin-panel-acces" role="tabpanel" aria-labelledby="admin-tab-acces" hidden={activeSection !== 'acces'}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-french-blue" /> Accès des collaborateurs</CardTitle>
+              <CardDescription>Les comptes de cette liste peuvent modifier les contenus, créer des Previews et publier après validation.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-900">Compte connecté</p>
+                <p className="mt-1 text-sm text-emerald-800">{user.login}{authorizedUsers.includes(user.login) ? ' · accès administrateur confirmé' : ''}</p>
+              </div>
+              <section className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Comptes autorisés</h3>
+                  <p className="mt-1 text-sm text-slate-600">Chaque collaborateur utilise son propre compte GitHub; aucun partage de mot de passe n’est nécessaire.</p>
+                </div>
+                {authorizedUsers.length ? <ul className="divide-y rounded-md border bg-white">{authorizedUsers.map((login) => <li key={login} className="flex items-center gap-3 px-4 py-3"><Github className="h-4 w-4 text-slate-500" /><span className="font-medium text-slate-800">{login}</span>{login === user.login && <span className="ml-auto text-xs font-semibold text-emerald-700">Vous</span>}</li>)}</ul> : <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Aucun compte autorisé n’est configuré. Vérifiez `ADMIN_GITHUB_USERS` dans les variables Vercel.</p>}
+              </section>
+              <section className="space-y-2 rounded-md border bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Ajouter ou retirer une personne</h3>
+                <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-600">
+                  <li>Dans Vercel, ouvrez le projet PSD-LFJP puis <strong>Settings → Environment Variables</strong>.</li>
+                  <li>Modifiez `ADMIN_GITHUB_USERS` avec les identifiants GitHub séparés par des virgules, par exemple `compte-1,compte-2`.</li>
+                  <li>Enregistrez puis redéployez l’environnement Production.</li>
+                </ol>
+                <p className="text-xs text-slate-500">La liste n’est volontairement pas modifiable ici: seul un administrateur du projet Vercel peut accorder un accès, ce qui évite qu’un visiteur s’ajoute lui-même.</p>
+                <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-french-blue hover:underline"><Settings2 className="h-4 w-4" /> Ouvrir Vercel</a>
+              </section>
+            </CardContent>
+          </Card>
+
+          <section id="admin-panel-publication" role="tabpanel" aria-labelledby="admin-tab-publication" hidden={activeSection !== 'publication'} className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
             <Button onClick={previewDraft} variant="outline"><Eye /> Aperçu global du brouillon</Button>
             <Button onClick={saveDraft} variant="outline"><Save /> Enregistrer le brouillon</Button>
             <Button onClick={resetDraft} variant="ghost">Réinitialiser</Button>
             <Button onClick={createPullRequest} disabled={isSaving}><Send /> {isSaving ? 'Préparation…' : 'Créer une Preview GitHub'}</Button>
             {pullRequest && <Button onClick={publishPullRequest} disabled={isSaving} variant="secondary">Publier après validation</Button>}
             {status && <p className="text-sm text-slate-600"><Check className="mr-1 inline h-4 w-4 text-green-600" />{status}</p>}
-          </div>
+            </div>
           {pullRequest && <p className="text-sm text-slate-600">Vérifie la <a className="font-semibold text-french-blue underline" href={pullRequest.url} target="_blank" rel="noreferrer">Pull Request et sa Preview Vercel</a> avant de publier.</p>}
+          </section>
         </div>
 
         <aside className="space-y-6">
