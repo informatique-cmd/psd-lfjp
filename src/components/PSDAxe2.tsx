@@ -1,9 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
+import pageDataFile from '@/content/pageData.json';
+import { psdTimelineData } from '@/data/psdTimelineData';
+import { useContentDraft } from '@/lib/contentDraft';
 import { ChevronDown, Globe2, Handshake, Palette } from 'lucide-react';
 import PSDAxeLayout from './PSDAxeLayout';
 
+const timelineDraftFallback = {
+  ...pageDataFile,
+  psdTimelines: (pageDataFile as { psdTimelines?: typeof psdTimelineData }).psdTimelines || psdTimelineData,
+};
+
 const PSDAxe2 = () => {
   const [isTimelineExpanded, setTimelineExpanded] = useState(false);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', timelineDraftFallback);
+  const timeline = pageData.psdTimelines.axe2;
   const objectifs = [
     {
       content: (
@@ -33,68 +43,16 @@ const PSDAxe2 = () => {
     },
   ];
 
-  const timelineYears = useMemo(() => Array.from({ length: 5 }, (_, index) => 2026 + index), []);
+  const timelineYears = Array.from({ length: timeline.endYear - timeline.startYear + 1 }, (_, index) => timeline.startYear + index);
   const startYear = timelineYears[0];
   const totalYears = timelineYears[timelineYears.length - 1] - startYear + 1;
 
-  const timelineActions = [
-    {
-      title: 'Continuité DNBi / SIA (collège)',
-      description:
-        'Déploiement de la Section Internationale Américaine sur tout le collège et articulation avec la SI primaire',
-      start: 2026,
-      end: 2028,
-      color: 'from-sky-400/80 to-sky-500'
-    },
-    {
-      title: 'Ouverture et montée en puissance du BFI (lycée)',
-      description: 'Ouverture simultanée de la Seconde SIA et du cycle BFI en 2028-2029, suivi et ajustements',
-      start: 2028,
-      end: 2030,
-      color: 'from-indigo-400/80 to-indigo-600'
-    },
-    {
-      title: 'Mobilités scolaires ADN-AEFE',
-      description: 'Stabiliser 10 à 12 mobilités par an, diversifier les destinations et systématiser la préparation/retour',
-      start: 2026,
-      end: 2030,
-      color: 'from-emerald-300/80 to-emerald-500'
-    },
-    {
-      title: 'Voyages internationaux & séjours locaux',
-      description: 'Équilibrer 1 à 2 voyages internationaux et 3 à 5 séjours locaux/régionaux par an, avec fonds de solidarité',
-      start: 2026,
-      end: 2030,
-      color: 'from-orange-300/80 to-orange-500'
-    },
-    {
-      title: 'Semaine des cultures & PEAC',
-      description:
-        'Thématiques annuelles, inventaire PEAC, valorisation des projets artistiques et coordination primaire-collège-lycée',
-      start: 2026,
-      end: 2030,
-      color: 'from-pink-300/80 to-pink-500'
-    },
-    {
-      title: 'Médiation entre pairs & médiation interculturelle',
-      description: 'Formation, suivi et extension du dispositif du primaire vers le collège pour améliorer le climat scolaire',
-      start: 2026,
-      end: 2030,
-      color: 'from-amber-200/80 to-amber-400'
-    },
-    {
-      title: 'Jumelages et projets collaboratifs',
-      description: 'Diplomatie éducative, ancrage territorial et coopérations internationales à consolider chaque année',
-      start: 2027,
-      end: 2030,
-      color: 'from-french-blue/70 to-french-blue'
-    }
-  ];
+  const timelineActions = timeline.actions;
 
   const timelineContent = (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-2 mb-6">
-        <h4 className="text-lg font-semibold text-slate-900">Frise temporelle des actions structurantes (2026-2030)</h4>
+        <h4 className="text-lg font-semibold text-slate-900">Frise temporelle des actions structurantes ({timeline.startYear}-{timeline.endYear})</h4>
         <p className="text-sm text-slate-600">
           Visualisation synthétique des jalons clés pour l&apos;axe 2 : la barre colorée indique la période estimée de
           préparation, de déploiement ou de suivi pour chaque action.
@@ -104,7 +62,7 @@ const PSDAxe2 = () => {
         <div className="min-w-[720px] space-y-4">
           <div className="grid grid-cols-[200px_1fr] items-center gap-4 text-sm font-semibold text-slate-500 uppercase tracking-wide">
             <span>Périmètre</span>
-            <div className="grid grid-cols-5 text-center">
+            <div className="grid text-center" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
               {timelineYears.map((year) => (
                 <span key={year}>{year}</span>
               ))}
@@ -137,7 +95,7 @@ const PSDAxe2 = () => {
                           width: `${width}%`
                         }}
                       />
-                      <div className="absolute inset-0 grid grid-cols-5 text-[10px] text-slate-400">
+                      <div className="absolute inset-0 grid text-[10px] text-slate-400" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
                         {timelineYears.map((year) => (
                           <div key={year} className="border-l border-dashed border-slate-200 first:border-l-0" />
                         ))}

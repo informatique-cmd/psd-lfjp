@@ -9,11 +9,25 @@ const PageTextEditor = () => {
   const location = useLocation();
   const isEditorRoute = location.pathname === '/espace-direction' || location.pathname === '/admin';
   const editingRequested = new URLSearchParams(location.search).get('edit') === '1';
+  const embedded = new URLSearchParams(location.search).get('embedded') === '1';
   const [isEditing, setIsEditing] = useState(editingRequested);
   const [overrides, setOverrides] = useState<PageTextOverrides>(loadPageTextOverrides);
   const [status, setStatus] = useState('');
 
   useEffect(() => setIsEditing(editingRequested), [editingRequested]);
+
+  useEffect(() => {
+    const syncOverrides = (event: StorageEvent) => {
+      if (event.key !== pageTextDraftStorageKey || !event.newValue) return;
+      try {
+        setOverrides(JSON.parse(event.newValue) as PageTextOverrides);
+      } catch {
+        setStatus('Le brouillon visuel n’a pas pu être chargé.');
+      }
+    };
+    window.addEventListener('storage', syncOverrides);
+    return () => window.removeEventListener('storage', syncOverrides);
+  }, []);
 
   useEffect(() => {
     const root = document.getElementById('root');
@@ -35,13 +49,41 @@ const PageTextEditor = () => {
 
       const element = target instanceof Element ? target : target.parentElement;
       if (!element || element.closest('[data-page-text-editor]')) return;
-      event.preventDefault();
-      event.stopPropagation();
 
       let path: string | null = null;
       let patch: PageElementOverride | null = null;
       const image = element.closest('img');
       const anchor = element.closest('a');
+      const textNode = target.nodeType === Node.TEXT_NODE
+        ? target
+        : document.caretRangeFromPoint?.(event.clientX, event.clientY)?.startContainer || null;
+
+      if (embedded) {
+        if (element.closest('button,[role="tab"],input,textarea,select,[data-radix-collection-item]')) return;
+        let selectedPath: string | null = null;
+        let selected: PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string } | null = null;
+        if (image instanceof HTMLImageElement) {
+          selectedPath = getNodePath(root, image);
+          if (selectedPath) selected = { kind: 'image', path: selectedPath, src: image.getAttribute('src') || '', alt: image.alt };
+        } else if (target === anchor && anchor instanceof HTMLAnchorElement) {
+          selectedPath = getNodePath(root, anchor);
+          if (selectedPath) selected = { kind: 'link', path: selectedPath, href: anchor.getAttribute('href') || '' };
+        } else if (textNode?.nodeType === Node.TEXT_NODE && textNode.textContent?.trim()) {
+          selectedPath = getNodePath(root, textNode);
+          const textAnchor = textNode.parentElement?.closest('a');
+          const linkPath = textAnchor ? getNodePath(root, textAnchor) || undefined : undefined;
+          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: textNode.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath };
+        }
+        if (!selected) return;
+        event.preventDefault();
+        event.stopPropagation();
+        window.parent.postMessage({ type: 'lfjp-cms-select', page: location.pathname, selection: selected }, window.location.origin);
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
       const editTextNode = (textNode: Node | null) => {
         if (!textNode || textNode.nodeType !== Node.TEXT_NODE || !textNode.textContent?.trim()) return false;
         path = getNodePath(root, textNode);
@@ -70,8 +112,7 @@ const PageTextEditor = () => {
         }
         patch = { href };
       } else {
-        const selection = document.caretRangeFromPoint?.(event.clientX, event.clientY);
-        if (!editTextNode(selection?.startContainer || null) || !patch) return;
+        if (!editTextNode(textNode) || !patch) return;
       }
 
       if (!path || !patch) return;
@@ -89,7 +130,7 @@ const PageTextEditor = () => {
 
     document.addEventListener('click', handleClick, true);
     return () => document.removeEventListener('click', handleClick, true);
-  }, [isEditing, isEditorRoute, location.pathname, overrides]);
+  }, [embedded, isEditing, isEditorRoute, location.pathname, overrides]);
 
   const resetCurrentPage = () => {
     const next = { ...overrides };
@@ -99,7 +140,7 @@ const PageTextEditor = () => {
     setStatus('Les modifications de cette page ont été retirées du brouillon.');
   };
 
-  if (!editingRequested || isEditorRoute) return null;
+  if (!editingRequested || isEditorRoute || embedded) return null;
 
   return createPortal(
     <div data-page-text-editor className="fixed bottom-4 right-4 z-[100] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-md border bg-white p-2 shadow-xl">

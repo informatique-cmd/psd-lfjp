@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, Copy, ExternalLink, Eye, Github, Image, Italic, Pencil, Save, Send, Trash2, Underline, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,9 @@ import pageDataFile from '@/content/pageData.json';
 import breadcrumbRoutes from '@/data/breadcrumbRoutes.json';
 import { bacBlancSchedule } from '@/data/bacBlancSchedule';
 import { filmAnnuelData } from '@/data/filmAnnuelData';
+import { restaurantPageData } from '@/data/restaurantPageData';
+import { psdTimelineData } from '@/data/psdTimelineData';
+import { elcsData } from '@/components/diagnostic/ElcsDataContext';
 import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
@@ -30,7 +33,27 @@ const defaultPageData = {
     title: 'Organisation du bac blanc – session de décembre',
     description: 'Vue synthétique de l’organisation de la journée du 10 décembre. Chaque carte détaille la surveillance principale, le support dédié et les consignes logistiques pour garantir une couverture complète des salles.',
   },
+  restaurant: restaurantPageData,
+  psdTimelines: psdTimelineData,
+  elcsData,
 };
+const restaurantEditorGroups: { title: string; datasets: { key: keyof typeof restaurantPageData; label: string; fields: { key: string; label: string; type?: 'number' | 'text' }[] }[] }[] = [
+  { title: 'Répartition et réponses', datasets: [
+    { key: 'studentDistributionData', label: 'Répartition des élèves', fields: [{ key: 'name', label: 'Niveau' }, { key: 'value', label: 'Effectif', type: 'number' }, { key: 'percentage', label: 'Pourcentage', type: 'number' }] },
+    { key: 'restaurationInterestData', label: 'Intérêt pour la restauration', fields: [{ key: 'name', label: 'Réponse' }, { key: 'value', label: 'Pourcentage', type: 'number' }] },
+    { key: 'currentLunchData', label: 'Repas actuels', fields: [{ key: 'name', label: 'Situation' }, { key: 'value', label: 'Réponses', type: 'number' }, { key: 'percentage', label: 'Pourcentage', type: 'number' }] },
+  ] },
+  { title: 'Préférences et budgets', datasets: [
+    { key: 'serviceInterestByDayData', label: 'Intérêt par jour', fields: [{ key: 'name', label: 'Jour' }, { key: 'value', label: 'Réponses', type: 'number' }, { key: 'percentage', label: 'Pourcentage', type: 'number' }] },
+    { key: 'mealTypePreferenceData', label: 'Types de repas', fields: [{ key: 'name', label: 'Type' }, { key: 'value', label: 'Réponses', type: 'number' }, { key: 'percentage', label: 'Pourcentage', type: 'number' }] },
+    { key: 'priceForDishData', label: 'Budget par plat', fields: [{ key: 'name', label: 'Tranche' }, { key: 'value', label: 'Pourcentage', type: 'number' }] },
+    { key: 'priceForMenuData', label: 'Budget par menu', fields: [{ key: 'name', label: 'Tranche' }, { key: 'value', label: 'Pourcentage', type: 'number' }] },
+  ] },
+  { title: 'Indicateurs de synthèse', datasets: [
+    { key: 'keyMetrics', label: 'Statistiques clés', fields: [{ key: 'name', label: 'Indicateur' }, { key: 'value', label: 'Valeur' }, { key: 'label', label: 'Précision' }] },
+    { key: 'alertPoints', label: 'Points d’attention', fields: [{ key: 'name', label: 'Indicateur' }, { key: 'value', label: 'Valeur' }, { key: 'label', label: 'Précision' }] },
+  ] },
+];
 
 const loadPageDataDraft = () => {
   const savedData = window.localStorage.getItem(pageDataDraftStorageKey);
@@ -143,6 +166,8 @@ const Admin = () => {
     }
   });
   const [visualRoute, setVisualRoute] = useState('/methode');
+  const [selectedVisualElement, setSelectedVisualElement] = useState<{ path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string } | null>(null);
+  const previewFrame = useRef<HTMLIFrameElement>(null);
   const [selectedPage, setSelectedPage] = useState(0);
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -157,6 +182,18 @@ const Admin = () => {
       .catch(() => setUser(null))
       .finally(() => setAuthChecked(true));
   }, []);
+
+  useEffect(() => {
+    const receiveSelection = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== previewFrame.current?.contentWindow) return;
+      if (event.data?.type !== 'lfjp-cms-select' || event.data.page !== visualRoute || !isRecord(event.data.selection)) return;
+      const selection = event.data.selection;
+      if (typeof selection.path !== 'string' || !['text', 'image', 'link'].includes(String(selection.kind))) return;
+      setSelectedVisualElement(selection as { path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string });
+    };
+    window.addEventListener('message', receiveSelection);
+    return () => window.removeEventListener('message', receiveSelection);
+  }, [visualRoute]);
 
   useEffect(() => {
     const syncVisualDraft = (event: StorageEvent) => {
@@ -186,6 +223,11 @@ const Admin = () => {
 
   const serializedContent = useMemo(() => JSON.stringify(content, null, 2), [content]);
   const serializedPages = useMemo(() => JSON.stringify({ pages }, null, 2), [pages]);
+  const persistPageData = (next: Record<string, unknown>) => {
+    const serialized = JSON.stringify(next, null, 2);
+    setPageDataJson(serialized);
+    window.localStorage.setItem(pageDataDraftStorageKey, serialized);
+  };
 
   const updateHome = (field: keyof Content['home'], value: string) => {
     setContent((current) => ({ ...current, home: { ...current.home, [field]: value } }));
@@ -433,7 +475,38 @@ const Admin = () => {
   };
 
   const openVisualEditor = () => {
-    if (saveDraft()) window.open(`${visualRoute}?draft=1&edit=1`, '_blank', 'noopener,noreferrer');
+    if (!saveDraft()) return;
+    setSelectedVisualElement(null);
+  };
+
+  const updateVisualElement = (field: 'text' | 'src' | 'alt' | 'href', value: string) => {
+    if (!selectedVisualElement) return;
+    if (field === 'href' && value && !value.startsWith('/') && !/^https?:\/\//i.test(value)) {
+      setStatus('Le lien doit être une adresse http(s) ou un chemin interne commençant par /.');
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(pageTextJson);
+    } catch {
+      parsed = {};
+    }
+    const current = isRecord(parsed) ? parsed : {};
+    const pageOverrides = isRecord(current[visualRoute]) ? current[visualRoute] : {};
+    const targetPath = field === 'href' ? selectedVisualElement.linkPath || selectedVisualElement.path : selectedVisualElement.path;
+    const existing = isRecord(pageOverrides[targetPath]) ? pageOverrides[targetPath] : {};
+    const next = {
+      ...current,
+      [visualRoute]: {
+        ...pageOverrides,
+        [targetPath]: { ...existing, [field]: value },
+      },
+    };
+    const serialized = JSON.stringify(next);
+    setPageTextJson(serialized);
+    window.localStorage.setItem(pageTextDraftStorageKey, serialized);
+    setSelectedVisualElement((selection) => selection ? { ...selection, [field]: value } : selection);
+    setStatus('Brouillon modifié. L’aperçu se met à jour automatiquement.');
   };
 
   const resetDraft = () => {
@@ -539,6 +612,219 @@ const Admin = () => {
     updateBlock(blockIndex, { style: { ...(pages[selectedPage]?.blocks[blockIndex] as ContentBlock & { style?: TextStyle }).style, ...patch } });
   };
 
+  const updateRestaurantRow = (dataset: keyof typeof restaurantPageData, rowIndex: number, field: string, value: string) => {
+    try {
+      const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+      const restaurant = parsed.restaurant as Record<string, unknown>;
+      const rows = restaurant[dataset] as Record<string, unknown>[];
+      const currentRow = rows[rowIndex];
+      const currentValue = currentRow[field];
+      const nextValue = typeof currentValue === 'number' ? (value.trim() === '' ? 0 : Number(value)) : value;
+      if (typeof nextValue === 'number' && !Number.isFinite(nextValue)) return;
+      const nextRows = rows.map((row, index) => index === rowIndex ? { ...row, [field]: nextValue } : row);
+      persistPageData({ ...parsed, restaurant: { ...restaurant, [dataset]: nextRows } });
+    } catch {
+      setStatus('Impossible de mettre à jour cette donnée. Réinitialisez le brouillon de données.');
+    }
+  };
+
+  const addRestaurantRow = (dataset: keyof typeof restaurantPageData) => {
+    const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+    const restaurant = parsed.restaurant as Record<string, unknown>;
+    const rows = restaurant[dataset] as Record<string, unknown>[];
+    const template = rows[0] || { name: '', value: 0 };
+    const row = Object.fromEntries(Object.entries(template).map(([field, value]) => [field, field === 'name' ? 'Nouvel élément' : field === 'value' || field === 'percentage' || field === 'average' ? 0 : value]));
+    persistPageData({ ...parsed, restaurant: { ...restaurant, [dataset]: [...rows, row] } });
+  };
+
+  const removeRestaurantRow = (dataset: keyof typeof restaurantPageData, rowIndex: number) => {
+    const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+    const restaurant = parsed.restaurant as Record<string, unknown>;
+    const rows = restaurant[dataset] as Record<string, unknown>[];
+    persistPageData({ ...parsed, restaurant: { ...restaurant, [dataset]: rows.filter((_, index) => index !== rowIndex) } });
+  };
+
+  const getRestaurantRows = (dataset: keyof typeof restaurantPageData): Record<string, unknown>[] => {
+    try {
+      const parsed = JSON.parse(pageDataJson) as { restaurant?: Record<string, unknown> };
+      const rows = parsed.restaurant?.[dataset];
+      return Array.isArray(rows) ? rows as Record<string, unknown>[] : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const getEditablePageData = (): Record<string, unknown> => {
+    try {
+      const parsed: unknown = JSON.parse(pageDataJson);
+      return isRecord(parsed) ? parsed : defaultPageData;
+    } catch {
+      return defaultPageData;
+    }
+  };
+
+  const updateEditablePageData = (update: (data: Record<string, unknown>) => Record<string, unknown>) => {
+    persistPageData(update(getEditablePageData()));
+  };
+
+  const updateScheduleDay = (dayIndex: number, field: string, value: string) => {
+    updateEditablePageData((data) => {
+      const days = data.bacBlancSchedule as Record<string, unknown>[];
+      return { ...data, bacBlancSchedule: days.map((day, index) => index === dayIndex ? { ...day, [field]: value } : day) };
+    });
+  };
+
+  const updateScheduleRoom = (dayIndex: number, roomIndex: number, field: string, value: string) => {
+    updateEditablePageData((data) => {
+      const days = data.bacBlancSchedule as Record<string, unknown>[];
+      const nextDays = days.map((day, currentDay) => {
+        if (currentDay !== dayIndex) return day;
+        const rooms = day.rooms as Record<string, unknown>[];
+        return { ...day, rooms: rooms.map((room, currentRoom) => {
+          if (currentRoom !== roomIndex) return room;
+          if (field === 'surveillanceTeam') return { ...room, surveillanceTeam: value.split(',').map((name) => name.trim()).filter(Boolean) };
+          if (field === 'supportNames') {
+            const support = isRecord(room.supportTeam) ? room.supportTeam : {};
+            return { ...room, supportTeam: { ...support, names: value.split(',').map((name) => name.trim()).filter(Boolean) } };
+          }
+          if (field === 'supportMission' || field === 'supportPresence') {
+            const support = isRecord(room.supportTeam) ? room.supportTeam : { names: [] };
+            return { ...room, supportTeam: { ...support, [field === 'supportMission' ? 'mission' : 'presence']: value } };
+          }
+          return { ...room, [field]: value };
+        }) };
+      });
+      return { ...data, bacBlancSchedule: nextDays };
+    });
+  };
+
+  const addScheduleDay = () => updateEditablePageData((data) => ({
+    ...data,
+    bacBlancSchedule: [...data.bacBlancSchedule as Record<string, unknown>[], { date: new Date().toISOString().slice(0, 10), label: 'Nouvelle journée', focus: 'Nouvelle épreuve', rooms: [] }],
+  }));
+
+  const removeScheduleDay = (dayIndex: number) => updateEditablePageData((data) => ({
+    ...data,
+    bacBlancSchedule: (data.bacBlancSchedule as Record<string, unknown>[]).filter((_, index) => index !== dayIndex),
+  }));
+
+  const addScheduleRoom = (dayIndex: number) => updateEditablePageData((data) => {
+    const days = data.bacBlancSchedule as Record<string, unknown>[];
+    return { ...data, bacBlancSchedule: days.map((day, index) => index === dayIndex ? { ...day, rooms: [...day.rooms as Record<string, unknown>[], { room: 'Nouvelle salle', examTitle: 'Nouvelle épreuve', examTime: '', leadExaminer: '', surveillanceTeam: [] }] } : day) };
+  });
+
+  const removeScheduleRoom = (dayIndex: number, roomIndex: number) => updateEditablePageData((data) => {
+    const days = data.bacBlancSchedule as Record<string, unknown>[];
+    return { ...data, bacBlancSchedule: days.map((day, index) => index === dayIndex ? { ...day, rooms: (day.rooms as Record<string, unknown>[]).filter((_, itemIndex) => itemIndex !== roomIndex) } : day) };
+  });
+
+  const updateFilmLevel = (levelKey: string, field: 'level' | 'subtitle', value: string) => {
+    updateEditablePageData((data) => {
+      const film = data.filmAnnuelData as Record<string, Record<string, unknown>>;
+      return { ...data, filmAnnuelData: { ...film, [levelKey]: { ...film[levelKey], [field]: value } } };
+    });
+  };
+
+  const updateFilmAction = (levelKey: string, actionIndex: number, field: string, value: string) => {
+    updateEditablePageData((data) => {
+      const film = data.filmAnnuelData as Record<string, Record<string, unknown>>;
+      const level = film[levelKey];
+      const actions = level.actions as Record<string, unknown>[];
+      return { ...data, filmAnnuelData: { ...film, [levelKey]: { ...level, actions: actions.map((action, index) => index === actionIndex ? { ...action, [field]: value } : action) } } };
+    });
+  };
+
+  const addFilmAction = (levelKey: string) => updateEditablePageData((data) => {
+    const film = data.filmAnnuelData as Record<string, Record<string, unknown>>;
+    const level = film[levelKey];
+    const actions = level.actions as Record<string, unknown>[];
+    return { ...data, filmAnnuelData: { ...film, [levelKey]: { ...level, actions: [...actions, { title: 'Nouvelle action', period: '', description: '', actors: '', phase: 'Mieux se connaître' }] } } };
+  });
+
+  const removeFilmAction = (levelKey: string, actionIndex: number) => updateEditablePageData((data) => {
+    const film = data.filmAnnuelData as Record<string, Record<string, unknown>>;
+    const level = film[levelKey];
+    return { ...data, filmAnnuelData: { ...film, [levelKey]: { ...level, actions: (level.actions as Record<string, unknown>[]).filter((_, index) => index !== actionIndex) } } };
+  });
+
+  const removeFilmLevel = (levelKey: string) => updateEditablePageData((data) => {
+    const film = { ...(data.filmAnnuelData as Record<string, unknown>) };
+    delete film[levelKey];
+    return { ...data, filmAnnuelData: film };
+  });
+
+  const updateTimelineRange = (axis: string, field: 'startYear' | 'endYear', value: number) => updateEditablePageData((data) => {
+    const timelines = data.psdTimelines as Record<string, Record<string, unknown>>;
+    const current = timelines[axis];
+    const startYear = field === 'startYear' ? value : Math.min(Number(current.startYear), value);
+    const endYear = field === 'endYear' ? value : Math.max(Number(current.endYear), value);
+    const actions = (current.actions as Record<string, unknown>[]).map((action) => {
+      const start = Math.min(endYear, Math.max(startYear, Number(action.start)));
+      const end = Math.max(start, Math.min(endYear, Math.max(startYear, Number(action.end))));
+      return { ...action, start, end };
+    });
+    return { ...data, psdTimelines: { ...timelines, [axis]: { ...current, startYear, endYear, actions } } };
+  });
+
+  const updateTimelineAction = (axis: string, actionIndex: number, field: string, value: string | number) => updateEditablePageData((data) => {
+    const timelines = data.psdTimelines as Record<string, Record<string, unknown>>;
+    const timeline = timelines[axis];
+    const actions = timeline.actions as Record<string, unknown>[];
+    return { ...data, psdTimelines: { ...timelines, [axis]: { ...timeline, actions: actions.map((action, index) => index === actionIndex ? { ...action, [field]: value } : action) } } };
+  });
+
+  const addTimelineAction = (axis: string) => updateEditablePageData((data) => {
+    const timelines = data.psdTimelines as Record<string, Record<string, unknown>>;
+    const timeline = timelines[axis];
+    const actions = timeline.actions as Record<string, unknown>[];
+    const startYear = Number(timeline.startYear);
+    return { ...data, psdTimelines: { ...timelines, [axis]: { ...timeline, actions: [...actions, { title: 'Nouvelle action', description: '', start: startYear, end: startYear, color: 'from-sky-400/80 to-sky-500' }] } } };
+  });
+
+  const removeTimelineAction = (axis: string, actionIndex: number) => updateEditablePageData((data) => {
+    const timelines = data.psdTimelines as Record<string, Record<string, unknown>>;
+    const timeline = timelines[axis];
+    return { ...data, psdTimelines: { ...timelines, [axis]: { ...timeline, actions: (timeline.actions as Record<string, unknown>[]).filter((_, index) => index !== actionIndex) } } };
+  });
+
+  const updateElcsMetric = (categoryKey: string, group: 'primary' | 'secondary', rowIndex: number, field: string, value: string) => updateEditablePageData((data) => {
+    const categories = data.elcsData as Record<string, Record<string, unknown>>;
+    const category = categories[categoryKey];
+    const metrics = category[group] as Record<string, unknown>[];
+    const current = metrics[rowIndex][field];
+    const nextValue = typeof current === 'number' ? (value.trim() === '' ? 0 : Number(value)) : value;
+    if (typeof nextValue === 'number' && !Number.isFinite(nextValue)) return data;
+    return { ...data, elcsData: { ...categories, [categoryKey]: { ...category, [group]: metrics.map((metric, index) => index === rowIndex ? { ...metric, [field]: nextValue } : metric) } } };
+  });
+
+  const updateElcsTitle = (categoryKey: string, title: string) => updateEditablePageData((data) => {
+    const categories = data.elcsData as Record<string, Record<string, unknown>>;
+    return { ...data, elcsData: { ...categories, [categoryKey]: { ...categories[categoryKey], title } } };
+  });
+
+  const addElcsMetric = (categoryKey: string, group: 'primary' | 'secondary') => updateEditablePageData((data) => {
+    const categories = data.elcsData as Record<string, Record<string, unknown>>;
+    const category = categories[categoryKey];
+    const metrics = category[group] as Record<string, unknown>[];
+    const template = metrics[0] || { name: '', value: 0, label: '' };
+    const row = Object.fromEntries(Object.entries(template).map(([field, value]) => [field, field === 'name' || field === 'label' ? `Nouvel indicateur` : field === 'value' || field === 'average' ? 0 : value]));
+    return { ...data, elcsData: { ...categories, [categoryKey]: { ...category, [group]: [...metrics, row] } } };
+  });
+
+  const removeElcsMetric = (categoryKey: string, group: 'primary' | 'secondary', rowIndex: number) => updateEditablePageData((data) => {
+    const categories = data.elcsData as Record<string, Record<string, unknown>>;
+    const category = categories[categoryKey];
+    return { ...data, elcsData: { ...categories, [categoryKey]: { ...category, [group]: (category[group] as Record<string, unknown>[]).filter((_, index) => index !== rowIndex) } } };
+  });
+
+  const addFilmLevel = () => {
+    const film = getEditablePageData().filmAnnuelData as Record<string, unknown>;
+    let key = 'nouveau-niveau';
+    let suffix = 2;
+    while (film[key]) key = `nouveau-niveau-${suffix++}`;
+    updateEditablePageData((data) => ({ ...data, filmAnnuelData: { ...(data.filmAnnuelData as Record<string, unknown>), [key]: { level: 'Nouveau niveau', subtitle: 'Parcours annuel à compléter.', actions: [] } } }));
+  };
+
   const importMedia = (file: File | undefined, onLoad: (dataUrl: string) => void) => {
     if (!file) return;
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
@@ -601,17 +887,13 @@ const Admin = () => {
       case 'callout':
         return <>{textField('title', 'Titre', block.title)}{textField('text', 'Contenu', block.text, true)}<div className="grid gap-2"><Label>Style</Label><select className="h-10 rounded-md border px-3" value={block.tone || 'blue'} onChange={(event) => updateBlockText(blockIndex, 'tone', event.target.value)}><option value="blue">Bleu</option><option value="gold">Or</option><option value="green">Vert</option></select></div><TextStyleToolbar style={block.style} onChange={(patch) => updateBlockStyle(blockIndex, patch)} /></>;
       case 'list':
+        return <div className="space-y-2"><Label>Éléments</Label>{block.items.map((item, itemIndex) => <div key={`item-${itemIndex}`} className="flex gap-2"><Input value={item} onChange={(event) => updateBlock(blockIndex, { items: block.items.map((current, index) => index === itemIndex ? event.target.value : current) })} aria-label={`Élément ${itemIndex + 1}`} /><Button type="button" size="icon" variant="ghost" onClick={() => updateBlock(blockIndex, { items: block.items.filter((_, index) => index !== itemIndex) })} aria-label={`Supprimer élément ${itemIndex + 1}`}><Trash2 /></Button></div>)}<Button type="button" size="sm" variant="outline" onClick={() => updateBlock(blockIndex, { items: [...block.items, 'Nouvel élément'] })}>Ajouter un élément</Button></div>;
       case 'gallery':
+        return <div className="space-y-3"><Label>Images de la galerie</Label>{block.images.map((image, imageIndex) => <div key={`image-${imageIndex}`} className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_1fr_auto]"><Input value={image.src} onChange={(event) => updateBlock(blockIndex, { images: block.images.map((current, index) => index === imageIndex ? { ...current, src: normalizeMediaUrl(event.target.value) } : current) })} aria-label={`URL image ${imageIndex + 1}`} placeholder="URL de l’image" /><Input value={image.alt} onChange={(event) => updateBlock(blockIndex, { images: block.images.map((current, index) => index === imageIndex ? { ...current, alt: event.target.value } : current) })} aria-label={`Texte alternatif image ${imageIndex + 1}`} placeholder="Texte alternatif" /><Button type="button" size="icon" variant="ghost" onClick={() => updateBlock(blockIndex, { images: block.images.filter((_, index) => index !== imageIndex) })} aria-label={`Supprimer image ${imageIndex + 1}`}><Trash2 /></Button></div>)}<Button type="button" size="sm" variant="outline" onClick={() => updateBlock(blockIndex, { images: [...block.images, { src: '', alt: '' }] })}>Ajouter une image</Button></div>;
       case 'table':
+        return <div className="space-y-3"><Label>Tableau</Label><div className="space-y-2"><p className="text-xs font-semibold text-slate-500">Colonnes</p>{block.headers.map((header, columnIndex) => <div key={`header-${columnIndex}`} className="flex gap-2"><Input value={header} onChange={(event) => updateBlock(blockIndex, { headers: block.headers.map((current, index) => index === columnIndex ? event.target.value : current) })} aria-label={`Nom colonne ${columnIndex + 1}`} /><Button type="button" size="icon" variant="ghost" onClick={() => updateBlock(blockIndex, { headers: block.headers.filter((_, index) => index !== columnIndex), rows: block.rows.map((row) => row.filter((_, index) => index !== columnIndex)) })} aria-label={`Supprimer colonne ${columnIndex + 1}`}><Trash2 /></Button></div>)}<Button type="button" size="sm" variant="outline" onClick={() => updateBlock(blockIndex, { headers: [...block.headers, `Colonne ${block.headers.length + 1}`], rows: block.rows.map((row) => [...row, '']) })}>Ajouter une colonne</Button></div><div className="space-y-2"><p className="text-xs font-semibold text-slate-500">Lignes</p>{block.rows.map((row, rowIndex) => <div key={`row-${rowIndex}`} className="flex flex-wrap gap-2 rounded border p-2">{block.headers.map((_, columnIndex) => <Input key={`cell-${columnIndex}`} className="min-w-32 flex-1" value={row[columnIndex] || ''} onChange={(event) => updateBlock(blockIndex, { rows: block.rows.map((current, index) => index === rowIndex ? current.map((cell, cellIndex) => cellIndex === columnIndex ? event.target.value : cell) : current) })} aria-label={`Ligne ${rowIndex + 1}, colonne ${columnIndex + 1}`} />)}<Button type="button" size="icon" variant="ghost" onClick={() => updateBlock(blockIndex, { rows: block.rows.filter((_, index) => index !== rowIndex) })} aria-label={`Supprimer ligne ${rowIndex + 1}`}><Trash2 /></Button></div>)}<Button type="button" size="sm" variant="outline" onClick={() => updateBlock(blockIndex, { rows: [...block.rows, block.headers.map(() => '')] })}>Ajouter une ligne</Button></div></div>;
       case 'chart':
-        return <div className="grid gap-2"><Label>Données du bloc</Label><Textarea className="min-h-[140px] font-mono text-xs" value={JSON.stringify(block, null, 2)} onChange={(event) => {
-          try {
-            const parsed = JSON.parse(event.target.value);
-            if (parsed.type === block.type) updateBlock(blockIndex, parsed);
-          } catch {
-            // Keep the editor usable while the JSON is being typed.
-          }
-        }} /><p className="text-xs text-slate-500">Vous pouvez modifier les éléments, URLs et valeurs dans ce JSON.</p></div>;
+        return <div className="space-y-3"><div className="grid gap-2"><Label>Titre du graphique</Label><Input value={block.title || ''} onChange={(event) => updateBlock(blockIndex, { title: event.target.value })} /></div><div className="space-y-2"><Label>Libellés et valeurs</Label>{block.labels.map((label, itemIndex) => <div key={`datum-${itemIndex}`} className="grid gap-2 sm:grid-cols-[1fr_160px_auto]"><Input value={label} onChange={(event) => updateBlock(blockIndex, { labels: block.labels.map((current, index) => index === itemIndex ? event.target.value : current) })} aria-label={`Libellé ${itemIndex + 1}`} placeholder="Libellé" /><Input type="number" step="any" value={block.values[itemIndex] ?? 0} onChange={(event) => updateBlock(blockIndex, { values: block.values.map((current, index) => index === itemIndex ? Number(event.target.value) || 0 : current) })} aria-label={`Valeur ${itemIndex + 1}`} /><Button type="button" size="icon" variant="ghost" onClick={() => updateBlock(blockIndex, { labels: block.labels.filter((_, index) => index !== itemIndex), values: block.values.filter((_, index) => index !== itemIndex) })} aria-label={`Supprimer donnée ${itemIndex + 1}`}><Trash2 /></Button></div>)}<Button type="button" size="sm" variant="outline" onClick={() => updateBlock(blockIndex, { labels: [...block.labels, 'Nouvelle donnée'], values: [...block.values, 0] })}>Ajouter une donnée</Button></div></div>;
       case 'divider':
         return <p className="text-sm text-slate-500">Séparateur visuel sans contenu.</p>;
     }
@@ -837,42 +1119,197 @@ const Admin = () => {
           </Card>
 
           <Card id="edition-visuelle">
-            <CardHeader>
+            <CardHeader className="flex-row items-start justify-between gap-4">
+              <div>
               <CardTitle>Modifier les pages du site</CardTitle>
-              <CardDescription>Ouvrez une page dans son design actuel, choisissez un texte, un lien ou une image et modifiez sa valeur dans le brouillon.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap items-end gap-3">
-              <div className="grid min-w-64 flex-1 gap-2">
-                <Label htmlFor="visual-page-route">Page à modifier</Label>
-                <select id="visual-page-route" className="h-10 rounded-md border bg-white px-3" value={visualRoute} onChange={(event) => setVisualRoute(event.target.value)}>
-                  {Object.entries(breadcrumbRoutes).map(([path, route]) => (
-                    <option key={path} value={path}>{route.name} — {path}</option>
-                  ))}
-                  {pages.map((page) => (
-                    <option key={page.slug} value={normalizePageSlug(page.slug)}>{page.title} — {normalizePageSlug(page.slug)}</option>
-                  ))}
-                </select>
+              <CardDescription>Choisissez une page, cliquez sur un élément dans l’aperçu, puis modifiez-le ici. Les changements restent dans le brouillon.</CardDescription>
               </div>
-              <Button type="button" onClick={openVisualEditor}><Pencil /> Modifier visuellement</Button>
-              <p className="w-full text-xs text-slate-500">Les changements sont enregistrés dans le brouillon local; créez ensuite une Preview GitHub et validez-la avant publication.</p>
+              <Button type="button" variant="outline" size="sm" onClick={openVisualEditor}><Save /> Enregistrer le brouillon</Button>
+            </CardHeader>
+            <CardContent className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
+              <nav className="max-h-[72vh] space-y-1 overflow-y-auto border-r pr-3" aria-label="Arborescence des pages">
+                <h3 className="mb-2 text-xs font-semibold uppercase text-slate-500">Pages et rubriques</h3>
+                {Object.entries(breadcrumbRoutes)
+                  .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
+                  .map(([path, route]) => {
+                    let depth = 0;
+                    let parent = route.parent;
+                    while (parent && parent !== '/' && depth < 5) {
+                      depth += 1;
+                      parent = (breadcrumbRoutes as Record<string, { parent?: string }>)[parent]?.parent;
+                    }
+                    return <button key={path} type="button" onClick={() => { setVisualRoute(path); setSelectedVisualElement(null); }} className={`block w-full truncate rounded px-2 py-1.5 text-left text-sm ${visualRoute === path ? 'bg-french-blue text-white' : 'text-slate-700 hover:bg-blue-50'}`} style={{ paddingLeft: `${8 + depth * 12}px` }} title={path}>{route.name}</button>;
+                  })}
+                {pages.map((page) => (
+                  <button key={page.slug} type="button" onClick={() => { setVisualRoute(normalizePageSlug(page.slug)); setSelectedVisualElement(null); }} className={`block w-full truncate rounded px-2 py-1.5 text-left text-sm ${visualRoute === normalizePageSlug(page.slug) ? 'bg-french-blue text-white' : 'text-slate-700 hover:bg-blue-50'}`} style={{ paddingLeft: `${8 + (page.parent ? 24 : 0)}px` }} title={page.slug}>{page.title}</button>
+                ))}
+                {Object.keys((getEditablePageData().filmAnnuelData as Record<string, unknown>)).filter((level) => !(breadcrumbRoutes as Record<string, unknown>)[`/film-annuel/${level}`]).map((level) => (
+                  <button key={`film-${level}`} type="button" onClick={() => { setVisualRoute(`/film-annuel/${level}`); setSelectedVisualElement(null); }} className={`block w-full truncate rounded px-2 py-1.5 pl-8 text-left text-sm ${visualRoute === `/film-annuel/${level}` ? 'bg-french-blue text-white' : 'text-slate-700 hover:bg-blue-50'}`}>Film annuel — {level}</button>
+                ))}
+              </nav>
+              <div className="min-w-0 overflow-hidden rounded border bg-slate-100">
+                <div className="flex items-center justify-between border-b bg-white px-3 py-2 text-xs text-slate-600">
+                  <span>{visualRoute}</span>
+                  <span>Mode aperçu avec sélection</span>
+                </div>
+                <iframe
+                  ref={previewFrame}
+                  key={visualRoute}
+                  title={`Aperçu ${visualRoute}`}
+                  src={`${visualRoute}?draft=1&edit=1&embedded=1`}
+                  className="h-[72vh] min-h-[560px] w-full bg-white"
+                />
+              </div>
+              <aside className="space-y-3" aria-label="Propriétés de l’élément sélectionné">
+                <h3 className="text-xs font-semibold uppercase text-slate-500">Inspecteur</h3>
+                {!selectedVisualElement ? <p className="text-sm text-slate-500">Sélectionnez un texte, un lien ou une image dans l’aperçu.</p> : (
+                  <>
+                    <p className="text-xs text-slate-500">{selectedVisualElement.kind === 'image' ? 'Image' : selectedVisualElement.kind === 'link' ? 'Lien' : 'Texte'}</p>
+                    {selectedVisualElement.kind === 'text' && <>
+                      <div className="grid gap-1"><Label htmlFor="selected-text">Contenu</Label><Textarea id="selected-text" value={selectedVisualElement.text || ''} onChange={(event) => updateVisualElement('text', event.target.value)} /></div>
+                      {selectedVisualElement.linkPath && <div className="grid gap-1"><Label htmlFor="selected-text-link">Adresse du lien</Label><Input id="selected-text-link" value={selectedVisualElement.href || ''} onChange={(event) => updateVisualElement('href', event.target.value)} /></div>}
+                    </>}
+                    {selectedVisualElement.kind === 'image' && <>
+                      <div className="grid gap-1"><Label htmlFor="selected-image-src">Source de l’image</Label><Input id="selected-image-src" value={selectedVisualElement.src || ''} onChange={(event) => updateVisualElement('src', event.target.value)} /></div>
+                      <div className="grid gap-1"><Label htmlFor="selected-image-alt">Texte alternatif</Label><Input id="selected-image-alt" value={selectedVisualElement.alt || ''} onChange={(event) => updateVisualElement('alt', event.target.value)} /></div>
+                      <MediaPreview src={selectedVisualElement.src || ''} />
+                    </>}
+                    {selectedVisualElement.kind === 'link' && <div className="grid gap-1"><Label htmlFor="selected-link">Adresse</Label><Input id="selected-link" value={selectedVisualElement.href || ''} onChange={(event) => updateVisualElement('href', event.target.value)} /></div>}
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedVisualElement(null)}>Désélectionner</Button>
+                  </>
+                )}
+                <p className="text-xs text-slate-500">Les données de graphiques se règlent dans leurs tableaux de données structurés; l’édition d’un chiffre affiché seul ne recalcule pas un graphique.</p>
+              </aside>
             </CardContent>
           </Card>
 
           <Card id="donnees-pages">
             <CardHeader>
-              <CardTitle>Données des pages spécialisées</CardTitle>
-              <CardDescription>Les plannings et parcours annuels utilisent ces données, sans modifier leur présentation.</CardDescription>
+              <CardTitle>Données des pages et graphiques</CardTitle>
+              <CardDescription>Éditez les plannings, parcours annuels et séries du diagnostic dans des champs adaptés. L’aperçu suit les données du brouillon.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-2">
-              <Label htmlFor="page-data-json">Plannings, années et parcours (JSON)</Label>
-              <Textarea
-                id="page-data-json"
-                className="min-h-[360px] font-mono text-xs"
-                value={pageDataJson}
-                onChange={(event) => setPageDataJson(event.target.value)}
-                spellCheck={false}
-              />
-              <p className="text-xs text-slate-500">Les données du bac blanc et des films annuels sont publiées avec les autres brouillons. Un JSON invalide bloque l’enregistrement et la Preview.</p>
+            <CardContent className="space-y-8">
+              <section className="space-y-4">
+                <div className="flex items-center justify-between gap-3 border-b pb-2"><h3 className="text-sm font-semibold text-french-blue">Planification du bac blanc</h3><Button type="button" size="sm" variant="outline" onClick={addScheduleDay}>Ajouter une journée</Button></div>
+                {(getEditablePageData().bacBlancSchedule as Record<string, unknown>[]).map((day, dayIndex) => (
+                  <div key={`exam-day-${dayIndex}`} className="space-y-4 rounded border p-4">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="grid gap-1"><Label>Date</Label><Input type="date" value={String(day.date || '')} onChange={(event) => updateScheduleDay(dayIndex, 'date', event.target.value)} /></div>
+                      <div className="grid gap-1"><Label>Libellé affiché</Label><Input value={String(day.label || '')} onChange={(event) => updateScheduleDay(dayIndex, 'label', event.target.value)} /></div>
+                      <div className="grid gap-1"><Label>Épreuve / thème</Label><Input value={String(day.focus || '')} onChange={(event) => updateScheduleDay(dayIndex, 'focus', event.target.value)} /></div>
+                      <div className="grid gap-1"><Label>Note de la journée</Label><Textarea value={String(day.note || '')} onChange={(event) => updateScheduleDay(dayIndex, 'note', event.target.value)} /></div>
+                    </div>
+                    <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Salles</h4><Button type="button" size="sm" variant="outline" onClick={() => addScheduleRoom(dayIndex)}>Ajouter une salle</Button></div>
+                    {(day.rooms as Record<string, unknown>[]).map((room, roomIndex) => {
+                      const support = isRecord(room.supportTeam) ? room.supportTeam : {};
+                      return <div key={`room-${roomIndex}`} className="grid gap-3 rounded bg-slate-50 p-3 md:grid-cols-2">
+                        {([
+                          ['room', 'Salle'], ['examTitle', 'Épreuve'], ['examTime', 'Horaire'], ['leadExaminer', 'Responsable'],
+                          ['surveillanceTeam', 'Surveillance (noms séparés par des virgules)'], ['notes', 'Note'],
+                          ['supportNames', 'Équipe support (noms séparés par des virgules)'],
+                        ] as const).map(([field, label]) => <div key={field} className="grid gap-1"><Label>{label}</Label><Input value={field === 'surveillanceTeam' ? (room.surveillanceTeam as string[] || []).join(', ') : field === 'supportNames' ? (support.names as string[] || []).join(', ') : String(room[field] || '')} onChange={(event) => updateScheduleRoom(dayIndex, roomIndex, field, event.target.value)} /></div>)}
+                        <div className="grid gap-1"><Label>Mission du support</Label><Textarea value={String(support.mission || '')} onChange={(event) => updateScheduleRoom(dayIndex, roomIndex, 'supportMission', event.target.value)} /></div>
+                        <div className="grid gap-1"><Label>Présence du support</Label><Input value={String(support.presence || '')} onChange={(event) => updateScheduleRoom(dayIndex, roomIndex, 'supportPresence', event.target.value)} /></div>
+                        <Button type="button" size="sm" variant="ghost" className="w-fit" onClick={() => removeScheduleRoom(dayIndex, roomIndex)}>Supprimer la salle</Button>
+                      </div>;
+                    })}
+                    <Button type="button" size="sm" variant="ghost" onClick={() => removeScheduleDay(dayIndex)}>Supprimer cette journée</Button>
+                  </div>
+                ))}
+              </section>
+
+              <section className="space-y-4">
+                <div className="flex items-center justify-between gap-3 border-b pb-2"><h3 className="text-sm font-semibold text-french-blue">Films annuels et actions d’orientation</h3><Button type="button" size="sm" variant="outline" onClick={addFilmLevel}>Ajouter un niveau</Button></div>
+                {Object.entries(getEditablePageData().filmAnnuelData as Record<string, Record<string, unknown>>).map(([levelKey, level]) => (
+                  <div key={levelKey} className="space-y-3 rounded border p-4">
+                    <div className="grid gap-3 md:grid-cols-2"><div className="grid gap-1"><Label>Nom du niveau</Label><Input value={String(level.level || '')} onChange={(event) => updateFilmLevel(levelKey, 'level', event.target.value)} /></div><div className="grid gap-1"><Label>Introduction</Label><Input value={String(level.subtitle || '')} onChange={(event) => updateFilmLevel(levelKey, 'subtitle', event.target.value)} /></div></div>
+                    <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Actions de {String(level.level || levelKey)}</h4><Button type="button" size="sm" variant="outline" onClick={() => addFilmAction(levelKey)}>Ajouter une action</Button></div>
+                    {(level.actions as Record<string, unknown>[]).map((action, actionIndex) => <div key={`action-${actionIndex}`} className="grid gap-2 rounded bg-slate-50 p-3 md:grid-cols-2">
+                      {(['title', 'period', 'description', 'actors'] as const).map((field) => <div key={field} className="grid gap-1"><Label>{field === 'title' ? 'Action' : field === 'period' ? 'Période' : field === 'description' ? 'Description' : 'Acteurs'}</Label>{field === 'description' ? <Textarea value={String(action[field] || '')} onChange={(event) => updateFilmAction(levelKey, actionIndex, field, event.target.value)} /> : <Input value={String(action[field] || '')} onChange={(event) => updateFilmAction(levelKey, actionIndex, field, event.target.value)} />}</div>)}
+                      <div className="grid gap-1"><Label>Étape du parcours</Label><select className="h-10 rounded-md border bg-white px-3" value={String(action.phase || 'Mieux se connaître')} onChange={(event) => updateFilmAction(levelKey, actionIndex, 'phase', event.target.value)}><option>Mieux se connaître</option><option>Plonger dans le monde professionnel</option><option>Finaliser les projets</option></select></div>
+                      <Button type="button" size="sm" variant="ghost" className="w-fit self-end" onClick={() => removeFilmAction(levelKey, actionIndex)}>Supprimer l’action</Button>
+                    </div>)}
+                    <Button type="button" size="sm" variant="ghost" onClick={() => removeFilmLevel(levelKey)}>Supprimer ce niveau</Button>
+                  </div>
+                ))}
+              </section>
+
+              <section className="space-y-4">
+                <h3 className="border-b pb-2 text-sm font-semibold text-french-blue">Frises temporelles du plan stratégique</h3>
+                {Object.entries(getEditablePageData().psdTimelines as Record<string, Record<string, unknown>>).map(([axis, timeline]) => (
+                  <div key={axis} className="space-y-3 rounded border p-4">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <h4 className="text-sm font-semibold">{axis.toUpperCase()}</h4>
+                      <div className="flex gap-2">
+                        <div className="grid gap-1"><Label htmlFor={`${axis}-start`}>Première année</Label><Input id={`${axis}-start`} className="w-28" type="number" value={Number(timeline.startYear)} onChange={(event) => updateTimelineRange(axis, 'startYear', Number(event.target.value))} /></div>
+                        <div className="grid gap-1"><Label htmlFor={`${axis}-end`}>Dernière année</Label><Input id={`${axis}-end`} className="w-28" type="number" value={Number(timeline.endYear)} onChange={(event) => updateTimelineRange(axis, 'endYear', Number(event.target.value))} /></div>
+                        <Button type="button" size="sm" variant="outline" onClick={() => addTimelineAction(axis)}>Ajouter une action</Button>
+                      </div>
+                    </div>
+                    {(timeline.actions as Record<string, unknown>[]).map((action, actionIndex) => <div key={`timeline-action-${actionIndex}`} className="grid gap-2 rounded bg-slate-50 p-3 md:grid-cols-[1.2fr_2fr_100px_100px_160px_auto]">
+                      <Input aria-label="Nom de l’action" value={String(action.title || '')} onChange={(event) => updateTimelineAction(axis, actionIndex, 'title', event.target.value)} placeholder="Action" />
+                      <Input aria-label="Description de l’action" value={String(action.description || '')} onChange={(event) => updateTimelineAction(axis, actionIndex, 'description', event.target.value)} placeholder="Description" />
+                      <Input aria-label="Début de l’action" type="number" value={Number(action.start)} onChange={(event) => updateTimelineAction(axis, actionIndex, 'start', Number(event.target.value))} />
+                      <Input aria-label="Fin de l’action" type="number" value={Number(action.end)} onChange={(event) => updateTimelineAction(axis, actionIndex, 'end', Number(event.target.value))} />
+                      <select className="h-10 rounded-md border bg-white px-2 text-sm" aria-label="Couleur de la frise" value={String(action.color)} onChange={(event) => updateTimelineAction(axis, actionIndex, 'color', event.target.value)}>
+                        <option value="from-sky-400/80 to-sky-500">Bleu ciel</option><option value="from-indigo-300/80 to-indigo-500">Indigo</option><option value="from-emerald-300/80 to-emerald-500">Vert</option><option value="from-orange-300/80 to-orange-500">Orange</option><option value="from-amber-300/80 to-amber-500">Ambre</option><option value="from-purple-300/80 to-purple-500">Violet</option><option value="from-rose-300/80 to-rose-500">Rose</option><option value="from-french-blue/70 to-french-blue">Bleu LFJP</option>
+                      </select>
+                      <Button type="button" size="icon" variant="ghost" onClick={() => removeTimelineAction(axis, actionIndex)} aria-label="Supprimer l’action de la frise"><Trash2 /></Button>
+                    </div>)}
+                  </div>
+                ))}
+              </section>
+
+              <section className="space-y-4">
+                <h3 className="border-b pb-2 text-sm font-semibold text-french-blue">Indicateurs du diagnostic ELCS</h3>
+                {Object.entries(getEditablePageData().elcsData as Record<string, Record<string, unknown>>).map(([categoryKey, category]) => (
+                  <div key={categoryKey} className="space-y-3 rounded border p-4">
+                    <div className="grid gap-1"><Label>Titre de la catégorie</Label><Input value={String(category.title || '')} onChange={(event) => updateElcsTitle(categoryKey, event.target.value)} /></div>
+                    {(['primary', 'secondary'] as const).map((group) => (
+                      <div key={group} className="space-y-2">
+                        <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">{group === 'primary' ? 'Indicateurs et barres de progression' : 'Points d’attention'}</h4><Button type="button" size="sm" variant="outline" onClick={() => addElcsMetric(categoryKey, group)}>Ajouter une ligne</Button></div>
+                        {(category[group] as Record<string, unknown>[]).map((metric, rowIndex) => <div key={`${group}-${rowIndex}`} className="grid gap-2 rounded bg-slate-50 p-2 md:grid-cols-[1.2fr_120px_1fr_100px_120px_auto]">
+                          <Input aria-label="Nom de l’indicateur" value={String(metric.name || '')} onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'name', event.target.value)} placeholder="Indicateur" />
+                          <Input aria-label="Valeur de l’indicateur" value={String(metric.value ?? '')} onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'value', event.target.value)} placeholder="Valeur" />
+                          <Input aria-label="Précision de l’indicateur" value={String(metric.label || '')} onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'label', event.target.value)} placeholder="Précision" />
+                          <Input aria-label="Moyenne comparée" type="number" step="any" value={metric.average === undefined ? '' : Number(metric.average)} onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'average', event.target.value)} placeholder="Moyenne" />
+                          <select className="h-10 rounded-md border bg-white px-2 text-sm" aria-label="Tendance" value={String(metric.trend || 'up')} onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'trend', event.target.value)}><option value="up">Progression</option><option value="down">Baisse</option></select>
+                          <Button type="button" size="icon" variant="ghost" onClick={() => removeElcsMetric(categoryKey, group, rowIndex)} aria-label="Supprimer l’indicateur"><Trash2 /></Button>
+                        </div>)}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </section>
+
+              {restaurantEditorGroups.map((group) => (
+                <section key={group.title} className="space-y-4">
+                  <h3 className="border-b pb-2 text-sm font-semibold text-french-blue">{group.title}</h3>
+                  {group.datasets.map((dataset) => {
+                    const rows = getRestaurantRows(dataset.key);
+                    return (
+                      <div key={dataset.key} className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <h4 className="text-sm font-semibold">{dataset.label}</h4>
+                          <Button type="button" size="sm" variant="outline" onClick={() => addRestaurantRow(dataset.key)}>Ajouter une ligne</Button>
+                        </div>
+                        <div className="overflow-x-auto rounded border">
+                          <table className="w-full min-w-[600px] text-left text-sm">
+                            <thead className="bg-slate-50 text-xs text-slate-600"><tr>{dataset.fields.map((field) => <th key={field.key} className="px-3 py-2 font-semibold">{field.label}</th>)}<th className="w-20 px-3 py-2">Action</th></tr></thead>
+                            <tbody>
+                              {rows.map((row, rowIndex) => <tr key={`${dataset.key}-${rowIndex}`} className="border-t">
+                                {dataset.fields.map((field) => <td key={field.key} className="px-2 py-1.5"><Input aria-label={`${dataset.label}, ${field.label}, ligne ${rowIndex + 1}`} type={field.type || 'text'} step={field.type === 'number' ? 'any' : undefined} value={String(row[field.key] ?? '')} onChange={(event) => updateRestaurantRow(dataset.key, rowIndex, field.key, event.target.value)} className="h-9 min-w-28" /></td>)}
+                                <td className="px-2 py-1.5"><Button type="button" size="sm" variant="ghost" onClick={() => removeRestaurantRow(dataset.key, rowIndex)} aria-label={`Supprimer ${dataset.label}, ligne ${rowIndex + 1}`}><Trash2 className="h-4 w-4" /></Button></td>
+                              </tr>)}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </section>
+              ))}
+              <p className="text-xs text-slate-500">Ces données alimentent le rendu du bac blanc, les films annuels et les graphiques de restauration. Elles sont incluses au brouillon et à la Preview GitHub.</p>
             </CardContent>
           </Card>
 
@@ -899,13 +1336,16 @@ const Admin = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Aperçu du brouillon</CardTitle></CardHeader>
-            <CardContent>
+            <CardHeader><CardTitle>État du contenu</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm text-slate-600">
               <div className="rounded-lg bg-gradient-to-r from-french-blue to-blue-700 p-5 text-white">
                 <h2 className="font-playfair text-2xl font-bold">{content.home.heroTitle}</h2>
                 <p className="mt-2 text-sm">{content.home.heroSubtitle}</p>
               </div>
-              <Textarea className="mt-4 font-mono text-xs" value={serializedContent} readOnly aria-label="Contenu JSON du brouillon" />
+              <p>{content.home.cards.length} rubriques d’accueil</p>
+              <p>{pages.length} pages personnalisées</p>
+              <p>{Object.values(getEditablePageData().filmAnnuelData as Record<string, unknown>).length} niveaux du film annuel</p>
+              <p className="rounded bg-blue-50 p-3 text-xs">Les modifications restent dans le brouillon de votre navigateur jusqu’à la création d’une Preview GitHub.</p>
             </CardContent>
           </Card>
         </aside>

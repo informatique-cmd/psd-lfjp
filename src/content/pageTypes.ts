@@ -151,7 +151,32 @@ export const isValidPageData = (value: unknown) =>
   isRecord(value.planificationBacBlanc) &&
   typeof value.planificationBacBlanc.badge === 'string' &&
   typeof value.planificationBacBlanc.title === 'string' &&
-  typeof value.planificationBacBlanc.description === 'string';
+  typeof value.planificationBacBlanc.description === 'string' &&
+  isRecord(value.restaurant) &&
+  ['studentDistributionData', 'restaurationInterestData', 'currentLunchData', 'serviceInterestByDayData', 'mealTypePreferenceData', 'priceForDishData', 'priceForMenuData', 'keyMetrics', 'alertPoints'].every((key) =>
+    Array.isArray(value.restaurant[key]) && value.restaurant[key].every((row) =>
+      isRecord(row) && typeof row.name === 'string' && (typeof row.value === 'number' || typeof row.value === 'string')
+    )
+  ) &&
+  isRecord(value.psdTimelines) &&
+  ['axe1', 'axe2', 'axe3'].every((key) => {
+    const timeline = value.psdTimelines[key];
+    return isRecord(timeline) && Number.isInteger(timeline.startYear) && Number.isInteger(timeline.endYear) && Number(timeline.endYear) >= Number(timeline.startYear) && Array.isArray(timeline.actions) && timeline.actions.every((action) =>
+      isRecord(action) && typeof action.title === 'string' && typeof action.description === 'string' && Number.isInteger(action.start) && Number.isInteger(action.end) && Number(action.start) >= Number(timeline.startYear) && Number(action.end) <= Number(timeline.endYear) && Number(action.end) >= Number(action.start) && typeof action.color === 'string'
+    );
+  }) &&
+  isRecord(value.elcsData) &&
+  ['satisfaction', 'relations', 'travail', 'securite'].every((key) => {
+    const category = value.elcsData[key];
+    return isRecord(category) && typeof category.title === 'string' && ['primary', 'secondary'].every((group) =>
+      Array.isArray(category[group]) && category[group].every((metric) =>
+        isRecord(metric) && typeof metric.name === 'string' && (typeof metric.value === 'number' || typeof metric.value === 'string') &&
+        (metric.label === undefined || typeof metric.label === 'string') &&
+        (metric.average === undefined || (typeof metric.average === 'number' && Number.isFinite(metric.average))) &&
+        (metric.trend === undefined || metric.trend === 'up' || metric.trend === 'down')
+      )
+    );
+  });
 
 export const validateManagedPages = (pages: ManagedPage[]) => {
   const errors: string[] = [];

@@ -1,5 +1,8 @@
 
 import React, { useState } from 'react';
+import pageDataFile from '@/content/pageData.json';
+import { psdTimelineData } from '@/data/psdTimelineData';
+import { useContentDraft } from '@/lib/contentDraft';
 import { Link } from 'react-router-dom';
 import {
   BarChart3,
@@ -20,6 +23,11 @@ import {
   Sun,
 } from 'lucide-react';
 
+const timelineDraftFallback = {
+  ...pageDataFile,
+  psdTimelines: (pageDataFile as { psdTimelines?: typeof psdTimelineData }).psdTimelines || psdTimelineData,
+};
+
 type ActionItem = {
   content: React.ReactNode;
   link?: string;
@@ -35,6 +43,8 @@ type ActionSection = {
 
 const PSDAxe1 = () => {
   const [isTimelineExpanded, setTimelineExpanded] = useState(false);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', timelineDraftFallback);
+  const timeline = pageData.psdTimelines.axe1;
   const objectifs = [
     {
       content: (
@@ -67,56 +77,11 @@ const PSDAxe1 = () => {
     }
   ];
 
-  const timelineYears = Array.from({ length: 7 }, (_, index) => 2025 + index);
+  const timelineYears = Array.from({ length: timeline.endYear - timeline.startYear + 1 }, (_, index) => timeline.startYear + index);
   const startYear = timelineYears[0];
   const totalYears = timelineYears[timelineYears.length - 1] - startYear + 1;
 
-  const timelineActions = [
-    {
-      title: 'Programmes bien-être & participation',
-      description:
-        'Médiation entre pairs, Savoir nager / Savoir rouler, expression & participation, parentalité-coéducation',
-      start: 2025,
-      end: 2031,
-      color: 'from-purple-400/80 to-purple-500'
-    },
-    {
-      title: 'Climatisation durable',
-      description: 'Prototype 2025, étude des offres et déploiement progressif à partir de 2026',
-      start: 2025,
-      end: 2027,
-      color: 'from-sky-400/80 to-sky-500'
-    },
-    {
-      title: 'Cantine scolaire',
-      description:
-        'Études, consultation des prestataires, mise en service en 2027 puis montée en charge jusqu’en 2029',
-      start: 2027,
-      end: 2029,
-      color: 'from-orange-300/80 to-orange-500'
-    },
-    {
-      title: 'Plan peinture & ravalement',
-      description: 'Programme de maintenance intérieure/extérieure sur 5 années',
-      start: 2026,
-      end: 2030,
-      color: 'from-amber-300/80 to-amber-500'
-    },
-    {
-      title: 'Plafonds acoustiques',
-      description: 'Priorités collège (2026-2027), lycée (2028) et laboratoires/primaires (2029-2030)',
-      start: 2026,
-      end: 2030,
-      color: 'from-emerald-300/80 to-emerald-500'
-    },
-    {
-      title: 'Renouvellement vidéoprojecteurs',
-      description: 'Phases annuelles de 2026 à 2031 pour homogénéiser le parc',
-      start: 2026,
-      end: 2031,
-      color: 'from-french-blue/70 to-french-blue'
-    }
-  ];
+  const timelineActions = timeline.actions;
 
   const actions: ActionSection[] = [
     {
@@ -272,7 +237,7 @@ const PSDAxe1 = () => {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-2 mb-6">
             <h4 className="text-lg font-semibold text-slate-900">
-              Frise temporelle des actions structurantes (2025-2031)
+              Frise temporelle des actions structurantes ({timeline.startYear}-{timeline.endYear})
             </h4>
             <p className="text-sm text-slate-600">
               Visualisation synthétique des principaux chantiers prévus pour l'axe 1 : la barre colorée indique
@@ -283,7 +248,7 @@ const PSDAxe1 = () => {
             <div className="min-w-[720px] space-y-4">
               <div className="grid grid-cols-[200px_1fr] items-center gap-4 text-sm font-semibold text-slate-500 uppercase tracking-wide">
                 <span>Périmètre</span>
-                <div className="grid grid-cols-7 text-center">
+                <div className="grid text-center" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
                   {timelineYears.map((year) => (
                     <span key={year}>{year}</span>
                   ))}
@@ -316,7 +281,7 @@ const PSDAxe1 = () => {
                               width: `${width}%`
                             }}
                           />
-                          <div className="absolute inset-0 grid grid-cols-7 text-[10px] text-slate-400">
+                          <div className="absolute inset-0 grid text-[10px] text-slate-400" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
                             {timelineYears.map((year) => (
                               <div key={year} className="border-l border-dashed border-slate-200 first:border-l-0" />
                             ))}

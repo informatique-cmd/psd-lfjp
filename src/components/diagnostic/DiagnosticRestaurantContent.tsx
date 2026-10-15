@@ -7,20 +7,19 @@ import RestaurantPieChart from './restaurant/RestaurantPieChart';
 import HorizontalBarChart from './restaurant/HorizontalBarChart';
 import VerticalBarChart from './restaurant/VerticalBarChart';
 import RestaurantConclusions from './restaurant/RestaurantConclusions';
-import { 
-  studentDistributionData,
-  restaurationInterestData,
-  currentLunchData,
-  serviceInterestByDayData,
-  mealTypePreferenceData,
-  priceForDishData,
-  priceForMenuData,
-  CHART_COLORS,
-  keyMetrics,
-  alertPoints
-} from './restaurant/restaurantData';
+import { restaurantPageData } from '@/data/restaurantPageData';
+import pageDataFile from '@/content/pageData.json';
+import { useContentDraft } from '@/lib/contentDraft';
+import { CHART_COLORS } from './restaurant/restaurantData';
+
+const restaurantDraftFallback = {
+  ...pageDataFile,
+  restaurant: (pageDataFile as { restaurant?: typeof restaurantPageData }).restaurant || restaurantPageData,
+};
 
 const DiagnosticRestaurantContent = () => {
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', restaurantDraftFallback);
+  const restaurant = pageData.restaurant;
   return (
     <div className="max-w-5xl mx-auto">
       <DiagnosticCard
@@ -32,22 +31,22 @@ const DiagnosticRestaurantContent = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <MetricCard 
             title="Statistiques clés" 
-            primary={keyMetrics}
-            secondary={alertPoints}
+            primary={restaurant.keyMetrics}
+            secondary={restaurant.alertPoints}
           />
-          <StudentDistributionChart data={studentDistributionData} />
+          <StudentDistributionChart data={restaurant.studentDistributionData} />
         </div>
 
         {/* Restaurant Interest and Current Lunch Situation */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <RestaurantPieChart 
             title="Intérêt pour la restauration scolaire" 
-            data={restaurationInterestData}
+            data={restaurant.restaurationInterestData}
             colors={CHART_COLORS}
           />
           <HorizontalBarChart 
             title="Situation actuelle des repas"
-            data={currentLunchData}
+            data={restaurant.currentLunchData}
           />
         </div>
 
@@ -55,11 +54,11 @@ const DiagnosticRestaurantContent = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <VerticalBarChart 
             title="Intérêt par jour de la semaine"
-            data={serviceInterestByDayData}
+            data={restaurant.serviceInterestByDayData}
           />
           <VerticalBarChart 
             title="Types de repas souhaités"
-            data={mealTypePreferenceData}
+            data={restaurant.mealTypePreferenceData}
           />
         </div>
 
@@ -67,12 +66,12 @@ const DiagnosticRestaurantContent = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <RestaurantPieChart 
             title="Budget pour un plat" 
-            data={priceForDishData}
+            data={restaurant.priceForDishData}
             colors={CHART_COLORS}
           />
           <RestaurantPieChart 
             title="Budget pour un menu complet" 
-            data={priceForMenuData}
+            data={restaurant.priceForMenuData}
             colors={CHART_COLORS}
           />
         </div>

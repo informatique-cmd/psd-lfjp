@@ -1,71 +1,31 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
+import pageDataFile from '@/content/pageData.json';
+import { psdTimelineData } from '@/data/psdTimelineData';
+import { useContentDraft } from '@/lib/contentDraft';
 import { GraduationCap, HandCoins, Laptop, Wifi, ChevronDown } from 'lucide-react';
 import PSDAxeLayout from './PSDAxeLayout';
 
+const timelineDraftFallback = {
+  ...pageDataFile,
+  psdTimelines: (pageDataFile as { psdTimelines?: typeof psdTimelineData }).psdTimelines || psdTimelineData,
+};
+
 const PSDAxe3 = () => {
   const [isTimelineExpanded, setTimelineExpanded] = useState(false);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', timelineDraftFallback);
+  const timeline = pageData.psdTimelines.axe3;
 
-  const timelineYears = useMemo(() => Array.from({ length: 5 }, (_, index) => 2026 + index), []);
+  const timelineYears = Array.from({ length: timeline.endYear - timeline.startYear + 1 }, (_, index) => timeline.startYear + index);
   const startYear = timelineYears[0];
   const totalYears = timelineYears[timelineYears.length - 1] - startYear + 1;
 
-  const timelineActions = [
-    {
-      title: 'Classe numérique mobile',
-      description: 'Phase 2 (2026) puis finalisation de la phase 3 et homogénéité du parc en 2027.',
-      start: 2026,
-      end: 2027,
-      color: 'from-indigo-300/80 to-indigo-500'
-    },
-    {
-      title: 'Renouvellement du matériel informatique',
-      description: 'Plan pluriannuel de remplacement des PC et vidéoprojecteurs (2026-2030).',
-      start: 2026,
-      end: 2030,
-      color: 'from-emerald-300/80 to-emerald-500'
-    },
-    {
-      title: 'Curriculum numérique & introduction au code',
-      description: 'Déploiement du curriculum spiralaire, algorithmique visuelle et Python collège/lycée.',
-      start: 2026,
-      end: 2030,
-      color: 'from-sky-300/80 to-sky-500'
-    },
-    {
-      title: 'Module IA & citoyenneté numérique',
-      description: 'Sensibilisation IA, PIX IA et ateliers éthiques/cybersécurité sur toute la période.',
-      start: 2026,
-      end: 2030,
-      color: 'from-amber-200/80 to-amber-400'
-    },
-    {
-      title: 'Connectivité 2.0',
-      description: 'Nouvelles bornes Wi-Fi, administration réseau, extension et éventuelle ligne pro THD.',
-      start: 2026,
-      end: 2030,
-      color: 'from-purple-300/80 to-purple-500'
-    },
-    {
-      title: 'Mécénat numérique',
-      description: 'Création du fonds, appels à projets puis financements et pérennisation (2026-2030).',
-      start: 2026,
-      end: 2030,
-      color: 'from-rose-300/80 to-rose-500'
-    },
-    {
-      title: '1 PC par lycéen',
-      description: 'Distribution progressive aux cohortes de Seconde (2028-2030) jusqu’à couverture complète.',
-      start: 2028,
-      end: 2030,
-      color: 'from-orange-300/80 to-orange-500'
-    }
-  ];
+  const timelineActions = timeline.actions;
 
   const timelineContent = (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-2 mb-6">
-        <h4 className="text-lg font-semibold text-slate-900">Frise temporelle des actions structurantes (2026-2030)</h4>
+        <h4 className="text-lg font-semibold text-slate-900">Frise temporelle des actions structurantes ({timeline.startYear}-{timeline.endYear})</h4>
         <p className="text-sm text-slate-600">
           Visualisation synthétique des jalons clés pour l&apos;axe 3 : la barre colorée indique la période estimée de
           préparation, de déploiement ou de suivi pour chaque action.
@@ -75,7 +35,7 @@ const PSDAxe3 = () => {
         <div className="min-w-[720px] space-y-4">
           <div className="grid grid-cols-[200px_1fr] items-center gap-4 text-sm font-semibold text-slate-500 uppercase tracking-wide">
             <span>Périmètre</span>
-            <div className="grid grid-cols-5 text-center">
+            <div className="grid text-center" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
               {timelineYears.map((year) => (
                 <span key={year}>{year}</span>
               ))}
@@ -108,7 +68,7 @@ const PSDAxe3 = () => {
                           width: `${width}%`
                         }}
                       />
-                      <div className="absolute inset-0 grid grid-cols-5 text-[10px] text-slate-400">
+                      <div className="absolute inset-0 grid text-[10px] text-slate-400" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
                         {timelineYears.map((year) => (
                           <div key={year} className="border-l border-dashed border-slate-200 first:border-l-0" />
                         ))}

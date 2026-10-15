@@ -1,7 +1,9 @@
 
 import React, { createContext, useContext } from 'react';
+import pageDataFile from '@/content/pageData.json';
+import { useContentDraft } from '@/lib/contentDraft';
 
-interface Metric {
+export interface ElcsMetric {
   name: string;
   value: number | string;
   label?: string;
@@ -9,21 +11,21 @@ interface Metric {
   trend?: 'up' | 'down';
 }
 
-interface CategoryData {
+export interface ElcsCategoryData {
   title: string;
-  primary: Metric[];
-  secondary: Metric[];
+  primary: ElcsMetric[];
+  secondary: ElcsMetric[];
 }
 
-interface ElcsDataType {
-  satisfaction: CategoryData;
-  relations: CategoryData;
-  travail: CategoryData;
-  securite: CategoryData;
+export interface ElcsDataType {
+  satisfaction: ElcsCategoryData;
+  relations: ElcsCategoryData;
+  travail: ElcsCategoryData;
+  securite: ElcsCategoryData;
 }
 
 // Create the default data 
-const elcsData: ElcsDataType = {
+export const elcsData: ElcsDataType = {
   satisfaction: {
     title: "Satisfaction des Infrastructures",
     primary: [
@@ -73,11 +75,16 @@ const elcsData: ElcsDataType = {
 
 // Create context
 const ElcsDataContext = createContext<ElcsDataType | undefined>(undefined);
+const elcsDraftFallback = {
+  ...pageDataFile,
+  elcsData: (pageDataFile as { elcsData?: ElcsDataType }).elcsData || elcsData,
+};
 
 // Provider component
 export const ElcsDataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', elcsDraftFallback);
   return (
-    <ElcsDataContext.Provider value={elcsData}>
+    <ElcsDataContext.Provider value={pageData.elcsData}>
       {children}
     </ElcsDataContext.Provider>
   );
