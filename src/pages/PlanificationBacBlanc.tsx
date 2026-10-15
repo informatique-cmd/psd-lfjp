@@ -5,8 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Clock, Info, LifeBuoy, Users } from 'lucide-react';
 import { bacBlancSchedule } from '@/data/bacBlancSchedule';
+import pageDataFile from '@/content/pageData.json';
+import { readContentDraft } from '@/lib/contentDraft';
 
 const PlanificationBacBlanc = () => {
+  const pageData = readContentDraft('lfjp-admin-page-data-draft', {
+    ...pageDataFile,
+    bacBlancSchedule: (pageDataFile as { bacBlancSchedule?: typeof bacBlancSchedule }).bacBlancSchedule || bacBlancSchedule,
+    planificationBacBlanc: (pageDataFile as { planificationBacBlanc?: { badge: string; title: string; description: string } }).planificationBacBlanc || {
+      badge: 'Planification des épreuves',
+      title: 'Organisation du bac blanc – session de décembre',
+      description: 'Vue synthétique de l’organisation de la journée du 10 décembre. Chaque carte détaille la surveillance principale, le support dédié et les consignes logistiques pour garantir une couverture complète des salles.',
+    },
+  });
   return (
     <div className="min-h-screen flex flex-col font-raleway bg-gradient-to-b from-[#f5f7fb] via-white to-white">
       <Navbar showLogo={true} />
@@ -16,21 +27,17 @@ const PlanificationBacBlanc = () => {
           <div className="container mx-auto px-6 py-16 md:py-24">
             <div className="max-w-3xl space-y-6">
               <Badge className="bg-white/15 text-white backdrop-blur-sm border border-white/30">
-                Planification des épreuves
+                {pageData.planificationBacBlanc.badge}
               </Badge>
               <h1 className="text-3xl md:text-5xl font-playfair font-bold leading-tight">
-                Organisation du bac blanc – session de décembre
+                {pageData.planificationBacBlanc.title}
               </h1>
-              <p className="text-base md:text-lg text-white/80 leading-relaxed">
-                Vue synthétique de l&apos;organisation de la journée du 10 décembre. Chaque carte détaille la
-                surveillance principale, le support dédié et les consignes logistiques pour garantir une couverture complète
-                des salles.
-              </p>
+              <p className="text-base md:text-lg text-white/80 leading-relaxed">{pageData.planificationBacBlanc.description}</p>
             </div>
           </div>
         </section>
 
-        {bacBlancSchedule.map((day) => (
+        {pageData.bacBlancSchedule.map((day) => (
           <section key={day.date} className="py-12 md:py-16">
             <div className="container mx-auto px-6 space-y-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

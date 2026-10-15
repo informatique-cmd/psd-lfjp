@@ -8,16 +8,46 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
+import pageDataFile from '@/content/pageData.json';
 import breadcrumbRoutes from '@/data/breadcrumbRoutes.json';
-import { isValidManagedPage, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
+import { bacBlancSchedule } from '@/data/bacBlancSchedule';
+import { filmAnnuelData } from '@/data/filmAnnuelData';
+import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 
 type Content = typeof siteContent;
 const draftStorageKey = 'lfjp-admin-draft';
 const pagesDraftStorageKey = 'lfjp-admin-pages-draft';
+const pageDataDraftStorageKey = 'lfjp-admin-page-data-draft';
+const defaultPageData = {
+  bacBlancSchedule: (pageDataFile as { bacBlancSchedule?: typeof bacBlancSchedule }).bacBlancSchedule || bacBlancSchedule,
+  filmAnnuelData: (pageDataFile as { filmAnnuelData?: typeof filmAnnuelData }).filmAnnuelData || filmAnnuelData,
+  planStrategique: { title: 'PLAN STRATÉGIQUE DE DÉVELOPPEMENT', subtitle: 'Lycée Français Jacques Prévert (2026-2030)' },
+  planificationBacBlanc: {
+    badge: 'Planification des épreuves',
+    title: 'Organisation du bac blanc – session de décembre',
+    description: 'Vue synthétique de l’organisation de la journée du 10 décembre. Chaque carte détaille la surveillance principale, le support dédié et les consignes logistiques pour garantir une couverture complète des salles.',
+  },
+};
+
+const loadPageDataDraft = () => {
+  const savedData = window.localStorage.getItem(pageDataDraftStorageKey);
+  if (!savedData) return { ...defaultPageData, ...pageDataFile };
+  try {
+    const parsed: unknown = JSON.parse(savedData);
+    if (!isRecord(parsed)) {
+      throw new Error('Structure des données de pages invalide.');
+    }
+    const merged = { ...defaultPageData, ...pageDataFile, ...parsed };
+    if (!isValidPageData(merged)) throw new Error('Structure des données de pages invalide.');
+    return merged;
+  } catch {
+    window.localStorage.removeItem(pageDataDraftStorageKey);
+    return { ...defaultPageData, ...pageDataFile };
+  }
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
-
 const loadContentDraft = (): Content => {
   const savedDraft = window.localStorage.getItem(draftStorageKey);
   if (!savedDraft) return siteContent;
@@ -97,6 +127,7 @@ const TextStyleToolbar = ({ style = {}, onChange }: { style?: TextStyle; onChang
 const Admin = () => {
   const [content, setContent] = useState<Content>(loadContentDraft);
   const [pages, setPages] = useState<ManagedPage[]>(loadPagesDraft);
+  const [pageDataJson, setPageDataJson] = useState(() => JSON.stringify(loadPageDataDraft(), null, 2));
   const [selectedPage, setSelectedPage] = useState(0);
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -286,6 +317,10 @@ const Admin = () => {
     try {
       const validationErrors = validateManagedPages(pages);
       if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
+      const parsedPageData: unknown = JSON.parse(pageDataJson);
+      if (!isValidPageData(parsedPageData)) {
+        throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de créer la Preview.');
+      }
       const managedPaths = new Set(pages.map((page) => normalizePageSlug(page.slug)));
       const knownPaths = new Set(Object.keys(breadcrumbRoutes));
       const invalidCard = content.home.cards.find((card) => {
@@ -299,6 +334,7 @@ const Admin = () => {
         body: JSON.stringify({ files: {
           'src/content/siteContent.json': serializedContent,
           'src/content/pages.json': serializedPages,
+          'src/content/pageData.json': JSON.stringify(parsedPageData, null, 2),
         } }),
       });
       const responseText = await response.text();
@@ -343,15 +379,33 @@ const Admin = () => {
   };
 
   const saveDraft = () => {
+    try {
+      const parsed: unknown = JSON.parse(pageDataJson);
+      if (!isValidPageData(parsed)) {
+        throw new Error('Les données de planning ou de film annuel sont invalides.');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.');
+      return false;
+    }
     window.localStorage.setItem(draftStorageKey, serializedContent);
     window.localStorage.setItem(pagesDraftStorageKey, serializedPages);
+    window.localStorage.setItem(pageDataDraftStorageKey, pageDataJson);
     setStatus('Brouillon enregistré dans ce navigateur. Il n’est pas encore public.');
+    return true;
+  };
+
+  const previewDraft = () => {
+    if (saveDraft()) window.open('/?draft=1', '_blank', 'noopener,noreferrer');
   };
 
   const resetDraft = () => {
     window.localStorage.removeItem(draftStorageKey);
+    window.localStorage.removeItem(pagesDraftStorageKey);
+    window.localStorage.removeItem(pageDataDraftStorageKey);
     setContent(siteContent);
     setPages(pagesFile.pages as ManagedPage[]);
+    setPageDataJson(JSON.stringify({ ...defaultPageData, ...pageDataFile }, null, 2));
     setStatus('Brouillon réinitialisé avec le contenu versionné.');
   };
 
@@ -554,6 +608,7 @@ const Admin = () => {
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#rubriques">Rubriques de l’accueil</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#pages">Pages & hiérarchie</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#messages">Messages & médias</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#donnees-pages">Données des pages</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#publication">Enregistrer & publier</a>
           </nav>
           <Card id="identite">
@@ -741,7 +796,26 @@ const Admin = () => {
             </CardContent>
           </Card>
 
+          <Card id="donnees-pages">
+            <CardHeader>
+              <CardTitle>Données des pages spécialisées</CardTitle>
+              <CardDescription>Les plannings et parcours annuels utilisent ces données, sans modifier leur présentation.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              <Label htmlFor="page-data-json">Plannings, années et parcours (JSON)</Label>
+              <Textarea
+                id="page-data-json"
+                className="min-h-[360px] font-mono text-xs"
+                value={pageDataJson}
+                onChange={(event) => setPageDataJson(event.target.value)}
+                spellCheck={false}
+              />
+              <p className="text-xs text-slate-500">Les données du bac blanc et des films annuels sont publiées avec les autres brouillons. Un JSON invalide bloque l’enregistrement et la Preview.</p>
+            </CardContent>
+          </Card>
+
           <div id="publication" className="flex scroll-mt-24 flex-wrap items-center gap-3">
+            <Button onClick={previewDraft} variant="outline"><Eye /> Aperçu global du brouillon</Button>
             <Button onClick={saveDraft} variant="outline"><Save /> Enregistrer le brouillon</Button>
             <Button onClick={resetDraft} variant="ghost">Réinitialiser</Button>
             <Button onClick={createPullRequest} disabled={isSaving}><Send /> {isSaving ? 'Préparation…' : 'Créer une Preview GitHub'}</Button>

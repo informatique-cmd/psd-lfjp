@@ -104,6 +104,55 @@ export const isValidManagedPage = (value: unknown): value is ManagedPage =>
   Array.isArray(value.blocks) &&
   value.blocks.every(isValidContentBlock);
 
+export const isValidPageData = (value: unknown) =>
+  isRecord(value) &&
+  Array.isArray(value.bacBlancSchedule) &&
+  value.bacBlancSchedule.every((day) =>
+    isRecord(day) &&
+    typeof day.date === 'string' &&
+    typeof day.label === 'string' &&
+    typeof day.focus === 'string' &&
+    Array.isArray(day.rooms) &&
+    day.rooms.every((room) =>
+      isRecord(room) &&
+      typeof room.room === 'string' &&
+      typeof room.examTitle === 'string' &&
+      typeof room.examTime === 'string' &&
+      typeof room.leadExaminer === 'string' &&
+      isStringArray(room.surveillanceTeam) &&
+      (room.supportTeam === undefined || (
+        isRecord(room.supportTeam) &&
+        isStringArray(room.supportTeam.names) &&
+        typeof room.supportTeam.mission === 'string' &&
+        (room.supportTeam.presence === undefined || typeof room.supportTeam.presence === 'string')
+      )) &&
+      (room.notes === undefined || typeof room.notes === 'string')
+    ) &&
+    (day.note === undefined || typeof day.note === 'string')
+  ) &&
+  isRecord(value.filmAnnuelData) &&
+  Object.values(value.filmAnnuelData).every((level) =>
+    isRecord(level) &&
+    typeof level.level === 'string' &&
+    typeof level.subtitle === 'string' &&
+    Array.isArray(level.actions) &&
+    level.actions.every((action) =>
+      isRecord(action) &&
+      typeof action.title === 'string' &&
+      typeof action.period === 'string' &&
+      typeof action.description === 'string' &&
+      typeof action.actors === 'string' &&
+      ['Mieux se connaître', 'Plonger dans le monde professionnel', 'Finaliser les projets'].includes(String(action.phase))
+    )
+  ) &&
+  isRecord(value.planStrategique) &&
+  typeof value.planStrategique.title === 'string' &&
+  typeof value.planStrategique.subtitle === 'string' &&
+  isRecord(value.planificationBacBlanc) &&
+  typeof value.planificationBacBlanc.badge === 'string' &&
+  typeof value.planificationBacBlanc.title === 'string' &&
+  typeof value.planificationBacBlanc.description === 'string';
+
 export const validateManagedPages = (pages: ManagedPage[]) => {
   const errors: string[] = [];
   const slugs = new Set<string>();

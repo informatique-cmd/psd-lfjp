@@ -2,8 +2,10 @@
 import React from 'react';
 import { Target } from 'lucide-react';
 import siteContent from '@/content/siteContent.json';
+import { readContentDraft } from '@/lib/contentDraft';
 
 const Vision = () => {
+  const content = readContentDraft('lfjp-admin-draft', siteContent);
   return (
     <section id="vision" className="py-16 md:py-24 bg-white">
       <div className="container mx-auto px-6">
@@ -22,7 +24,7 @@ const Vision = () => {
           <div className="w-full md:w-2/3">
             
             <div className="space-y-4 font-raleway">
-              {siteContent.visionMissionsValeurs.vision.map((paragraph) => <p key={paragraph} className="text-gray-700 leading-relaxed">{paragraph}</p>)}
+              {content.visionMissionsValeurs.vision.map((paragraph) => <p key={paragraph} className="text-gray-700 leading-relaxed">{paragraph}</p>)}
             </div>
           </div>
         </div>

@@ -3,10 +3,11 @@ import React from 'react';
 import { Heart, Award, Users, Sparkles, Check } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import siteContent from '@/content/siteContent.json';
+import { readContentDraft } from '@/lib/contentDraft';
 
 const Valeurs = () => {
   const icons = [Heart, Award, Users, Sparkles, Check];
-  const values = siteContent.visionMissionsValeurs.values.map((value, index) => ({ ...value, Icon: icons[index] || Check }));
+  const values = readContentDraft('lfjp-admin-draft', siteContent).visionMissionsValeurs.values.map((value, index) => ({ ...value, Icon: icons[index] || Check }));
 
   return (
     <section id="valeurs" className="py-16 md:py-24 bg-white">

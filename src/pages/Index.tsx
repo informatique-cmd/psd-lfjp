@@ -8,6 +8,7 @@ import BackToTop from '../components/BackToTop';
 import { Card, CardContent } from '@/components/ui/card';
 import siteContent from '@/content/siteContent.json';
 import { normalizeMediaUrl } from '@/lib/media';
+import { readContentDraft } from '@/lib/contentDraft';
 import type { TextStyle } from '@/content/pageTypes';
 
 const cardTextStyle = (style?: TextStyle): React.CSSProperties => ({
@@ -23,7 +24,7 @@ const cardTextStyle = (style?: TextStyle): React.CSSProperties => ({
 });
 
 const Index = () => {
-  const { home } = siteContent;
+  const { home } = readContentDraft('lfjp-admin-draft', siteContent);
 
   return (
     <div className="min-h-screen flex flex-col font-raleway">

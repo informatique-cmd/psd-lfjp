@@ -2,9 +2,10 @@
 import React from 'react';
 import { List } from 'lucide-react';
 import siteContent from '@/content/siteContent.json';
+import { readContentDraft } from '@/lib/contentDraft';
 
 const Missions = () => {
-  const missions = siteContent.visionMissionsValeurs.missions;
+  const missions = readContentDraft('lfjp-admin-draft', siteContent).visionMissionsValeurs.missions;
 
   return (
     <section id="missions" className="py-16 md:py-24 bg-gray-50">

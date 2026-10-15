@@ -27,6 +27,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { filmAnnuelData, FilmAction, FilmPhase } from '@/data/filmAnnuelData';
+import pageDataFile from '@/content/pageData.json';
+import { readContentDraft } from '@/lib/contentDraft';
 import { ArrowLeft, Home, Filter, Search, Printer, Clock, Users, Layers } from 'lucide-react';
 
 const phases: FilmPhase[] = [
@@ -43,7 +45,11 @@ const phaseColors: Record<FilmPhase, string> = {
 
 const FilmAnnuelLevel = () => {
   const { niveau } = useParams<{ niveau: string }>();
-  const data = (niveau && filmAnnuelData[niveau]) || undefined;
+  const pageData = readContentDraft('lfjp-admin-page-data-draft', {
+    ...pageDataFile,
+    filmAnnuelData: (pageDataFile as { filmAnnuelData?: typeof filmAnnuelData }).filmAnnuelData || filmAnnuelData,
+  });
+  const data = (niveau && pageData.filmAnnuelData[niveau]) || undefined;
   const [phaseFilter, setPhaseFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
