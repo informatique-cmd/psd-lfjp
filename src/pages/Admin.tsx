@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, Copy, ExternalLink, Eye, Github, Image, Italic, Save, Send, Trash2, Underline, Upload } from 'lucide-react';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowLeft, Bold, Check, Copy, ExternalLink, Eye, Github, Image, Italic, Pencil, Save, Send, Trash2, Underline, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { bacBlancSchedule } from '@/data/bacBlancSchedule';
 import { filmAnnuelData } from '@/data/filmAnnuelData';
 import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
+import publishedPageText from '@/content/pageText.json';
+import { pageTextDraftStorageKey } from '@/lib/pageOverrides';
 
 type Content = typeof siteContent;
 const draftStorageKey = 'lfjp-admin-draft';
@@ -48,6 +50,11 @@ const loadPageDataDraft = () => {
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+const isValidPageTextOverrides = (value: unknown) => isRecord(value) &&
+  Object.values(value).every((page) => isRecord(page) &&
+    Object.values(page).every((entry) => isRecord(entry) &&
+      Object.entries(entry).every(([field, item]) => ['text', 'src', 'alt', 'href'].includes(field) && typeof item === 'string')));
+
 const loadContentDraft = (): Content => {
   const savedDraft = window.localStorage.getItem(draftStorageKey);
   if (!savedDraft) return siteContent;
@@ -128,6 +135,14 @@ const Admin = () => {
   const [content, setContent] = useState<Content>(loadContentDraft);
   const [pages, setPages] = useState<ManagedPage[]>(loadPagesDraft);
   const [pageDataJson, setPageDataJson] = useState(() => JSON.stringify(loadPageDataDraft(), null, 2));
+  const [pageTextJson, setPageTextJson] = useState(() => {
+    try {
+      return window.localStorage.getItem(pageTextDraftStorageKey) || JSON.stringify(publishedPageText, null, 2);
+    } catch {
+      return JSON.stringify(publishedPageText, null, 2);
+    }
+  });
+  const [visualRoute, setVisualRoute] = useState('/methode');
   const [selectedPage, setSelectedPage] = useState(0);
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -141,6 +156,14 @@ const Admin = () => {
       .then((data) => setUser(data?.user ?? null))
       .catch(() => setUser(null))
       .finally(() => setAuthChecked(true));
+  }, []);
+
+  useEffect(() => {
+    const syncVisualDraft = (event: StorageEvent) => {
+      if (event.key === pageTextDraftStorageKey && event.newValue) setPageTextJson(event.newValue);
+    };
+    window.addEventListener('storage', syncVisualDraft);
+    return () => window.removeEventListener('storage', syncVisualDraft);
   }, []);
 
   useEffect(() => {
@@ -321,6 +344,10 @@ const Admin = () => {
       if (!isValidPageData(parsedPageData)) {
         throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de créer la Preview.');
       }
+      const parsedPageText: unknown = JSON.parse(pageTextJson);
+      if (!isValidPageTextOverrides(parsedPageText)) {
+        throw new Error('Les modifications visuelles des pages sont invalides. Vérifiez leur JSON avant de créer la Preview.');
+      }
       const managedPaths = new Set(pages.map((page) => normalizePageSlug(page.slug)));
       const knownPaths = new Set(Object.keys(breadcrumbRoutes));
       const invalidCard = content.home.cards.find((card) => {
@@ -335,6 +362,7 @@ const Admin = () => {
           'src/content/siteContent.json': serializedContent,
           'src/content/pages.json': serializedPages,
           'src/content/pageData.json': JSON.stringify(parsedPageData, null, 2),
+          'src/content/pageText.json': JSON.stringify(parsedPageText, null, 2),
         } }),
       });
       const responseText = await response.text();
@@ -384,6 +412,10 @@ const Admin = () => {
       if (!isValidPageData(parsed)) {
         throw new Error('Les données de planning ou de film annuel sont invalides.');
       }
+      const visualOverrides: unknown = JSON.parse(pageTextJson);
+      if (!isValidPageTextOverrides(visualOverrides)) {
+        throw new Error('Les modifications visuelles des pages sont invalides.');
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.');
       return false;
@@ -391,6 +423,7 @@ const Admin = () => {
     window.localStorage.setItem(draftStorageKey, serializedContent);
     window.localStorage.setItem(pagesDraftStorageKey, serializedPages);
     window.localStorage.setItem(pageDataDraftStorageKey, pageDataJson);
+    window.localStorage.setItem(pageTextDraftStorageKey, pageTextJson);
     setStatus('Brouillon enregistré dans ce navigateur. Il n’est pas encore public.');
     return true;
   };
@@ -399,13 +432,19 @@ const Admin = () => {
     if (saveDraft()) window.open('/?draft=1', '_blank', 'noopener,noreferrer');
   };
 
+  const openVisualEditor = () => {
+    if (saveDraft()) window.open(`${visualRoute}?draft=1&edit=1`, '_blank', 'noopener,noreferrer');
+  };
+
   const resetDraft = () => {
     window.localStorage.removeItem(draftStorageKey);
     window.localStorage.removeItem(pagesDraftStorageKey);
     window.localStorage.removeItem(pageDataDraftStorageKey);
+    window.localStorage.removeItem(pageTextDraftStorageKey);
     setContent(siteContent);
     setPages(pagesFile.pages as ManagedPage[]);
     setPageDataJson(JSON.stringify({ ...defaultPageData, ...pageDataFile }, null, 2));
+    setPageTextJson(JSON.stringify(publishedPageText, null, 2));
     setStatus('Brouillon réinitialisé avec le contenu versionné.');
   };
 
@@ -608,6 +647,7 @@ const Admin = () => {
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#rubriques">Rubriques de l’accueil</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#pages">Pages & hiérarchie</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#messages">Messages & médias</a>
+            <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#edition-visuelle">Modifier les pages</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#donnees-pages">Données des pages</a>
             <a className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-french-blue" href="#publication">Enregistrer & publier</a>
           </nav>
@@ -793,6 +833,28 @@ const Admin = () => {
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          <Card id="edition-visuelle">
+            <CardHeader>
+              <CardTitle>Modifier les pages du site</CardTitle>
+              <CardDescription>Ouvrez une page dans son design actuel, choisissez un texte, un lien ou une image et modifiez sa valeur dans le brouillon.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-end gap-3">
+              <div className="grid min-w-64 flex-1 gap-2">
+                <Label htmlFor="visual-page-route">Page à modifier</Label>
+                <select id="visual-page-route" className="h-10 rounded-md border bg-white px-3" value={visualRoute} onChange={(event) => setVisualRoute(event.target.value)}>
+                  {Object.entries(breadcrumbRoutes).map(([path, route]) => (
+                    <option key={path} value={path}>{route.name} — {path}</option>
+                  ))}
+                  {pages.map((page) => (
+                    <option key={page.slug} value={normalizePageSlug(page.slug)}>{page.title} — {normalizePageSlug(page.slug)}</option>
+                  ))}
+                </select>
+              </div>
+              <Button type="button" onClick={openVisualEditor}><Pencil /> Modifier visuellement</Button>
+              <p className="w-full text-xs text-slate-500">Les changements sont enregistrés dans le brouillon local; créez ensuite une Preview GitHub et validez-la avant publication.</p>
             </CardContent>
           </Card>
 

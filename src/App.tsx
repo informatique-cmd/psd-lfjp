@@ -63,6 +63,7 @@ import ToutesLesReussites from "./pages/ToutesLesReussites";
 import CelebrationReussitesDiplomes from "./pages/CelebrationReussitesDiplomes";
 import Admin from "./pages/Admin";
 import ManagedPage from "./pages/ManagedPage";
+import PageTextEditor from "./components/PageTextEditor";
 
 // Créer l'instance QueryClient en dehors du composant pour éviter les recréations
 const queryClient = new QueryClient({
@@ -83,6 +84,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <PageTextEditor />
             <div className="flex flex-col min-h-screen">
               <Routes>
                 <Route path="/admin" element={<Navigate to="/espace-direction" replace />} />

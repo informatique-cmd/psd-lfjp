@@ -1,5 +1,8 @@
 export const isContentDraftPreview = () =>
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('draft') === '1';
+  typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.search).get('draft') === '1' ||
+    new URLSearchParams(window.location.search).get('edit') === '1'
+  );
 
 export const readContentDraft = <T,>(key: string, fallback: T): T => {
   if (!isContentDraftPreview()) return fallback;
