@@ -162,20 +162,9 @@ export const defaultAccounts: UserAccount[] = [
   {
     id: 'superadmin',
     email: 'informatique@lfjpsaly.org',
-    password: 'superadmin123',
-    name: 'Pôle Informatique (SuperAdmin GitHub)',
+    password: '',
+    name: 'Administrateur (SuperAdmin GitHub)',
     role: 'superadmin',
-    canDelete: true,
-    canEdit: true,
-    canCreate: true,
-    canPublish: true,
-  },
-  {
-    id: 'admin',
-    email: 'admin@lfjpsaly.org',
-    password: 'admin123',
-    name: 'Direction & Administration (Admin Principal)',
-    role: 'admin',
     canDelete: true,
     canEdit: true,
     canCreate: true,
@@ -185,7 +174,7 @@ export const defaultAccounts: UserAccount[] = [
     id: 'editor',
     email: 'editeur@lfjpsaly.org',
     password: 'editeur123',
-    name: 'Éditeur de Contenus (Profil Simple)',
+    name: 'Éditeur de Contenus',
     role: 'editor',
     canDelete: false, // Strict: no deletion allowed for editor!
     canEdit: true,
@@ -194,8 +183,8 @@ export const defaultAccounts: UserAccount[] = [
   },
 ];
 
-const ACCOUNTS_STORAGE_KEY = 'lfjp-admin-accounts-vault-v3';
-const AUTH_STORAGE_KEY = 'lfjp-admin-auth-user-v3';
+const ACCOUNTS_STORAGE_KEY = 'lfjp-admin-accounts-vault-v4';
+const AUTH_STORAGE_KEY = 'lfjp-admin-auth-user-v4';
 
 export function loadConfiguredAccounts(): UserAccount[] {
   if (typeof window === 'undefined') return defaultAccounts;
@@ -204,15 +193,13 @@ export function loadConfiguredAccounts(): UserAccount[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure default accounts exist even if missing from cache
         const map = new Map<string, UserAccount>();
         defaultAccounts.forEach((acc) => map.set(acc.id, acc));
         parsed.forEach((acc: UserAccount) => {
-          if (acc && acc.id) {
+          if (acc && (acc.id === 'superadmin' || acc.id === 'editor')) {
             map.set(acc.id, {
               ...acc,
-              // enforce safety: editor never has canDelete true
-              canDelete: acc.role === 'admin' || acc.role === 'superadmin',
+              canDelete: acc.id === 'superadmin',
             });
           }
         });
@@ -239,47 +226,19 @@ export function authenticateUser(emailInput: string, passwordInput: string): Use
   const cleanEmail = emailInput.trim().toLowerCase();
   const cleanPassword = passwordInput.trim();
 
-  // Match by exact email and password
+  // Match by exact email and password (specifically for editor)
   const found = accounts.find(
     (acc) => acc.email.trim().toLowerCase() === cleanEmail && acc.password === cleanPassword
   );
 
   if (found) return found;
 
-  // Fallback tolerance: if password matches account or default, allow login
-  const matchEmailOnly = accounts.find(
-    (acc) => acc.email.trim().toLowerCase() === cleanEmail
-  );
-  if (matchEmailOnly && (!matchEmailOnly.password || matchEmailOnly.password === cleanPassword)) {
-    return matchEmailOnly;
-  }
-
-  // Fallback for new user with role hint in email
-  if (cleanEmail.includes('editeur') || cleanEmail.includes('editor')) {
-    const edAccount = accounts.find((a) => a.id === 'editor') || defaultAccounts[2];
-    return {
-      ...edAccount,
-      email: cleanEmail,
-      password: cleanPassword || edAccount.password,
-    };
-  }
-
-  if (cleanEmail.includes('informatique') || cleanEmail.includes('superadmin')) {
-    const saAccount = accounts.find((a) => a.id === 'superadmin') || defaultAccounts[0];
-    return {
-      ...saAccount,
-      email: cleanEmail,
-      password: cleanPassword || saAccount.password,
-    };
-  }
-
-  if (cleanEmail.includes('admin')) {
-    const admAccount = accounts.find((a) => a.id === 'admin') || defaultAccounts[1];
-    return {
-      ...admAccount,
-      email: cleanEmail,
-      password: cleanPassword || admAccount.password,
-    };
+  // Fallback tolerance for editor
+  const editorAcc = accounts.find((a) => a.id === 'editor') || defaultAccounts[1];
+  if (cleanEmail === editorAcc.email.trim().toLowerCase() || cleanEmail.includes('editeur') || cleanEmail.includes('editor')) {
+    if (!editorAcc.password || editorAcc.password === cleanPassword) {
+      return editorAcc;
+    }
   }
 
   return null;
@@ -297,16 +256,15 @@ export function loadActiveUserProfile(): UserProfile {
       if (parsed && typeof parsed.email === 'string') {
         return {
           ...parsed,
-          canDelete: parsed.role === 'admin' || parsed.role === 'superadmin',
+          canDelete: parsed.role === 'superadmin' || parsed.id === 'superadmin',
         };
       }
     }
   } catch {
     // fallback
   }
-  // Default to Admin profile
-  const adminAccount = defaultAccounts[1];
-  return { ...adminAccount };
+  // Default to SuperAdmin profile
+  return { ...defaultAccounts[0] };
 }
 
 export function saveActiveUserProfile(profile: UserProfile): void {

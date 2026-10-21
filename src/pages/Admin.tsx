@@ -313,16 +313,16 @@ const Admin = () => {
   const [editFormPassword, setEditFormPassword] = useState('');
   const [editFormName, setEditFormName] = useState('');
 
-  const adminAccount = configuredAccounts.find((a) => a.id === 'admin') || defaultAccounts[1];
-  const editorAccount = configuredAccounts.find((a) => a.id === 'editor') || defaultAccounts[2];
   const superAdminAccount = configuredAccounts.find((a) => a.id === 'superadmin') || defaultAccounts[0];
+  const editorAccount = configuredAccounts.find((a) => a.id === 'editor') || defaultAccounts[1];
+  const adminAccount = superAdminAccount;
 
-  const [loginEmail, setLoginEmail] = useState(adminAccount.email);
-  const [loginPassword, setLoginPassword] = useState(adminAccount.password);
+  const [loginEmail, setLoginEmail] = useState(editorAccount.email);
+  const [loginPassword, setLoginPassword] = useState(editorAccount.password);
 
-  const [gateTab, setGateTab] = useState<'credentials' | 'github' | 'preview'>('credentials');
-  const [gateEmail, setGateEmail] = useState(adminAccount.email);
-  const [gatePassword, setGatePassword] = useState(adminAccount.password);
+  const [gateTab, setGateTab] = useState<'editor' | 'superadmin'>('editor');
+  const [gateEmail, setGateEmail] = useState(editorAccount.email);
+  const [gatePassword, setGatePassword] = useState(editorAccount.password);
   const [gateError, setGateError] = useState('');
   const [showGatePassword, setShowGatePassword] = useState(false);
 
@@ -2506,46 +2506,47 @@ const Admin = () => {
           </div>
 
           <div className="bg-white p-6 space-y-5">
-            {/* Login Mode Selector Tabs */}
-            <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+            {/* Exactly TWO clear Options: Éditeur vs Administrateur (SuperAdmin GitHub) */}
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => { setGateTab('credentials'); setGateError(''); }}
-                className={`py-2 px-1 rounded-lg text-center transition-all ${
-                  gateTab === 'credentials'
+                onClick={() => { setGateTab('editor'); setGateError(''); }}
+                className={`py-2.5 px-3 rounded-lg text-center transition-all flex items-center justify-center gap-2 ${
+                  gateTab === 'editor'
                     ? 'bg-white text-french-blue shadow-sm font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Identifiants
+                <User className="h-4 w-4 text-amber-500" />
+                <span>Éditeur</span>
               </button>
               <button
                 type="button"
-                onClick={() => { setGateTab('github'); setGateError(''); }}
-                className={`py-2 px-1 rounded-lg text-center transition-all ${
-                  gateTab === 'github'
+                onClick={() => { setGateTab('superadmin'); setGateError(''); }}
+                className={`py-2.5 px-3 rounded-lg text-center transition-all flex items-center justify-center gap-2 ${
+                  gateTab === 'superadmin'
                     ? 'bg-white text-french-blue shadow-sm font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                GitHub SuperAdmin
-              </button>
-              <button
-                type="button"
-                onClick={() => { setGateTab('preview'); setGateError(''); }}
-                className={`py-2 px-1 rounded-lg text-center transition-all ${
-                  gateTab === 'preview'
-                    ? 'bg-white text-french-blue shadow-sm font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Prévisualisation
+                <Github className="h-4 w-4 text-slate-800" />
+                <span>SuperAdmin</span>
               </button>
             </div>
 
-            {/* TAB 1: CREDENTIALS (Email & Password) */}
-            {gateTab === 'credentials' && (
+            {/* OPTION 1: ÉDITEUR (Identifiants & Mot de passe) */}
+            {gateTab === 'editor' && (
               <form onSubmit={handleGateLogin} className="space-y-4">
+                <div className="rounded-lg bg-amber-50/80 border border-amber-200 p-3 text-xs text-amber-900 space-y-1 text-left">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5 text-amber-600" />
+                    <span>Profil Éditeur de contenus</span>
+                  </p>
+                  <p className="text-[11px] text-amber-800 leading-relaxed">
+                    Connexion par identifiant et mot de passe. Permet la modification complète des textes, images, plannings et données du site sans risque de suppression accidentelle.
+                  </p>
+                </div>
+
                 {gateError && (
                   <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700 flex items-start gap-2 animate-in fade-in">
                     <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
@@ -2562,7 +2563,7 @@ const Admin = () => {
                       required
                       value={gateEmail}
                       onChange={(e) => setGateEmail(e.target.value)}
-                      placeholder="admin@lfjpsaly.org ou editeur@lfjpsaly.org"
+                      placeholder="editeur@lfjpsaly.org"
                       className="pl-9 text-xs h-10"
                     />
                   </div>
@@ -2593,97 +2594,28 @@ const Admin = () => {
                 </div>
 
                 <Button type="submit" className="w-full bg-french-blue hover:bg-blue-700 text-white font-semibold text-xs h-10 shadow">
-                  <Key className="mr-2 h-4 w-4" /> Se connecter à l’administration
+                  <Key className="mr-2 h-4 w-4" /> Se connecter comme Éditeur
                 </Button>
-
-                {/* Quick Presets for Convenient Testing */}
-                <div className="pt-2 border-t border-slate-100">
-                  <p className="text-[11px] font-bold text-slate-500 mb-2 text-center uppercase tracking-wider">
-                    Rôles & Connexion rapide en 1 clic
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGateEmail(adminAccount.email);
-                        setGatePassword(adminAccount.password);
-                        enterLocalAdminSession('admin');
-                      }}
-                      className="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70 text-left transition-all"
-                    >
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                        <span>Administrateur</span>
-                      </div>
-                      <p className="text-[10px] text-emerald-700 truncate mt-0.5">{adminAccount.email}</p>
-                      <p className="text-[9px] text-emerald-600 mt-1">Tous droits (avec suppression)</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGateEmail(editorAccount.email);
-                        setGatePassword(editorAccount.password);
-                        enterLocalAdminSession('editor');
-                      }}
-                      className="p-2.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100/70 text-left transition-all"
-                    >
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                        <User className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                        <span>Éditeur Simple</span>
-                      </div>
-                      <p className="text-[10px] text-amber-700 truncate mt-0.5">{editorAccount.email}</p>
-                      <p className="text-[9px] text-amber-600 mt-1">Modifs sans suppression</p>
-                    </button>
-                  </div>
-                </div>
               </form>
             )}
 
-            {/* TAB 2: GITHUB OAUTH (SuperAdmin & GitOps) */}
-            {gateTab === 'github' && (
-              <div className="space-y-4 text-center py-2">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-left">
+            {/* OPTION 2: ADMINISTRATEUR / SUPERADMIN (GitHub OAuth) */}
+            {gateTab === 'superadmin' && (
+              <div className="space-y-4 py-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-left">
                   <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
-                    <Github className="h-4 w-4" />
-                    <span>Compte SuperAdmin GitHub ({superAdminAccount.email})</span>
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    <span>Profil Administrateur (SuperAdmin GitHub)</span>
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Cette méthode vous authentifie directement avec votre compte GitHub. Elle permet d’envoyer vos modifications vers la branche de production et de déclencher automatiquement la reconstruction Vercel.
+                  <p className="text-xs text-slate-600 leading-relaxed text-[11px]">
+                    Connexion officielle via GitHub pour le compte administrateur <strong>informatique-cmd</strong>. Confère l’ensemble des droits : création, modification, suppressions de rubriques et déploiement direct vers Vercel.
                   </p>
                 </div>
 
-                <Button asChild className="w-full bg-slate-900 hover:bg-black text-white font-semibold text-xs h-10 shadow">
+                <Button asChild className="w-full bg-slate-900 hover:bg-black text-white font-semibold text-xs h-11 shadow">
                   <a href="/api/auth/github">
                     <Github className="mr-2 h-4 w-4" /> Se connecter avec GitHub (SuperAdmin)
                   </a>
-                </Button>
-              </div>
-            )}
-
-            {/* TAB 3: DIRECT PREVIEW MODE */}
-            {gateTab === 'preview' && (
-              <div className="space-y-3 py-2">
-                <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 space-y-1 text-left">
-                  <p className="font-bold">Mode Prévisualisation locale</p>
-                  <p className="text-[11px] text-blue-700 leading-relaxed">
-                    Accédez immédiatement à l’interface d’administration pour tester les modifications et explorer les rubriques sans saisir d’identifiants.
-                  </p>
-                </div>
-
-                <Button
-                  onClick={() => enterLocalAdminSession('admin')}
-                  className="w-full bg-french-blue text-white hover:bg-blue-700 font-semibold text-xs h-10 shadow"
-                >
-                  <ShieldCheck className="mr-2 h-4 w-4" /> Entrer en mode Admin (Tous droits)
-                </Button>
-
-                <Button
-                  onClick={() => enterLocalAdminSession('editor')}
-                  variant="outline"
-                  className="w-full text-slate-700 hover:bg-slate-50 font-semibold text-xs h-10 border-slate-300"
-                >
-                  <User className="mr-2 h-4 w-4 text-amber-600" /> Entrer en mode Éditeur (Sans suppression)
                 </Button>
               </div>
             )}
@@ -7189,29 +7121,28 @@ const Admin = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          switchUserProfile(adminAccount);
-                          setLoginEmail(adminAccount.email);
-                          setLoginPassword(adminAccount.password);
+                          switchUserProfile(superAdminAccount);
+                          setLoginEmail(superAdminAccount.email);
                         }}
                         className={`p-3.5 rounded-xl border text-left transition-all space-y-1.5 ${
-                          userProfile.role === 'admin'
+                          userProfile.role === 'superadmin' || userProfile.id === 'superadmin'
                             ? 'border-french-blue bg-blue-50/60 ring-2 ring-french-blue/20'
                             : 'border-slate-200 hover:border-french-blue/60 hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-xs text-french-blue flex items-center gap-1.5">
-                            <ShieldCheck className="h-4 w-4" /> Administrateur
+                            <ShieldCheck className="h-4 w-4" /> Administrateur (SuperAdmin GitHub)
                           </span>
-                          {userProfile.role === 'admin' && (
+                          {(userProfile.role === 'superadmin' || userProfile.id === 'superadmin') && (
                             <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
                               Actif
                             </span>
                           )}
                         </div>
-                        <p className="font-mono text-[11px] text-slate-600 font-semibold">{adminAccount.email}</p>
+                        <p className="font-mono text-[11px] text-slate-600 font-semibold">{superAdminAccount.email}</p>
                         <p className="text-[11px] text-slate-500 leading-tight">
-                          Tous droits : modifications, créations, réorganisation et suppressions.
+                          Tous droits : modifications, suppressions et déploiement direct vers Vercel.
                         </p>
                       </button>
 
@@ -7230,7 +7161,7 @@ const Admin = () => {
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-xs text-amber-700 flex items-center gap-1.5">
-                            <User className="h-4 w-4" /> Éditeur Simple
+                            <User className="h-4 w-4" /> Éditeur de Contenus
                           </span>
                           {userProfile.role === 'editor' && (
                             <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
@@ -7240,7 +7171,7 @@ const Admin = () => {
                         </div>
                         <p className="font-mono text-[11px] text-slate-600 font-semibold">{editorAccount.email}</p>
                         <p className="text-[11px] text-slate-500 leading-tight">
-                          Modification complète des contenus sans risque de suppression.
+                          Modification complète des contenus (suppression protégée).
                         </p>
                       </button>
                     </div>
@@ -7334,53 +7265,20 @@ const Admin = () => {
                   </div>
 
                   <div className="space-y-4">
-                    {/* Admin Account Settings */}
-                    <div className="rounded-xl border p-4 bg-slate-50/60 space-y-3">
+                    {/* SuperAdmin GitHub Account Info */}
+                    <div className="rounded-xl border p-4 bg-slate-50/80 space-y-2">
                       <div className="flex items-center justify-between border-b pb-2">
                         <div className="flex items-center gap-2">
                           <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                          <span className="font-bold text-xs text-slate-900">Compte Administrateur (Tous droits)</span>
+                          <span className="font-bold text-xs text-slate-900">Compte Administrateur (SuperAdmin GitHub)</span>
                         </div>
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
-                          Admin
+                        <span className="text-[10px] bg-slate-900 text-white font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                          <Github className="h-3 w-3" /> GitHub
                         </span>
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <Label className="text-[11px] font-semibold text-slate-700">Email Administrateur</Label>
-                          <Input
-                            id="admin-email-field"
-                            defaultValue={adminAccount.email}
-                            className="text-xs h-8 mt-1 font-mono bg-white"
-                            placeholder="admin@lfjpsaly.org"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-[11px] font-semibold text-slate-700">Mot de passe Administrateur</Label>
-                          <Input
-                            id="admin-pass-field"
-                            defaultValue={adminAccount.password}
-                            className="text-xs h-8 mt-1 font-mono bg-white"
-                            placeholder="••••••••"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-end pt-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => {
-                            const emailEl = document.getElementById('admin-email-field') as HTMLInputElement;
-                            const passEl = document.getElementById('admin-pass-field') as HTMLInputElement;
-                            if (emailEl && passEl) {
-                              handleUpdateAccountCredentials('admin', emailEl.value, passEl.value);
-                            }
-                          }}
-                          className="h-7 text-xs bg-french-blue hover:bg-blue-700 text-white font-semibold"
-                        >
-                          Enregistrer les identifiants Admin
-                        </Button>
-                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        L’administrateur principal se connecte directement via son compte GitHub (<strong>informatique-cmd</strong> / <strong>{superAdminAccount.email}</strong>). Ce profil détient les droits absolus (création, modification, suppression et déploiement direct vers Vercel).
+                      </p>
                     </div>
 
                     {/* Editor Account Settings */}
