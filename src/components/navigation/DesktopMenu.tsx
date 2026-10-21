@@ -4,31 +4,20 @@ import {
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
 import DesktopNavItem from './DesktopNavItem';
-import pagesFile from '@/content/pages.json';
-import { isValidManagedPage, type ManagedPage } from '@/content/pageTypes';
-
-const draftPages = new URLSearchParams(window.location.search).get('draft') === '1'
-  ? (() => {
-      try {
-        const parsed = JSON.parse(window.localStorage.getItem('lfjp-admin-pages-draft') || '{}') as { pages?: unknown };
-        return Array.isArray(parsed.pages) ? parsed.pages.filter(isValidManagedPage) : pagesFile.pages;
-      } catch {
-        return pagesFile.pages;
-      }
-    })()
-  : pagesFile.pages;
-const managedNavigation = (draftPages as ManagedPage[])
-  .filter((page) => page.showInNavigation !== false && !page.parent)
-  .sort((a, b) => (a.order || 0) - (b.order || 0));
-const childNavigation = (draftPages as ManagedPage[])
-  .filter((page) => page.showInNavigation !== false && page.parent)
-  .sort((a, b) => (a.order || 0) - (b.order || 0));
+import { getManagedPages, type ManagedPage } from '@/content/pageTypes';
 
 interface DesktopMenuProps {
   isActive: (path: string) => boolean;
 }
 
 const DesktopMenu = ({ isActive }: DesktopMenuProps) => {
+  const draftPages = getManagedPages();
+  const managedNavigation = (draftPages as ManagedPage[])
+    .filter((page) => page.showInNavigation !== false && !page.parent)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const childNavigation = (draftPages as ManagedPage[])
+    .filter((page) => page.showInNavigation !== false && page.parent)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
   return (
     <NavigationMenu className="hidden md:flex">
       <NavigationMenuList className="space-x-2">

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import siteContent from '@/content/siteContent.json';
 import { readContentDraft } from '@/lib/contentDraft';
 
@@ -17,6 +18,9 @@ const Footer = () => {
           <div className="text-sm font-raleway text-center md:text-right">
             <p>{content.site.footerCopyrightPrefix} {content.site.footerYear} {content.site.footerCopyright}</p>
             <p className="mt-1">{content.site.footerPlan}</p>
+            <Link to="/espace-direction" className="mt-2 inline-block text-xs text-blue-200/60 hover:text-white transition-colors">
+              Administration du site
+            </Link>
           </div>
         </div>
       </div>

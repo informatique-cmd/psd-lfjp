@@ -40,10 +40,29 @@ export interface ManagedPagesFile {
   pages: ManagedPage[];
 }
 
+import pagesFile from '@/content/pages.json';
+
 export const normalizePageSlug = (slug: string) => {
   const trimmed = slug.trim();
   if (!trimmed) return '/';
   return `/${trimmed.replace(/^\/+|\/+$/g, '')}`;
+};
+
+export const getManagedPages = (): ManagedPage[] => {
+  if (typeof window === 'undefined') return pagesFile.pages as ManagedPage[];
+  try {
+    const saved = window.localStorage.getItem('lfjp-admin-pages-draft');
+    if (saved) {
+      const parsed = JSON.parse(saved) as { pages?: unknown };
+      if (Array.isArray(parsed?.pages)) {
+        const valid = parsed.pages.filter(isValidManagedPage);
+        if (valid.length > 0) return valid;
+      }
+    }
+  } catch {
+    // fallback to versioned pages
+  }
+  return pagesFile.pages as ManagedPage[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
@@ -159,8 +178,7 @@ export const isValidPageData = (value: unknown) =>
     )
   ) &&
   isRecord(value.psdTimelines) &&
-  ['axe1', 'axe2', 'axe3'].every((key) => {
-    const timeline = value.psdTimelines[key];
+  Object.entries(value.psdTimelines).every(([key, timeline]) => {
     return isRecord(timeline) && Number.isInteger(timeline.startYear) && Number.isInteger(timeline.endYear) && Number(timeline.endYear) >= Number(timeline.startYear) && Array.isArray(timeline.actions) && timeline.actions.every((action) =>
       isRecord(action) && typeof action.title === 'string' && typeof action.description === 'string' && Number.isInteger(action.start) && Number.isInteger(action.end) && Number(action.start) >= Number(timeline.startYear) && Number(action.end) <= Number(timeline.endYear) && Number(action.end) >= Number(action.start) && typeof action.color === 'string'
     );
@@ -176,7 +194,9 @@ export const isValidPageData = (value: unknown) =>
         (metric.trend === undefined || metric.trend === 'up' || metric.trend === 'down')
       )
     );
-  });
+  }) &&
+  (value.budgetData === undefined || isRecord(value.budgetData)) &&
+  (value.transportData === undefined || isRecord(value.transportData));
 
 export const validateManagedPages = (pages: ManagedPage[]) => {
   const errors: string[] = [];

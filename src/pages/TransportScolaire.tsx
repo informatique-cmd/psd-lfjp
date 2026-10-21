@@ -15,6 +15,8 @@ import {
   Home
 } from 'lucide-react';
 
+import { defaultTransportData, type TransportData } from '../data/budgetTransportData';
+
 const communes = [
   { ville: 'Saly', total: 291, part: '49 %' },
   { ville: 'Ngaparou', total: 120, part: '20 %' },
@@ -27,6 +29,23 @@ const communes = [
 
 const TransportScolaire = () => {
   const navigate = useNavigate();
+
+  const liveTransport = React.useMemo(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.transportData) return parsed.transportData as TransportData;
+        }
+      } catch {
+        return defaultTransportData;
+      }
+    }
+    return defaultTransportData;
+  }, []);
+
+  const activeCommunes = (liveTransport.communes && liveTransport.communes.length > 0) ? liveTransport.communes : communes;
 
   return (
     <div className="min-h-screen flex flex-col font-raleway">
@@ -86,9 +105,9 @@ const TransportScolaire = () => {
                   élèves sont concernés par des trajets longs et quotidiens.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="bg-sky-100 text-sky-800 border-sky-200">Saly : 49 %</Badge>
-                  <Badge variant="secondary" className="bg-sky-100 text-sky-800 border-sky-200">Périphérie immédiate : 42 %</Badge>
-                  <Badge variant="secondary" className="bg-sky-100 text-sky-800 border-sky-200">&gt; 30 km : 9 %</Badge>
+                  <Badge variant="secondary" className="bg-sky-100 text-sky-800 border-sky-200">Saly : {liveTransport.stats?.partSaly || '49 %'}</Badge>
+                  <Badge variant="secondary" className="bg-sky-100 text-sky-800 border-sky-200">Périphérie immédiate : {liveTransport.stats?.partPeripherie || '42 %'}</Badge>
+                  <Badge variant="secondary" className="bg-sky-100 text-sky-800 border-sky-200">&gt; 30 km : {liveTransport.stats?.partEloignee || '9 %'}</Badge>
                 </div>
               </div>
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -101,7 +120,7 @@ const TransportScolaire = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
-                    {communes.map((item) => (
+                    {activeCommunes.map((item) => (
                       <tr key={item.ville}>
                         <td className="px-4 py-2 font-medium capitalize">{item.ville}</td>
                         <td className="px-4 py-2 text-right">{item.total}</td>
@@ -202,6 +221,68 @@ const TransportScolaire = () => {
               </p>
             </CardContent>
           </Card>
+
+          {/* 5. Circuits préconisés & Grille tarifaire */}
+          {liveTransport.circuits && liveTransport.circuits.length > 0 && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BusFront className="h-8 w-8 text-sky-700" />
+                  <div>
+                    <CardTitle className="text-2xl text-slate-900">5. Circuits de ramassage & Grille tarifaire indicative</CardTitle>
+                    <CardDescription className="text-slate-500">
+                      Lignes étudiées et estimation des coûts mensuels et annuels pour les familles
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="font-semibold text-slate-800 text-sm uppercase tracking-wide mb-3">
+                    Lignes de ramassage préconisées
+                  </h4>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {liveTransport.circuits.map((c, i) => (
+                      <div key={i} className="p-4 rounded-xl border border-sky-100 bg-sky-50/40 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-sky-900">{c.name}</span>
+                          <span className="text-xs bg-white text-sky-800 font-semibold px-2 py-0.5 rounded border border-sky-200">
+                            Départ {c.horaireDepart}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600">
+                          <strong>Arrêts :</strong> {c.arrets}
+                        </p>
+                        <p className="text-xs text-sky-800 font-semibold">
+                          Élèves concernés : ~{c.eleves}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {liveTransport.tarifs && liveTransport.tarifs.length > 0 && (
+                  <div className="pt-4 border-t">
+                    <h4 className="font-semibold text-slate-800 text-sm uppercase tracking-wide mb-3">
+                      Grille tarifaire par zone kilométrique
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {liveTransport.tarifs.map((t, i) => (
+                        <div key={i} className="p-3.5 rounded-xl border bg-white space-y-1 text-sm shadow-xs">
+                          <p className="font-bold text-slate-900">{t.zone}</p>
+                          <p className="text-xs text-slate-500">{t.description}</p>
+                          <div className="pt-2 border-t mt-2 flex items-center justify-between">
+                            <span className="font-bold text-sky-800">{t.mensuel.toLocaleString('fr-FR')} FCFA / mois</span>
+                            <span className="text-xs text-slate-500">({t.annuel.toLocaleString('fr-FR')} FCFA / an)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

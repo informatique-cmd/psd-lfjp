@@ -8,11 +8,18 @@ import BackToTop from '@/components/BackToTop';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NotFound from '@/pages/NotFound';
-import pagesData from '@/content/pages.json';
-import { isValidContentBlock, isValidManagedPage, type ContentBlock, type ManagedPage as ManagedPageData, type TextStyle } from '@/content/pageTypes';
+import { getManagedPages, isValidContentBlock, type ContentBlock, type ManagedPage as ManagedPageData, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 
-const pages = pagesData.pages as ManagedPageData[];
+import pagesFile from '@/content/pages.json';
+
+const getPagesList = () => {
+  try {
+    return getManagedPages();
+  } catch {
+    return (pagesFile.pages || []) as ManagedPageData[];
+  }
+};
 
 const textStyle = (style?: TextStyle): React.CSSProperties => ({
   fontFamily: style?.fontFamily === 'serif' ? 'Georgia, serif' : style?.fontFamily === 'playfair' ? 'Playfair Display, serif' : style?.fontFamily === 'mono' ? 'ui-monospace, monospace' : style?.fontFamily === 'raleway' ? 'Raleway, sans-serif' : undefined,
@@ -63,18 +70,7 @@ const Block = ({ block }: { block: ContentBlock }) => {
 
 const ManagedPage = () => {
   const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
-  const draftPages = useMemo(() => {
-    if (new URLSearchParams(window.location.search).get('draft') !== '1') return pages;
-    const savedDraft = window.localStorage.getItem('lfjp-admin-pages-draft');
-    if (!savedDraft) return pages;
-    try {
-      const parsed: unknown = JSON.parse(savedDraft);
-      if (typeof parsed !== 'object' || parsed === null || !('pages' in parsed) || !Array.isArray(parsed.pages)) return pages;
-      return parsed.pages.filter(isValidManagedPage);
-    } catch {
-      return pages;
-    }
-  }, []);
+  const draftPages = useMemo(() => getManagedPages(), []);
   const page = draftPages.find((item) => item.slug === pathname);
   if (!page) return <NotFound />;
 
@@ -97,5 +93,6 @@ const ManagedPage = () => {
   );
 };
 
-export const hasManagedPage = (pathname: string) => pages.some((page) => page.slug === pathname.replace(/\/+$/, '') || pathname === page.slug);
+export const hasManagedPage = (pathname: string) =>
+  getPagesList().some((page) => page.slug === pathname.replace(/\/+$/, '') || pathname === page.slug);
 export default ManagedPage;

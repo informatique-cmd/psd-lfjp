@@ -23,6 +23,7 @@ import {
 } from 'recharts';
 import type { LegendProps, TooltipProps } from 'recharts';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+import { defaultBudgetData, type BudgetData } from '@/data/budgetTransportData';
 
 // Les données sont codées en dur pour faciliter les ajustements futurs.
 // Vous pouvez modifier les montants, années ou pourcentages directement dans
@@ -169,9 +170,53 @@ const BudgetCadreVieInfrastructures = () => {
   const cumulativeTuition = 345_139_418;
   const annualTotals = [135_000_000, 126_666_667, 156_666_667, 156_666_667, 200_000_000];
 
+  const liveBudget = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.budgetData) return parsed.budgetData as BudgetData;
+        }
+      } catch {
+        return defaultBudgetData;
+      }
+    }
+    return defaultBudgetData;
+  }, []);
+
+  const dynamicSummaryCards = useMemo(() => [
+    {
+      label: 'Investissement total',
+      value: liveBudget.summaryCards?.totalInvestment ?? 775_000_000,
+      icon: PiggyBank,
+      accent: 'from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-100',
+    },
+    {
+      label: 'Manque à gagner / besoin de financement à l’horizon 2030',
+      value: liveBudget.summaryCards?.fundingGap ?? 89_860_582,
+      icon: AlertTriangle,
+      accent: 'from-rose-50 to-amber-50 text-amber-700 border-amber-100',
+    },
+    {
+      label: 'Capacité totale estimée (budget + ANEFE + écolages)',
+      value: liveBudget.summaryCards?.estimatedCapacity ?? 685_139_418,
+      icon: BadgeDollarSign,
+      accent: 'from-sky-50 to-indigo-50 text-sky-700 border-sky-100',
+    },
+  ], [liveBudget]);
+
+  const activeProjects = useMemo(() => {
+    return (liveBudget.projects && liveBudget.projects.length > 0) ? liveBudget.projects : projects;
+  }, [liveBudget]);
+
+  const activeTimeline = useMemo(() => {
+    return (liveBudget.financialTimeline && liveBudget.financialTimeline.length > 0) ? liveBudget.financialTimeline : financialTimeline;
+  }, [liveBudget]);
+
   const chartData = useMemo(
     () =>
-      financialTimeline.map((row) => {
+      activeTimeline.map((row) => {
         const factor = currency === 'EUR' ? 1 / XOF_TO_EUR : 1;
         return {
           ...row,
@@ -182,7 +227,7 @@ const BudgetCadreVieInfrastructures = () => {
           solde: (row.recettesTotales - row.depenses) * factor,
         };
       }),
-    [currency],
+    [currency, activeTimeline],
   );
 
   const axisTickFormatter = (value: number) =>
@@ -195,16 +240,16 @@ const BudgetCadreVieInfrastructures = () => {
 
   const cashFlowRows = useMemo(
     () =>
-      financialTimeline.map((row) => ({
+      activeTimeline.map((row) => ({
         ...row,
         solde: row.recettesTotales - row.depenses,
       })),
-    [],
+    [activeTimeline],
   );
 
   const projectsByYear = useMemo(
     () => {
-      const grouped = projects
+      const grouped = activeProjects
         .slice()
         .sort((a, b) => getPeriodStartYear(a.period) - getPeriodStartYear(b.period))
         .reduce<Record<number, Project[]>>((acc, project) => {
@@ -220,7 +265,7 @@ const BudgetCadreVieInfrastructures = () => {
         .map(([year, items]) => ({ year: Number(year), items }))
         .sort((a, b) => a.year - b.year);
     },
-    [],
+    [activeProjects],
   );
 
   const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
@@ -309,7 +354,7 @@ const BudgetCadreVieInfrastructures = () => {
       </div>
 
       <div className="grid gap-5 md:gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {summaryCards.map((card) => {
+        {dynamicSummaryCards.map((card) => {
           const Icon = card.icon;
           return (
             <div

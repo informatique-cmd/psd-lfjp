@@ -51,4 +51,16 @@ export const psdTimelineData: Record<string, PsdTimeline> = {
       { title: '1 PC par lycéen', description: 'Distribution progressive aux cohortes de Seconde (2028-2030) jusqu’à couverture complète.', start: 2028, end: 2030, color: 'from-orange-300/80 to-orange-500' },
     ],
   },
+  axe4: {
+    startYear: 2026,
+    endYear: 2030,
+    actions: [
+      { title: 'Curriculum Soft Skills & Éloquence', description: 'Prise de parole, confiance, coopération et esprit critique de la maternelle au lycée', start: 2026, end: 2030, color: 'from-purple-400/80 to-purple-500' },
+      { title: 'Valorisation de l’erreur & Persévérance', description: 'Rapports d’évaluation positive, culture du rebond et ateliers d’apprentissage', start: 2026, end: 2029, color: 'from-sky-400/80 to-sky-500' },
+      { title: 'Célébration des réussites & Réseau Alumni', description: 'Cérémonie des diplômés, mentorat des anciens élèves et conférences inspirantes', start: 2026, end: 2030, color: 'from-amber-300/80 to-amber-500' },
+      { title: 'Éducation financière & Vie autonome', description: 'Gestion budgétaire, projets d’entrepreneuriat solidaire et autonomie des lycéens', start: 2027, end: 2030, color: 'from-emerald-300/80 to-emerald-500' },
+      { title: 'Parcours Avenir & Orientation', description: 'Forums des métiers, stages d’observation, partenariats avec les universités internationales', start: 2026, end: 2030, color: 'from-indigo-400/80 to-indigo-600' },
+      { title: 'Implication des familles & Coéducation', description: 'Cafés des parents, ateliers thématiques et renforcement de l’alliance éducative', start: 2026, end: 2030, color: 'from-rose-300/80 to-rose-500' },
+    ],
+  },
 };

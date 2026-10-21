@@ -84,7 +84,7 @@ const ClasseNumerique = () => {
             Classe numérique mobile du LFJP
           </h1>
           <p className="text-lg md:text-xl max-w-3xl font-light animate-fade-in-delay-1">
-            Un programme triennal d'investissement (2025-2027) de 4 333 333 FCFA par an pour équiper le lycée de solutions mobiles, inclusives et innovantes.
+            Un programme triennal d'investissement (2025-2027) de 4 333 333 FCFA par an pour équiper le lycée de solutions mobiles, inclusives et innovantes.
           </p>
         </div>
       </section>
@@ -121,7 +121,7 @@ const ClasseNumerique = () => {
             </CardHeader>
             <CardContent className="space-y-4 text-gray-700 leading-relaxed">
               <p>
-                Validé lors de l’Assemblée générale du 20 février 2025, le projet engage le LFJP dans une trajectoire de modernisation durable. Un investissement de <strong>4 333 333 FCFA par an sur trois ans</strong> finance l’équipement progressif en classes numériques mobiles.
+                Validé lors de l’Assemblée générale du 20 février 2025, le projet engage le LFJP dans une trajectoire de modernisation durable. Un investissement de <strong>4 333 333 FCFA par an sur trois ans</strong> finance l’équipement progressif en classes numériques mobiles.
               </p>
               <p>
                 Cette démarche s’inscrit pleinement dans la vision stratégique de l’établissement&nbsp;: démocratiser l’accès aux outils numériques, accompagner l’appropriation des innovations technologiques et faire de chaque élève un acteur autonome, créatif et responsable.

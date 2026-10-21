@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react';
 export const isContentDraftPreview = () =>
   typeof window !== 'undefined' && (
     new URLSearchParams(window.location.search).get('draft') === '1' ||
-    new URLSearchParams(window.location.search).get('edit') === '1'
+    new URLSearchParams(window.location.search).get('edit') === '1' ||
+    window.sessionStorage.getItem('lfjp-preview-mode') === '1' ||
+    window.localStorage.getItem('lfjp_preview_active') === '1' ||
+    Boolean(window.localStorage.getItem('lfjp-admin-draft'))
   );
 
 export const readContentDraft = <T,>(key: string, fallback: T): T => {

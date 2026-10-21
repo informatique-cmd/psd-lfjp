@@ -232,7 +232,7 @@ const SavoirRouler = () => {
                   </div>
                   <p className={textClasses}>
                     Les groupes <strong>débutants</strong> et <strong>confirmés</strong> alternent activités à vélo, sorties nature et
-                    veillées éducatives : reboisement avec l’<strong>ONG Nebeday</strong> et découverte de la
+                    veillées éducatives : reboisement avec l’<strong>ONG Nebeday</strong> et découverte de la
                     <strong> réserve naturelle et de la ferme de Popenguine</strong>.
                   </p>
                 </div>
@@ -250,7 +250,7 @@ const SavoirRouler = () => {
                       {
                         label: 'Site',
                         value:
-                          'Centre Téranga Bike à Popenguine (8 000 m², dortoirs, sanitaires, restauration, gardiennage).'
+                          'Centre Téranga Bike à Popenguine (8 000 m², dortoirs, sanitaires, restauration, gardiennage).'
                       },
                       {
                         label: 'Matériel',
@@ -267,11 +267,11 @@ const SavoirRouler = () => {
                       {
                         label: 'Tarif 2025',
                         value:
-                          '100 000 CFA/enfant (sans transport) ou 110 000 CFA/enfant (avec transport). Gratuité pour les enseignants accompagnateurs.'
+                          '100 000 CFA/enfant (sans transport) ou 110 000 CFA/enfant (avec transport). Gratuité pour les enseignants accompagnateurs.'
                       }
                     ].map(item => (
                       <li key={item.label} className={textClasses}>
-                        <span className="font-semibold text-french-blue">{item.label} :</span> {item.value}
+                        <span className="font-semibold text-french-blue">{item.label} :</span> {item.value}
                       </li>
                     ))}
                   </ul>
@@ -308,7 +308,7 @@ const SavoirRouler = () => {
                     </table>
                   </div>
                   <p className={textClasses}>
-                    Chaque élève reçoit une <strong>attestation « Savoir Rouler LFJP »</strong>, intégrée au
+                    Chaque élève reçoit une <strong>attestation « Savoir Rouler LFJP »</strong>, intégrée au
                     <strong> Parcours Citoyen</strong> et au <strong>Parcours Éducation à la Santé</strong>.
                   </p>
                 </div>
