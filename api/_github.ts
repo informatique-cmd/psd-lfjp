@@ -36,7 +36,7 @@ export const getCookies = (header = '') => Object.fromEntries(
 
 export const getSessionToken = (req: { headers: { cookie?: string } }) => {
   const cookie = getCookies(req.headers.cookie).lfjp_admin_session;
-  return cookie ? decryptToken(cookie) : null;
+  return cookie ? decryptToken(cookie) : (process.env.GITHUB_TOKEN || null);
 };
 
 export const githubRequest = async (token: string, path: string, init: RequestInit = {}) => {

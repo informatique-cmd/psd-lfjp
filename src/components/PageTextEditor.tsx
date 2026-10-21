@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { Eye, Pencil, RotateCcw, X } from 'lucide-react';
+import { ArrowRight, Eye, LogOut, Pencil, RotateCcw, ShieldCheck, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { applyPageTextOverrides, getNodePath, loadPageTextOverrides, pageTextDraftStorageKey, type PageElementOverride, type PageTextOverrides } from '@/lib/pageOverrides';
+import { loadActiveUserProfile, type UserProfile } from '@/data/adminProfilesAndRubriques';
 
 const PageTextEditor = () => {
   const location = useLocation();
@@ -11,29 +12,74 @@ const PageTextEditor = () => {
   const editingRequested = new URLSearchParams(location.search).get('edit') === '1';
   const embedded = new URLSearchParams(location.search).get('embedded') === '1';
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const hasLocal = window.sessionStorage.getItem('lfjp_admin_local_session') === '1' || window.localStorage.getItem('lfjp_admin_active_session') === '1';
+    return hasLocal ? loadActiveUserProfile() : null;
+  });
   const [authChecked, setAuthChecked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [overrides, setOverrides] = useState<PageTextOverrides>(loadPageTextOverrides);
   const [status, setStatus] = useState('');
   const [selectedElement, setSelectedElement] = useState<(PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string; rect?: { left: number; top: number; width: number; height: number } }) | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  const checkAuth = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const hasLocal = window.sessionStorage.getItem('lfjp_admin_local_session') === '1' || window.localStorage.getItem('lfjp_admin_active_session') === '1';
+    if (hasLocal) {
+      const profile = loadActiveUserProfile();
+      setCurrentUser(profile);
+      setIsAdmin(true);
+      if (editingRequested || embedded) setIsEditing(true);
+      setAuthChecked(true);
+      return;
+    }
+
     fetch('/api/auth/me', { credentials: 'same-origin' })
-      .then(async (response) => response.ok ? response.json() : null)
+      .then(async (response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (!active) return;
-        setIsAdmin(Boolean(data?.user?.login));
-        setIsEditing(Boolean(data?.user?.login && (editingRequested || embedded)));
+        if (data?.user?.login) {
+          const profile = loadActiveUserProfile();
+          setCurrentUser(profile);
+          setIsAdmin(true);
+          setIsEditing(Boolean(editingRequested || embedded));
+        } else {
+          setCurrentUser(null);
+          setIsAdmin(false);
+          setIsEditing(false);
+        }
       })
       .catch(() => {
-        if (!active) return;
+        setCurrentUser(null);
         setIsAdmin(false);
         setIsEditing(false);
       })
-      .finally(() => { if (active) setAuthChecked(true); });
-    return () => { active = false; };
+      .finally(() => {
+        setAuthChecked(true);
+      });
   }, [editingRequested, embedded]);
+
+  useEffect(() => {
+    checkAuth();
+    window.addEventListener('lfjp_auth_changed', checkAuth);
+    return () => window.removeEventListener('lfjp_auth_changed', checkAuth);
+  }, [checkAuth]);
+
+  const handleLogout = async () => {
+    window.sessionStorage.removeItem('lfjp_admin_local_session');
+    window.localStorage.removeItem('lfjp_admin_active_session');
+    window.localStorage.removeItem('lfjp_preview_active');
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      void err;
+    }
+    setCurrentUser(null);
+    setIsAdmin(false);
+    setIsEditing(false);
+    setSelectedElement(null);
+    window.dispatchEvent(new Event('lfjp_auth_changed'));
+  };
 
   useEffect(() => {
     const syncOverrides = (event: StorageEvent) => {
@@ -171,18 +217,72 @@ const PageTextEditor = () => {
 
   return createPortal(
     <div data-page-text-editor className="fixed inset-0 z-[100] pointer-events-none">
-      <div className="pointer-events-auto fixed bottom-4 right-4 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-md border bg-white p-2 shadow-xl">
-      {embedded ? <span className="px-2 text-xs font-semibold text-french-blue">Sélectionnez un élément à modifier</span> : <>
-        <Button type="button" size="sm" variant={isEditing ? 'default' : 'outline'} onClick={() => setIsEditing((value) => !value)}>
-          {isEditing ? <X /> : <Pencil />}
-          {isEditing ? 'Terminer' : 'Modifier cette page'}
-        </Button>
-        {isEditing && <>
-          <Button type="button" size="icon" variant="ghost" title="Ouvrir la page en aperçu" aria-label="Ouvrir la page en aperçu" onClick={() => setIsEditing(false)}><Eye /></Button>
-          <Button type="button" size="icon" variant="ghost" title="Annuler les changements de cette page" aria-label="Annuler les changements de cette page" onClick={resetCurrentPage}><RotateCcw /></Button>
-        </>}
-        {status && <span className="max-w-56 text-xs text-slate-600">{status}</span>}
-      </>}
+      <div className="pointer-events-auto fixed bottom-4 right-4 flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2 rounded-xl border border-slate-200/90 bg-white/95 backdrop-blur-md p-2 shadow-2xl z-[100]">
+      {embedded ? (
+        <span className="px-2 text-xs font-semibold text-french-blue">Sélectionnez un élément à modifier</span>
+      ) : (
+        <>
+          {/* Authenticated User Role Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-[11px] font-semibold text-slate-800">
+            {currentUser?.canDelete ? (
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            ) : (
+              <User className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+            )}
+            <span className="max-w-[140px] sm:max-w-[200px] truncate">
+              {currentUser?.role === 'editor' ? 'Éditeur' : 'Admin'} : {currentUser?.email || 'Connecté'}
+            </span>
+          </div>
+
+          <Button
+            type="button"
+            size="sm"
+            variant={isEditing ? 'default' : 'outline'}
+            onClick={() => setIsEditing((value) => !value)}
+            className="text-xs h-8 font-semibold shadow-xs"
+          >
+            {isEditing ? <X className="h-3.5 w-3.5 mr-1" /> : <Pencil className="h-3.5 w-3.5 mr-1 text-french-blue" />}
+            {isEditing ? 'Terminer l’édition' : 'Modifier cette page'}
+          </Button>
+
+          {isEditing && (
+            <>
+              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" title="Ouvrir la page en aperçu" aria-label="Ouvrir la page en aperçu" onClick={() => setIsEditing(false)}>
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" size="icon" variant="ghost" className="h-8 w-8" title="Annuler les changements de cette page" aria-label="Annuler les changements de cette page" onClick={resetCurrentPage}>
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          )}
+
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="text-xs h-8 text-french-blue hover:text-blue-800 hover:bg-blue-50 px-2 flex items-center gap-1"
+          >
+            <a href="/admin">
+              <span>Admin</span>
+              <ArrowRight className="h-3 w-3" />
+            </a>
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={handleLogout}
+            title="Se déconnecter et masquer la barre d’édition"
+            className="text-xs h-8 text-red-600 hover:text-red-700 hover:bg-red-50 px-2 flex items-center gap-1"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Quitter</span>
+          </Button>
+
+          {status && <span className="max-w-44 text-[11px] text-slate-600 truncate">{status}</span>}
+        </>
+      )}
       </div>
       {!embedded && isEditing && selectedElement?.rect && <Button type="button" size="icon" className="pointer-events-auto fixed h-9 w-9 rounded-md shadow-lg ring-2 ring-white" style={{ left: Math.max(8, selectedElement.rect.left), top: Math.max(8, selectedElement.rect.top - 44) }} title="Modifier cet élément" aria-label="Modifier cet élément" onClick={() => document.getElementById('page-element-editor')?.focus()}><Pencil className="h-4 w-4" /></Button>}
       {!embedded && isEditing && selectedElement && <section className="pointer-events-auto fixed bottom-20 right-4 z-[101] max-h-[70vh] w-[min(380px,calc(100vw-2rem))] overflow-y-auto rounded-md border bg-white p-4 shadow-2xl" aria-label="Propriétés de l’élément sélectionné">

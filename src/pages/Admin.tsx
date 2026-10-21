@@ -320,6 +320,12 @@ const Admin = () => {
   const [loginEmail, setLoginEmail] = useState(adminAccount.email);
   const [loginPassword, setLoginPassword] = useState(adminAccount.password);
 
+  const [gateTab, setGateTab] = useState<'credentials' | 'github' | 'preview'>('credentials');
+  const [gateEmail, setGateEmail] = useState(adminAccount.email);
+  const [gatePassword, setGatePassword] = useState(adminAccount.password);
+  const [gateError, setGateError] = useState('');
+  const [showGatePassword, setShowGatePassword] = useState(false);
+
   const canDelete = userProfile.canDelete && (userProfile.role === 'admin' || userProfile.role === 'superadmin');
 
   const assertCanDelete = (actionName = 'cette action'): boolean => {
@@ -657,19 +663,73 @@ const Admin = () => {
     },
   ], [rubriques]);
 
-  const enterLocalAdminSession = () => {
-    const previewUser = { login: 'direction-lfjp', avatar_url: 'https://i.imgur.com/0YmGlXO.png' };
-    setUser(previewUser);
-    setAuthorizedUsers(['direction-lfjp', 'informatique-cmd']);
+  const enterLocalAdminSession = (specificRole?: 'admin' | 'editor' | 'superadmin') => {
+    const role = specificRole || 'admin';
+    const matchingAccount = configuredAccounts.find((a) => a.role === role) || (role === 'editor' ? defaultAccounts[2] : defaultAccounts[1]);
+    const targetProfile: UserProfile = {
+      id: matchingAccount.id,
+      email: matchingAccount.email,
+      name: matchingAccount.name,
+      role: matchingAccount.role,
+      canDelete: matchingAccount.canDelete,
+      canEdit: matchingAccount.canEdit,
+      canCreate: matchingAccount.canCreate,
+      canPublish: matchingAccount.canPublish,
+    };
+    setUserProfile(targetProfile);
+    saveActiveUserProfile(targetProfile);
+    const sessionUser = { login: matchingAccount.email, avatar_url: 'https://i.imgur.com/0YmGlXO.png' };
+    setUser(sessionUser);
+    setAuthorizedUsers(['direction-lfjp', 'informatique-cmd', matchingAccount.email]);
     window.sessionStorage.setItem('lfjp_admin_local_session', '1');
+    window.localStorage.setItem('lfjp_admin_active_session', '1');
     window.localStorage.setItem('lfjp_preview_active', '1');
     setAuthChecked(true);
-    setStatus('Session d’administration locale active. Vous pouvez créer, modifier et supprimer tous les contenus.');
+    setStatus(`Session active en tant que ${targetProfile.name} (${targetProfile.email}).`);
+    window.dispatchEvent(new Event('lfjp_auth_changed'));
   };
 
-  const logout = () => {
+  const handleGateLogin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setGateError('');
+    const userFound = authenticateUser(gateEmail, gatePassword);
+    if (userFound) {
+      const newProfile: UserProfile = {
+        id: userFound.id,
+        email: userFound.email,
+        name: userFound.name,
+        role: userFound.role,
+        canDelete: userFound.canDelete,
+        canEdit: userFound.canEdit,
+        canCreate: userFound.canCreate,
+        canPublish: userFound.canPublish,
+      };
+      setUserProfile(newProfile);
+      saveActiveUserProfile(newProfile);
+      setUser({ login: newProfile.email, avatar_url: 'https://i.imgur.com/0YmGlXO.png' });
+      setAuthorizedUsers(['direction-lfjp', 'informatique-cmd', newProfile.email]);
+      window.sessionStorage.setItem('lfjp_admin_local_session', '1');
+      window.localStorage.setItem('lfjp_admin_active_session', '1');
+      setGateError('');
+      setStatus(`Connexion réussie : Bienvenue ${newProfile.name} (${newProfile.email}).`);
+      window.dispatchEvent(new Event('lfjp_auth_changed'));
+    } else {
+      setGateError(`Identifiant ou mot de passe incorrect pour « ${gateEmail} ». Vérifiez l'adresse ou le mot de passe.`);
+    }
+  };
+
+  const logout = async () => {
     window.sessionStorage.removeItem('lfjp_admin_local_session');
+    window.localStorage.removeItem('lfjp_admin_active_session');
+    window.localStorage.removeItem('lfjp_preview_active');
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      void err;
+    }
     setUser(null);
+    setStatus('Vous êtes déconnecté de l’espace d’administration.');
+    window.dispatchEvent(new Event('lfjp_auth_changed'));
   };
 
   useEffect(() => {
@@ -2432,32 +2492,211 @@ const Admin = () => {
   }
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-french-blue to-blue-700 p-6">
-        <Card className="w-full max-w-md border-0 shadow-2xl">
-          <CardContent className="space-y-6 p-8 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-french-blue text-3xl font-bold text-white shadow-lg">L</div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-french-blue">LFJP</p>
-              <h1 className="mt-2 font-playfair text-3xl font-bold text-slate-900">Espace d’administration</h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                Gérez, créez, modifiez et supprimez l’ensemble des contenus du site, des pages, des rubriques, sous-rubriques et plannings.
-              </p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-french-blue to-blue-900 p-4 sm:p-6">
+        <Card className="w-full max-w-lg border-0 shadow-2xl overflow-hidden rounded-2xl">
+          <div className="bg-slate-950 p-6 text-center border-b border-slate-800 text-white">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-french-blue text-2xl font-bold text-white shadow-lg font-playfair mb-3">
+              L
             </div>
-            <div className="space-y-3 pt-2">
-              <Button onClick={enterLocalAdminSession} className="w-full bg-french-blue text-white hover:bg-blue-700 font-semibold shadow-md">
-                Accéder directement (Mode Prévisualisation & Édition)
-              </Button>
-              <div className="relative my-2 text-center text-xs text-slate-400">
-                <span className="bg-white px-2">ou</span>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">Lycée Français Jacques Prévert de Saly</p>
+            <h1 className="mt-1 font-playfair text-2xl sm:text-3xl font-bold text-white">Espace d’administration</h1>
+            <p className="mt-2 text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+              Gérez, créez, modifiez l’ensemble des contenus, pages, rubriques, sous-rubriques et données du site.
+            </p>
+          </div>
+
+          <div className="bg-white p-6 space-y-5">
+            {/* Login Mode Selector Tabs */}
+            <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => { setGateTab('credentials'); setGateError(''); }}
+                className={`py-2 px-1 rounded-lg text-center transition-all ${
+                  gateTab === 'credentials'
+                    ? 'bg-white text-french-blue shadow-sm font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Identifiants
+              </button>
+              <button
+                type="button"
+                onClick={() => { setGateTab('github'); setGateError(''); }}
+                className={`py-2 px-1 rounded-lg text-center transition-all ${
+                  gateTab === 'github'
+                    ? 'bg-white text-french-blue shadow-sm font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                GitHub SuperAdmin
+              </button>
+              <button
+                type="button"
+                onClick={() => { setGateTab('preview'); setGateError(''); }}
+                className={`py-2 px-1 rounded-lg text-center transition-all ${
+                  gateTab === 'preview'
+                    ? 'bg-white text-french-blue shadow-sm font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Prévisualisation
+              </button>
+            </div>
+
+            {/* TAB 1: CREDENTIALS (Email & Password) */}
+            {gateTab === 'credentials' && (
+              <form onSubmit={handleGateLogin} className="space-y-4">
+                {gateError && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700 flex items-start gap-2 animate-in fade-in">
+                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                    <span>{gateError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-1 text-left">
+                  <label className="text-xs font-bold text-slate-700">Adresse Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      type="email"
+                      required
+                      value={gateEmail}
+                      onChange={(e) => setGateEmail(e.target.value)}
+                      placeholder="admin@lfjpsaly.org ou editeur@lfjpsaly.org"
+                      className="pl-9 text-xs h-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Mot de passe</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowGatePassword(!showGatePassword)}
+                      className="text-[11px] text-french-blue hover:underline"
+                    >
+                      {showGatePassword ? 'Masquer' : 'Afficher'}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      type={showGatePassword ? 'text' : 'password'}
+                      required
+                      value={gatePassword}
+                      onChange={(e) => setGatePassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-9 pr-9 text-xs h-10 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full bg-french-blue hover:bg-blue-700 text-white font-semibold text-xs h-10 shadow">
+                  <Key className="mr-2 h-4 w-4" /> Se connecter à l’administration
+                </Button>
+
+                {/* Quick Presets for Convenient Testing */}
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[11px] font-bold text-slate-500 mb-2 text-center uppercase tracking-wider">
+                    Rôles & Connexion rapide en 1 clic
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGateEmail(adminAccount.email);
+                        setGatePassword(adminAccount.password);
+                        enterLocalAdminSession('admin');
+                      }}
+                      className="p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70 text-left transition-all"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>Administrateur</span>
+                      </div>
+                      <p className="text-[10px] text-emerald-700 truncate mt-0.5">{adminAccount.email}</p>
+                      <p className="text-[9px] text-emerald-600 mt-1">Tous droits (avec suppression)</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGateEmail(editorAccount.email);
+                        setGatePassword(editorAccount.password);
+                        enterLocalAdminSession('editor');
+                      }}
+                      className="p-2.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100/70 text-left transition-all"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                        <User className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <span>Éditeur Simple</span>
+                      </div>
+                      <p className="text-[10px] text-amber-700 truncate mt-0.5">{editorAccount.email}</p>
+                      <p className="text-[9px] text-amber-600 mt-1">Modifs sans suppression</p>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {/* TAB 2: GITHUB OAUTH (SuperAdmin & GitOps) */}
+            {gateTab === 'github' && (
+              <div className="space-y-4 text-center py-2">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-left">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
+                    <Github className="h-4 w-4" />
+                    <span>Compte SuperAdmin GitHub ({superAdminAccount.email})</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Cette méthode vous authentifie directement avec votre compte GitHub. Elle permet d’envoyer vos modifications vers la branche de production et de déclencher automatiquement la reconstruction Vercel.
+                  </p>
+                </div>
+
+                <Button asChild className="w-full bg-slate-900 hover:bg-black text-white font-semibold text-xs h-10 shadow">
+                  <a href="/api/auth/github">
+                    <Github className="mr-2 h-4 w-4" /> Se connecter avec GitHub (SuperAdmin)
+                  </a>
+                </Button>
               </div>
-              <Button asChild variant="outline" className="w-full">
-                <a href="/api/auth/github"><Github className="mr-2 h-4 w-4" /> Se connecter avec GitHub (Production)</a>
+            )}
+
+            {/* TAB 3: DIRECT PREVIEW MODE */}
+            {gateTab === 'preview' && (
+              <div className="space-y-3 py-2">
+                <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 space-y-1 text-left">
+                  <p className="font-bold">Mode Prévisualisation locale</p>
+                  <p className="text-[11px] text-blue-700 leading-relaxed">
+                    Accédez immédiatement à l’interface d’administration pour tester les modifications et explorer les rubriques sans saisir d’identifiants.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => enterLocalAdminSession('admin')}
+                  className="w-full bg-french-blue text-white hover:bg-blue-700 font-semibold text-xs h-10 shadow"
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Entrer en mode Admin (Tous droits)
+                </Button>
+
+                <Button
+                  onClick={() => enterLocalAdminSession('editor')}
+                  variant="outline"
+                  className="w-full text-slate-700 hover:bg-slate-50 font-semibold text-xs h-10 border-slate-300"
+                >
+                  <User className="mr-2 h-4 w-4 text-amber-600" /> Entrer en mode Éditeur (Sans suppression)
+                </Button>
+              </div>
+            )}
+
+            {/* Return to Public Site */}
+            <div className="pt-2 border-t border-slate-100 text-center">
+              <Button asChild variant="ghost" className="w-full text-slate-500 hover:text-slate-900 text-xs">
+                <Link to="/">
+                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Retour au site public
+                </Link>
               </Button>
             </div>
-            <Button asChild variant="ghost" className="w-full text-slate-500 hover:text-slate-900">
-              <Link to="/">Retour au site public</Link>
-            </Button>
-          </CardContent>
+          </div>
         </Card>
       </div>
     );
@@ -2605,6 +2844,30 @@ const Admin = () => {
             >
               <Key className="h-3.5 w-3.5" />
             </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={logout}
+              title="Se déconnecter de la session d’administration"
+              className="h-8 text-xs text-red-400 hover:text-red-200 hover:bg-red-950/60 border-red-900/60 px-2.5 flex items-center gap-1.5 transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5 text-red-400" />
+              <span className="hidden sm:inline">Se déconnecter</span>
+            </Button>
+
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs text-slate-300 hover:text-white hover:bg-slate-800 px-2.5 flex items-center gap-1.5"
+            >
+              <Link to="/" title="Quitter et revenir au site public">
+                <ArrowLeft className="h-3.5 w-3.5 text-french-blue" />
+                <span className="hidden lg:inline">Site public</span>
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -2685,12 +2948,88 @@ const Admin = () => {
             ))}
           </div>
 
-          {/* Sidebar Footer with Collapse Toggle */}
-          <div className="p-2 border-t border-slate-800 hidden lg:block">
+          {/* Sidebar Footer with Active Profile & Collapse Toggle */}
+          <div className="p-2 border-t border-slate-800 space-y-2">
+            {!isSidebarCollapsed ? (
+              <div className="rounded-lg bg-slate-950/80 p-2.5 border border-slate-800/80 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-md ${canDelete ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'}`}>
+                    {canDelete ? <ShieldCheck className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-white truncate leading-tight">{userProfile.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{userProfile.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800/60">
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${canDelete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span className={`text-[10px] font-semibold truncate ${canDelete ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {canDelete ? 'Admin (Tous droits)' : 'Éditeur (Sans suppression)'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="flex items-center justify-center gap-1 py-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 transition-colors"
+                  >
+                    <Key className="h-3 w-3" />
+                    <span>Profils</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="flex items-center justify-center gap-1 py-1 px-1.5 rounded bg-red-950/60 hover:bg-red-900/80 text-[10px] text-red-300 transition-colors"
+                    title="Se déconnecter"
+                  >
+                    <LogOut className="h-3 w-3 text-red-400" />
+                    <span>Quitter</span>
+                  </button>
+                </div>
+
+                <Link
+                  to="/"
+                  className="flex items-center justify-center gap-1.5 w-full py-1 text-[11px] text-slate-400 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="h-3 w-3 text-french-blue" />
+                  <span>Retour au site public</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800"
+                  title="Profils et comptes"
+                >
+                  <Key className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="p-1.5 rounded text-red-400 hover:text-red-200 hover:bg-red-950/50"
+                  title="Se déconnecter"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+                <Link
+                  to="/"
+                  className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800"
+                  title="Retour au site public"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors hidden lg:flex"
             >
               {isSidebarCollapsed ? (
                 <PanelLeftOpen className="h-4 w-4 mx-auto" />
@@ -6610,6 +6949,38 @@ const Admin = () => {
                   </div>
                 </div>
 
+                {/* Workflow Status Banner */}
+                <div className="rounded-xl border p-4 bg-gradient-to-r from-blue-50/70 via-slate-50 to-emerald-50/50 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="font-bold text-xs text-slate-900">
+                        Comment les modifications arrivent-elles sur Vercel ?
+                      </span>
+                    </div>
+                    {user?.login && !user.login.includes('@') ? (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-semibold px-2 py-0.5">
+                        <Github className="h-3 w-3" /> Connecté GitHub : @{user.login} (Prêt à publier)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 text-amber-800 text-[11px] font-semibold px-2 py-0.5">
+                        Mode Édition ({userProfile.email})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Le site fonctionne en architecture <strong>GitOps</strong> : toute mise à jour sur Vercel provient d’un commit sur la branche GitHub.
+                  </p>
+                  <ul className="text-xs text-slate-600 list-disc pl-5 space-y-1">
+                    <li>
+                      <strong>Option A (SuperAdmin GitHub)</strong> : Connectez-vous avec GitHub pour créer la Pull Request et la déployer sur Vercel en 1 clic.
+                    </li>
+                    <li>
+                      <strong>Option B (Publication transparente pour Éditeur & Admin)</strong> : En ajoutant la variable <code>GITHUB_TOKEN</code> dans vos réglages Vercel, tout clic de publication des éditeurs envoie directement les fichiers sur GitHub et Vercel se met à jour automatiquement !
+                    </li>
+                  </ul>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="p-4 rounded-lg border bg-blue-50/60 space-y-2">
                     <h4 className="font-semibold text-xs text-french-blue uppercase tracking-wider flex items-center gap-1.5">
@@ -6918,6 +7289,18 @@ const Admin = () => {
                         <Pencil className="mr-1 h-3 w-3" /> Changer email ou mot de passe
                       </Button>
                       <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsProfileModalOpen(false);
+                            logout();
+                          }}
+                          className="text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <LogOut className="mr-1.5 h-3.5 w-3.5" /> Se déconnecter
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"
