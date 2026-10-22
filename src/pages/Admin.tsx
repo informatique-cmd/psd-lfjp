@@ -2706,32 +2706,32 @@ const Admin = () => {
   if (userProfile.role === 'editor') {
     return (
       <div className="flex flex-col h-screen w-screen bg-slate-900 text-slate-100 overflow-hidden font-raleway select-none">
-        {/* Top Header */}
+        {/* Simple & Clean Top Navigation Bar for Editor */}
         <header className="shrink-0 h-14 bg-slate-950 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between z-30 shadow-md">
-          {/* Brand & Page Selector */}
+          {/* Left: Brand & Page Switcher */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="flex items-center gap-2 shrink-0">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-french-blue text-sm font-bold text-white shadow-sm font-playfair">
                 L
               </span>
               <div className="hidden sm:block leading-tight">
-                <span className="font-playfair font-bold text-sm text-white">LFJP Éditeur</span>
-                <span className="text-[10px] text-amber-400 font-semibold block">Édition Grand Format</span>
+                <span className="font-playfair font-bold text-sm text-white">LFJP · Édition du Site</span>
+                <span className="text-[10px] text-amber-400 font-semibold block">Profil Éditeur</span>
               </div>
             </div>
 
             <div className="h-5 w-px bg-slate-800 hidden sm:block shrink-0" />
 
-            {/* Quick Page Selector */}
+            {/* Direct Page Selector for the Site */}
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs text-slate-400 hidden md:inline shrink-0">Page :</span>
+              <span className="text-xs text-slate-400 hidden md:inline shrink-0 font-medium">Page du site :</span>
               <select
                 value={visualRoute}
                 onChange={(e) => {
                   setVisualRoute(e.target.value);
                   setSelectedVisualElement(null);
                 }}
-                className="bg-slate-900 border border-slate-700 text-white text-xs h-8 px-2 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-french-blue font-medium max-w-[190px] sm:max-w-[260px] truncate"
+                className="bg-slate-900 border border-slate-700 text-white text-xs h-8 px-2.5 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-french-blue font-semibold max-w-[200px] sm:max-w-[280px] truncate"
               >
                 <optgroup label="🏛️ Les 5 Grandes Rubriques">
                   <option value="/">1. Accueil (/)</option>
@@ -2746,77 +2746,46 @@ const Admin = () => {
                   <option value="/axe-3">Axe 3 : Rayonnement & partenariats</option>
                   <option value="/axe-4">Axe 4 : Gouvernance & cadre</option>
                 </optgroup>
-                <optgroup label="📊 Données & Enquêtes">
-                  <option value="/elcs-analyse-complete">Diagnostic ELCS complet</option>
+                <optgroup label="📊 Données & Restauration">
                   <option value="/restaurant-scolaire">Restauration scolaire</option>
+                  <option value="/elcs-analyse-complete">Diagnostic ELCS complet</option>
                   <option value="/budget-previsionnel">Budget prévisionnel</option>
                   <option value="/plan-transports">Plan des transports</option>
                   <option value="/bac-blanc">Planning Bac Blanc</option>
                 </optgroup>
-                {pages.filter((p) => !['/', '/methode', '/vision-missions-valeurs', '/diagnostic', '/plan-strategique'].includes(p.slug)).length > 0 && (
+                {pages.filter((p) => !['/', '/methode', '/vision-missions-valeurs', '/diagnostic', '/plan-strategique', '/axe-1', '/axe-2', '/axe-3', '/axe-4', '/restaurant-scolaire', '/elcs-analyse-complete', '/budget-previsionnel', '/plan-transports', '/bac-blanc'].includes(p.slug)).length > 0 && (
                   <optgroup label="📄 Autres Pages">
                     {pages
-                      .filter((p) => !['/', '/methode', '/vision-missions-valeurs', '/diagnostic', '/plan-strategique'].includes(p.slug))
+                      .filter((p) => !['/', '/methode', '/vision-missions-valeurs', '/diagnostic', '/plan-strategique', '/axe-1', '/axe-2', '/axe-3', '/axe-4', '/restaurant-scolaire', '/elcs-analyse-complete', '/budget-previsionnel', '/plan-transports', '/bac-blanc'].includes(p.slug))
                       .map((p) => (
                         <option key={p.slug} value={normalizePageSlug(p.slug)}>
-                          {p.title} ({p.slug})
+                          {p.title}
                         </option>
                       ))}
                   </optgroup>
                 )}
               </select>
             </div>
-
-            {/* Tree Toggle Button */}
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setTreeCollapsed(!treeCollapsed)}
-              className="h-8 text-xs text-slate-300 hover:text-white hover:bg-slate-800 px-2 shrink-0"
-              title={treeCollapsed ? 'Afficher la liste des pages' : 'Masquer la liste des pages'}
-            >
-              {treeCollapsed ? <PanelLeftOpen className="h-4 w-4 mr-1 text-slate-400" /> : <PanelLeftClose className="h-4 w-4 mr-1 text-slate-400" />}
-              <span className="hidden xl:inline">{treeCollapsed ? 'Arborescence' : 'Masquer pages'}</span>
-            </Button>
           </div>
 
-          {/* Viewport switchers */}
-          <div className="hidden lg:flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900 p-1 shrink-0">
-            {([
-              { id: 'desktop', label: 'Grand Format (100%)', Icon: Monitor },
-              { id: 'tablet', label: 'Tablette (820px)', Icon: Tablet },
-              { id: 'mobile', label: 'Mobile (390px)', Icon: Smartphone },
-            ] as const).map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setPreviewViewport(id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${
-                  previewViewport === id
-                    ? 'bg-french-blue text-white font-semibold shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
-                title={label}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{id === 'desktop' ? 'Grand Format' : id === 'tablet' ? 'Tablette' : 'Mobile'}</span>
-              </button>
-            ))}
+          {/* Center: Friendly In-Situ Editing Guide */}
+          <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1 rounded-full text-xs text-slate-300">
+            <Pencil className="h-3.5 w-3.5 text-amber-400" />
+            <span>Cliquez sur n’importe quel texte ou image du site ci-dessous pour le modifier</span>
           </div>
 
-          {/* Right actions: Status, Save draft, Deploy Vercel button, Logout */}
+          {/* Right: Actions (Save draft, Deploy to Vercel, Logout) */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Status indicator */}
             {pendingDeployment?.status === 'pending_admin_approval' ? (
-              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
                 <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                <span>En attente de validation Administrateur</span>
+                <span>En attente validation Admin</span>
               </span>
             ) : (
-              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                <span>Brouillon modifiable</span>
+                <span>Brouillon actif</span>
               </span>
             )}
 
@@ -2830,16 +2799,17 @@ const Admin = () => {
               title="Enregistrer le brouillon sur cet appareil"
             >
               <Save className="mr-1.5 h-3.5 w-3.5 text-french-blue" />
-              <span>Enregistrer</span>
+              <span className="hidden sm:inline">Enregistrer le brouillon</span>
+              <span className="sm:hidden">Enregistrer</span>
             </Button>
 
-            {/* Deploy to Vercel Button */}
+            {/* Deploy to Vercel Request Button */}
             <Button
               type="button"
               size="sm"
               onClick={() => setIsEditorDeployModalOpen(true)}
               className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5"
-              title="Déployer les modifications sur Vercel"
+              title="Déployer sur Vercel (Validation finale par le SuperAdmin)"
             >
               <Send className="h-3.5 w-3.5" />
               <span>Déployer sur Vercel</span>
@@ -2847,22 +2817,11 @@ const Admin = () => {
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
-            {/* User Profile Badge & Logout */}
+            {/* User and Logout */}
             <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setProfileModalTab('login');
-                  setIsProfileModalOpen(true);
-                }}
-                className="h-8 text-xs text-slate-300 hover:text-white hover:bg-slate-800 px-2 flex items-center gap-1"
-                title="Gérer les identifiants ou changer de profil"
-              >
-                <User className="h-3.5 w-3.5 text-amber-400" />
-                <span className="hidden sm:inline font-mono text-[11px]">{userProfile.email}</span>
-              </Button>
+              <span className="hidden lg:inline text-[11px] font-mono text-slate-400 px-1">
+                {userProfile.email}
+              </span>
               <Button
                 type="button"
                 size="sm"
@@ -2878,20 +2837,20 @@ const Admin = () => {
           </div>
         </header>
 
-        {/* Notification Banner for Editor if pending or rejected */}
+        {/* Status notification banner if pending approval or feedback from Admin */}
         {pendingDeployment?.status === 'pending_admin_approval' && (
-          <div className="shrink-0 bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-200 flex items-center justify-between gap-3">
+          <div className="shrink-0 bg-gradient-to-r from-amber-600/90 to-amber-700/90 border-b border-amber-500/40 px-4 py-2 text-xs text-white flex items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
               <span>
-                <strong>Demande en cours :</strong> Vos modifications ont été soumises pour déploiement Vercel le{' '}
-                {new Date(pendingDeployment.submittedAt).toLocaleTimeString('fr-FR')}. Elles restent en brouillon sécurisé jusqu’à ce que le SuperAdmin valide la mise en ligne.
+                <strong>Demande en cours transmise au SuperAdmin :</strong> Vos modifications ont été soumises pour déploiement Vercel le{' '}
+                {new Date(pendingDeployment.submittedAt).toLocaleTimeString('fr-FR')}. Elles restent en brouillon sécurisé et seront mises en ligne dès que le SuperAdmin aura validé.
               </span>
             </div>
             <button
               type="button"
               onClick={() => setIsEditorDeployModalOpen(true)}
-              className="text-amber-300 hover:underline font-semibold shrink-0"
+              className="bg-white/20 hover:bg-white/30 text-white font-semibold px-2 py-0.5 rounded text-[11px] shrink-0 transition-colors"
             >
               Modifier la note
             </button>
@@ -2899,9 +2858,9 @@ const Admin = () => {
         )}
 
         {pendingDeployment?.status === 'rejected' && (
-          <div className="shrink-0 bg-red-500/15 border-b border-red-500/30 px-4 py-2 text-xs text-red-200 flex items-center justify-between gap-3">
+          <div className="shrink-0 bg-red-600/90 border-b border-red-500 px-4 py-2 text-xs text-white flex items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              <AlertCircle className="h-4 w-4 text-white shrink-0" />
               <span>
                 <strong>Retour du SuperAdmin :</strong> « {pendingDeployment.feedback || 'Modifications à ajuster'} ». Vous pouvez continuer à éditer et renvoyer la demande dès que c’est prêt.
               </span>
@@ -2909,282 +2868,212 @@ const Admin = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
               onClick={() => setIsEditorDeployModalOpen(true)}
-              className="h-6 text-[11px] border-red-400/40 text-white bg-red-900/40"
+              className="h-6 text-[11px] bg-white text-red-900 hover:bg-red-50 font-bold shrink-0"
             >
               Renvoyer pour déploiement
             </Button>
           </div>
         )}
 
-        {/* Editor Main Workspace: Tree + Grand Format Iframe + Inspector */}
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          {/* Arborescence Sidebar */}
-          {!treeCollapsed && (
-            <aside className="w-64 shrink-0 border-r border-slate-800 bg-slate-950 flex flex-col overflow-hidden">
-              <div className="p-3 border-b border-slate-800 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-                <span>Arborescence des pages</span>
-                <Button
+        {/* Main Workspace: 100% Full-Screen Grand Format Live Site + Content Inspector */}
+        <div className="flex min-h-0 flex-1 overflow-hidden relative">
+          {/* 100% Full Width Live Site Iframe */}
+          <main className="flex-1 min-w-0 flex flex-col bg-slate-950 overflow-hidden relative">
+            <div ref={previewCanvas} className="relative flex-1 min-h-0 w-full h-full overflow-hidden bg-slate-900">
+              <iframe
+                ref={previewFrame}
+                key={visualRoute}
+                title={`Aperçu interactif ${visualRoute}`}
+                src={`${visualRoute}?draft=1&edit=1&embedded=1`}
+                className="block w-full h-full bg-white border-0 shadow-inner"
+              />
+
+              {/* Floating Edit Pin directly on clicked element in the page */}
+              {selectedVisualElement?.rect && (
+                <button
                   type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setTreeCollapsed(true)}
-                  className="h-6 w-6 text-slate-400 hover:text-white"
+                  className="absolute z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-french-blue text-white shadow-xl ring-2 ring-white hover:bg-blue-800 animate-in fade-in text-xs font-semibold"
+                  style={{
+                    left: Math.max(8, selectedVisualElement.rect.left),
+                    top: Math.max(8, selectedVisualElement.rect.top - 36),
+                  }}
+                  title="Modifier cet élément"
+                  onClick={() => {
+                    setInspectorCollapsed(false);
+                    setFocusInspector(true);
+                  }}
                 >
-                  <PanelLeftClose className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-2 space-y-1 text-xs">
-                {Object.entries(breadcrumbRoutes)
-                  .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
-                  .map(([path, route]) => {
-                    let depth = 0;
-                    let parent = route.parent;
-                    while (parent && parent !== '/' && depth < 5) {
-                      depth += 1;
-                      parent = (breadcrumbRoutes as Record<string, { parent?: string }>)[parent]?.parent;
-                    }
-                    const isSelected = visualRoute === path;
-                    return (
-                      <button
-                        key={path}
-                        type="button"
-                        onClick={() => {
-                          setVisualRoute(path);
-                          setSelectedVisualElement(null);
-                        }}
-                        style={{ paddingLeft: `${8 + depth * 12}px` }}
-                        className={`w-full text-left truncate py-1.5 px-2 rounded-md transition-colors ${
-                          isSelected
-                            ? 'bg-french-blue text-white font-semibold shadow-xs'
-                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                        }`}
-                        title={path}
-                      >
-                        {route.name}
-                      </button>
-                    );
-                  })}
-                {pages.map((p) => {
-                  const isSelected = visualRoute === normalizePageSlug(p.slug);
-                  return (
-                    <button
-                      key={p.slug}
-                      type="button"
-                      onClick={() => {
-                        setVisualRoute(normalizePageSlug(p.slug));
-                        setSelectedVisualElement(null);
-                      }}
-                      style={{ paddingLeft: `${8 + (p.parent ? 20 : 0)}px` }}
-                      className={`w-full text-left truncate py-1.5 px-2 rounded-md transition-colors ${
-                        isSelected
-                          ? 'bg-french-blue text-white font-semibold shadow-xs'
-                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                      }`}
-                      title={p.slug}
-                    >
-                      {p.title}
-                    </button>
-                  );
-                })}
-              </div>
-            </aside>
-          )}
-
-          {/* Center: Grand Format Live Site Iframe */}
-          <main className="flex-1 min-w-0 flex flex-col bg-slate-900 overflow-hidden relative">
-            {/* Viewport Top Bar */}
-            <div className="shrink-0 h-8 bg-slate-950/70 border-b border-slate-800/80 px-3 flex items-center justify-between text-xs text-slate-400">
-              <span className="font-mono truncate">{visualRoute}</span>
-              <div className="flex items-center gap-3">
-                <span className="text-[11px]">
-                  💡 Cliquez sur n'importe quel texte ou image pour l'éditer en direct
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setInspectorCollapsed(!inspectorCollapsed)}
-                  className="h-6 text-[11px] text-slate-300 hover:text-white hover:bg-slate-800 px-2"
-                >
-                  {inspectorCollapsed ? <PanelRightOpen className="h-3 w-3 mr-1" /> : <PanelRightClose className="h-3 w-3 mr-1" />}
-                  {inspectorCollapsed ? 'Afficher Inspecteur' : 'Masquer Inspecteur'}
-                </Button>
-              </div>
-            </div>
-
-            {/* Canvas */}
-            <div ref={previewCanvas} className="relative flex-1 min-h-0 flex justify-center overflow-auto p-2 sm:p-4 bg-slate-900">
-              <div
-                className="relative min-h-full bg-white shadow-2xl transition-[width] duration-200"
-                style={{
-                  width: previewViewport === 'desktop' ? '100%' : previewViewport === 'tablet' ? '820px' : '390px',
-                  maxWidth: '100%',
-                }}
-              >
-                <iframe
-                  ref={previewFrame}
-                  key={visualRoute}
-                  title={`Aperçu ${visualRoute}`}
-                  src={`${visualRoute}?draft=1&edit=1&embedded=1`}
-                  className="block w-full h-full min-h-[700px] bg-white border-0"
-                />
-
-                {/* Edit Button Overlay for selected element */}
-                {selectedVisualElement?.rect && (
-                  <button
-                    type="button"
-                    className="absolute z-20 inline-flex h-9 w-9 items-center justify-center rounded-md bg-french-blue text-white shadow-lg ring-2 ring-white hover:bg-blue-800 animate-in fade-in"
-                    style={{
-                      left: Math.max(4, selectedVisualElement.rect.left),
-                      top: Math.max(4, selectedVisualElement.rect.top - 42),
-                    }}
-                    title="Modifier cet élément"
-                    onClick={() => {
-                      setInspectorCollapsed(false);
-                      setFocusInspector(true);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span>Modifier ce contenu</span>
+                </button>
+              )}
             </div>
           </main>
 
-          {/* Right: In-Situ Element Inspector Panel */}
-          {!inspectorCollapsed && (
-            <aside className="w-80 shrink-0 border-l border-slate-800 bg-slate-950 flex flex-col overflow-hidden text-slate-100">
-              <div className="p-3 border-b border-slate-800 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-                <span className="flex items-center gap-1.5">
-                  <Pencil className="h-3.5 w-3.5 text-french-blue" /> Inspecteur de contenu
+          {/* Right Slide-over Inspector for Selected Content (Text or Image) */}
+          {selectedVisualElement && !inspectorCollapsed && (
+            <aside className="w-88 shrink-0 border-l border-slate-800 bg-slate-950 flex flex-col overflow-hidden text-slate-100 shadow-2xl animate-in slide-in-from-right-4 duration-200">
+              <div className="p-3.5 border-b border-slate-800 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-300 bg-slate-900">
+                <span className="flex items-center gap-2">
+                  <Pencil className="h-4 w-4 text-amber-400" />
+                  <span>Modification du contenu</span>
                 </span>
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
-                  onClick={() => setInspectorCollapsed(true)}
+                  onClick={() => setSelectedVisualElement(null)}
                   className="h-6 w-6 text-slate-400 hover:text-white"
+                  title="Fermer"
                 >
-                  <PanelRightClose className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-                {!selectedVisualElement ? (
-                  <div className="text-center py-12 px-3 text-slate-400 space-y-3">
-                    <div className="mx-auto h-12 w-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
-                      <Pencil className="h-5 w-5" />
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                  <span className="font-bold text-xs uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    {selectedVisualElement.kind === 'image' ? (
+                      <>
+                        <Image className="h-4 w-4" />
+                        <span>Image / Illustration</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4" />
+                        <span>Texte / Titre</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">Modif directe</span>
+                </div>
+
+                {/* Text Editing Field */}
+                {(selectedVisualElement.kind === 'text' || selectedVisualElement.kind === 'link') && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-200 text-xs font-semibold">Contenu du texte :</Label>
+                      <Textarea
+                        autoFocus={focusInspector}
+                        value={selectedVisualElement.text || ''}
+                        onFocus={() => setFocusInspector(false)}
+                        onChange={(e) => updateVisualElement('text', e.target.value)}
+                        placeholder="Rédigez le texte ici..."
+                        className="bg-slate-900 border-slate-700 text-white min-h-[140px] text-xs leading-relaxed focus:border-amber-400"
+                      />
+                      <p className="text-[11px] text-slate-400 flex items-center justify-between">
+                        <span>Le texte s’actualise immédiatement sur la page.</span>
+                        <span className="font-mono">{(selectedVisualElement.text || '').length} car.</span>
+                      </p>
                     </div>
-                    <p className="font-semibold text-slate-300">Aucun élément sélectionné</p>
-                    <p className="text-[11px] leading-relaxed">
-                      Cliquez directement sur un texte, un titre, un lien ou une image dans la page ci-contre pour le modifier en direct.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold text-xs uppercase tracking-wider text-amber-400">
-                        {selectedVisualElement.kind === 'image'
-                          ? 'Image'
-                          : selectedVisualElement.kind === 'link'
-                          ? 'Lien cliquable'
-                          : 'Texte / Titre'}
-                      </span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedVisualElement(null)}
-                        className="h-6 text-[11px] text-slate-400 hover:text-white"
-                      >
-                        Désélectionner
-                      </Button>
-                    </div>
 
-                    {selectedVisualElement.kind === 'text' && (
-                      <div className="space-y-3">
-                        <div className="space-y-1">
-                          <Label className="text-slate-300 text-xs">Contenu du texte</Label>
-                          <Textarea
-                            autoFocus={focusInspector}
-                            value={selectedVisualElement.text || ''}
-                            onFocus={() => setFocusInspector(false)}
-                            onChange={(e) => updateVisualElement('text', e.target.value)}
-                            className="bg-slate-900 border-slate-700 text-white min-h-[110px] text-xs font-normal"
-                          />
-                        </div>
-                        {selectedVisualElement.linkPath && (
-                          <div className="space-y-1">
-                            <Label className="text-slate-300 text-xs">Adresse de destination du lien</Label>
-                            <Input
-                              value={selectedVisualElement.href || ''}
-                              onChange={(e) => updateVisualElement('href', e.target.value)}
-                              className="bg-slate-900 border-slate-700 text-white text-xs font-mono"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {selectedVisualElement.kind === 'image' && (
-                      <div className="space-y-3">
-                        <div className="space-y-1">
-                          <Label className="text-slate-300 text-xs">URL de l’image</Label>
-                          <Input
-                            value={selectedVisualElement.src || ''}
-                            onChange={(e) => updateVisualElement('src', e.target.value)}
-                            className="bg-slate-900 border-slate-700 text-white text-xs font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-slate-300 text-xs">Texte alternatif (Accessibilité)</Label>
-                          <Input
-                            value={selectedVisualElement.alt || ''}
-                            onChange={(e) => updateVisualElement('alt', e.target.value)}
-                            className="bg-slate-900 border-slate-700 text-white text-xs"
-                          />
-                        </div>
-                        {selectedVisualElement.src && (
-                          <div className="rounded-lg border border-slate-800 bg-slate-900 p-2 overflow-hidden">
-                            <p className="text-[10px] text-slate-400 mb-1">Aperçu :</p>
-                            <img
-                              src={selectedVisualElement.src}
-                              alt={selectedVisualElement.alt || 'Aperçu'}
-                              className="max-h-36 w-full object-cover rounded"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {selectedVisualElement.kind === 'link' && (
-                      <div className="space-y-1">
-                        <Label className="text-slate-300 text-xs">Adresse URL</Label>
-                        <Input
-                          value={selectedVisualElement.href || ''}
-                          onChange={(e) => updateVisualElement('href', e.target.value)}
-                          className="bg-slate-900 border-slate-700 text-white text-xs font-mono"
-                        />
-                      </div>
-                    )}
-
-                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                    <div className="pt-2">
                       <Button
                         type="button"
                         size="sm"
                         onClick={saveDraft}
-                        className="bg-french-blue hover:bg-blue-700 text-white text-xs w-full"
+                        className="w-full bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold py-2"
                       >
-                        <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer la modification
+                        <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer ce texte
                       </Button>
                     </div>
                   </div>
                 )}
+
+                {/* Image Editing Field */}
+                {selectedVisualElement.kind === 'image' && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-200 text-xs font-semibold">Adresse URL de l’image :</Label>
+                      <Input
+                        value={selectedVisualElement.src || ''}
+                        onChange={(e) => updateVisualElement('src', e.target.value)}
+                        placeholder="https://... ou chemin d'image"
+                        className="bg-slate-900 border-slate-700 text-white text-xs font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 transition-colors">
+                        <Upload className="h-4 w-4 text-french-blue" />
+                        <span>Importer une image depuis l’ordinateur</span>
+                        <input
+                          className="sr-only"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              importContentImage(file, (dataUrl) => {
+                                updateVisualElement('src', dataUrl);
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-200 text-xs font-semibold">Description de l’image (texte alternatif) :</Label>
+                      <Input
+                        value={selectedVisualElement.alt || ''}
+                        onChange={(e) => updateVisualElement('alt', e.target.value)}
+                        placeholder="Description pour l'accessibilité..."
+                        className="bg-slate-900 border-slate-700 text-white text-xs"
+                      />
+                    </div>
+
+                    {selectedVisualElement.src && (
+                      <div className="rounded-xl border border-slate-800 bg-slate-900 p-2.5 overflow-hidden">
+                        <p className="text-[10px] text-slate-400 mb-1 font-semibold uppercase">Aperçu visuel :</p>
+                        <img
+                          src={selectedVisualElement.src}
+                          alt={selectedVisualElement.alt || 'Aperçu'}
+                          className="max-h-40 w-full object-cover rounded-lg border border-slate-800"
+                        />
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={saveDraft}
+                        className="w-full bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold py-2"
+                      >
+                        <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer cette image
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-lg bg-slate-900/90 border border-slate-800/80 p-3 text-[11px] text-slate-400 space-y-1">
+                  <p className="font-semibold text-slate-300">ℹ️ Rôle Éditeur :</p>
+                  <p>Vous pouvez modifier librement tous les textes, images et données du site. L'arborescence, les liens et la structure des pages sont gérés par le SuperAdmin.</p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedVisualElement(null)}
+                    className="text-slate-400 hover:text-white text-xs w-full"
+                  >
+                    Fermer l’inspecteur
+                  </Button>
+                </div>
               </div>
             </aside>
+          )}
+
+          {/* Floating hint when inspector is closed */}
+          {(!selectedVisualElement || inspectorCollapsed) && (
+            <div className="absolute bottom-4 right-4 z-20 hidden md:flex items-center gap-2 bg-slate-950/85 backdrop-blur-md border border-slate-800 text-white text-xs px-3.5 py-2 rounded-xl shadow-2xl">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Cliquez sur un texte ou une image de la page pour le modifier</span>
+            </div>
           )}
         </div>
 
@@ -3203,7 +3092,7 @@ const Admin = () => {
                   </div>
                   <div>
                     <h3 className="font-playfair font-bold text-lg text-white">Déploiement sur Vercel</h3>
-                    <p className="text-xs text-emerald-100">Soumission pour validation par l'Administrateur</p>
+                    <p className="text-xs text-emerald-100">Transmission au SuperAdmin pour validation finale</p>
                   </div>
                 </div>
                 <button
@@ -3222,22 +3111,22 @@ const Admin = () => {
                     Vos modifications restent en brouillon sécurisé
                   </p>
                   <p className="text-slate-600 leading-relaxed">
-                    Toutes vos modifications sont actuellement enregistrées en local. Lorsque vous cliquez sur « Transmettre pour déploiement », une notification immédiate s'affiche pour le SuperAdmin. L'administrateur vérifiera l'aperçu du site et lancera le déploiement sur Vercel.
+                    Toutes vos modifications sont sauvegardées. Lorsque vous confirmez l’envoi, le SuperAdmin recevra une notification instantanée avec vos modifications. Il vérifiera le site et déclenchera le déploiement en ligne sur Vercel.
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-700">
-                    Résumé des modifications effectuées (optionnel) :
+                    Notes ou résumé des modifications (optionnel) :
                   </Label>
                   <Textarea
                     value={editorDeployNotes}
                     onChange={(e) => setEditorDeployNotes(e.target.value)}
-                    placeholder="Ex : Mise à jour des tarifs cantine, modification du texte de présentation de la rubrique Vision..."
+                    placeholder="Ex : Actualisation des textes de présentation, modification des photos de la section Vision..."
                     className="text-xs min-h-[90px] bg-slate-50 border-slate-300"
                   />
                   <p className="text-[11px] text-slate-500">
-                    Ce résumé permettra au SuperAdmin de savoir exactement ce qui a été modifié avant de déployer.
+                    Ce résumé permettra au SuperAdmin de vérifier rapidement vos changements avant de déployer.
                   </p>
                 </div>
 
@@ -3249,7 +3138,7 @@ const Admin = () => {
                     onClick={() => setIsEditorDeployModalOpen(false)}
                     className="text-xs"
                   >
-                    Annuler
+                    Continuer à modifier
                   </Button>
                   <Button
                     type="submit"
