@@ -3068,13 +3068,7 @@ const Admin = () => {
             </aside>
           )}
 
-          {/* Floating hint when inspector is closed */}
-          {(!selectedVisualElement || inspectorCollapsed) && (
-            <div className="absolute bottom-4 right-4 z-20 hidden md:flex items-center gap-2 bg-slate-950/85 backdrop-blur-md border border-slate-800 text-white text-xs px-3.5 py-2 rounded-xl shadow-2xl">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Cliquez sur un texte ou une image de la page pour le modifier</span>
-            </div>
-          )}
+
         </div>
 
         {/* Modal: Demande de Déploiement sur Vercel */}
