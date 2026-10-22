@@ -262,6 +262,7 @@ const Admin = () => {
   const [visualExpanded, setVisualExpanded] = useState(false);
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+  const [editorModeActive, setEditorModeActive] = useState(true);
   const [previewViewport, setPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [focusInspector, setFocusInspector] = useState(false);
   const previewCanvas = useRef<HTMLDivElement>(null);
@@ -818,6 +819,11 @@ const Admin = () => {
   useEffect(() => {
     const receiveSelection = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== previewFrame.current?.contentWindow) return;
+      if (event.data?.type === 'lfjp-route-change' && typeof event.data.path === 'string') {
+        setVisualRoute(event.data.path);
+        setSelectedVisualElement(null);
+        return;
+      }
       if (event.data?.type !== 'lfjp-cms-select' || event.data.page !== visualRoute || !isRecord(event.data.selection)) return;
       const selection = event.data.selection;
       if (typeof selection.path !== 'string' || !['text', 'image', 'link'].includes(String(selection.kind))) return;
@@ -2768,13 +2774,45 @@ const Admin = () => {
             </div>
           </div>
 
-          {/* Center: Friendly In-Situ Editing Guide */}
-          <div className="hidden xl:flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1 rounded-full text-xs text-slate-300">
-            <Pencil className="h-3.5 w-3.5 text-amber-400" />
-            <span>Cliquez sur n’importe quel texte ou image du site ci-dessous pour le modifier</span>
+          {/* Center: Toggle Button Activer / Désactiver les modifications */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const nextState = !editorModeActive;
+                setEditorModeActive(nextState);
+                if (!nextState) setSelectedVisualElement(null);
+                previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-set-edit-mode', active: nextState }, window.location.origin);
+              }}
+              className={`h-8 text-xs font-bold px-3 shadow-md flex items-center gap-2 transition-all ${
+                editorModeActive
+                  ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 ring-2 ring-amber-300'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+              }`}
+              title={editorModeActive ? "Cliquez pour désactiver les modifications et pouvoir naviguer sur les liens du site" : "Cliquez pour activer les modifications de textes et d'images"}
+            >
+              {editorModeActive ? (
+                <>
+                  <Pencil className="h-3.5 w-3.5 fill-current" />
+                  <span>Modifications : ACTIVÉES</span>
+                  <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <Eye className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Activer les modifications</span>
+                </>
+              )}
+            </Button>
+            {!editorModeActive && (
+              <span className="hidden xl:inline text-[11px] text-slate-400">
+                (Mode navigation : cliquez sur les liens pour explorer le site)
+              </span>
+            )}
           </div>
 
-          {/* Right: Actions (Save draft, Deploy to Vercel, Logout) */}
+          {/* Right: Actions (Save draft, Publish on Vercel, Logout) */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Status indicator */}
             {pendingDeployment?.status === 'pending_admin_approval' ? (
@@ -2809,10 +2847,10 @@ const Admin = () => {
               size="sm"
               onClick={() => setIsEditorDeployModalOpen(true)}
               className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5"
-              title="Déployer sur Vercel (Validation finale par le SuperAdmin)"
+              title="Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"
             >
               <Send className="h-3.5 w-3.5" />
-              <span>Déployer sur Vercel</span>
+              <span>Enregistrer pour publier sur Vercel</span>
             </Button>
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block" />
@@ -2883,20 +2921,20 @@ const Admin = () => {
             <div ref={previewCanvas} className="relative flex-1 min-h-0 w-full h-full overflow-hidden bg-slate-900">
               <iframe
                 ref={previewFrame}
-                key={visualRoute}
+                key={`${visualRoute}-${editorModeActive ? 'edit' : 'nav'}`}
                 title={`Aperçu interactif ${visualRoute}`}
-                src={`${visualRoute}?draft=1&edit=1&embedded=1`}
+                src={`${visualRoute}?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`}
                 className="block w-full h-full bg-white border-0 shadow-inner"
               />
 
-              {/* Floating Edit Pin directly on clicked element in the page */}
-              {selectedVisualElement?.rect && (
+              {/* Floating Edit Pin directly on clicked element in the page: ONLY when editorModeActive is true */}
+              {editorModeActive && selectedVisualElement?.rect && (
                 <button
                   type="button"
-                  className="absolute z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-french-blue text-white shadow-xl ring-2 ring-white hover:bg-blue-800 animate-in fade-in text-xs font-semibold"
+                  className="absolute z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 text-slate-950 shadow-2xl ring-2 ring-white hover:bg-amber-500 animate-in fade-in text-xs font-bold"
                   style={{
                     left: Math.max(8, selectedVisualElement.rect.left),
-                    top: Math.max(8, selectedVisualElement.rect.top - 36),
+                    top: Math.max(8, selectedVisualElement.rect.top - 40),
                   }}
                   title="Modifier cet élément"
                   onClick={() => {
@@ -2904,15 +2942,15 @@ const Admin = () => {
                     setFocusInspector(true);
                   }}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-3.5 w-3.5 fill-current" />
                   <span>Modifier ce contenu</span>
                 </button>
               )}
             </div>
           </main>
 
-          {/* Right Slide-over Inspector for Selected Content (Text or Image) */}
-          {selectedVisualElement && !inspectorCollapsed && (
+          {/* Right Slide-over Inspector for Selected Content (Text or Image): ONLY when editorModeActive is true */}
+          {editorModeActive && selectedVisualElement && !inspectorCollapsed && (
             <aside className="w-88 shrink-0 border-l border-slate-800 bg-slate-950 flex flex-col overflow-hidden text-slate-100 shadow-2xl animate-in slide-in-from-right-4 duration-200">
               <div className="p-3.5 border-b border-slate-800 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-300 bg-slate-900">
                 <span className="flex items-center gap-2">

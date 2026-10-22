@@ -9,8 +9,9 @@ import { loadActiveUserProfile, type UserProfile } from '@/data/adminProfilesAnd
 const PageTextEditor = () => {
   const location = useLocation();
   const isEditorRoute = location.pathname === '/espace-direction' || location.pathname === '/admin';
-  const editingRequested = new URLSearchParams(location.search).get('edit') === '1';
+  const editParam = new URLSearchParams(location.search).get('edit');
   const embedded = new URLSearchParams(location.search).get('embedded') === '1';
+  const editingRequested = editParam === '1' || (embedded && editParam !== '0');
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -30,7 +31,8 @@ const PageTextEditor = () => {
       const profile = loadActiveUserProfile();
       setCurrentUser(profile);
       setIsAdmin(true);
-      if (editingRequested || embedded) setIsEditing(true);
+      if (editingRequested) setIsEditing(true);
+      else if (editParam === '0') setIsEditing(false);
       setAuthChecked(true);
       return;
     }
@@ -42,7 +44,7 @@ const PageTextEditor = () => {
           const profile = loadActiveUserProfile();
           setCurrentUser(profile);
           setIsAdmin(true);
-          setIsEditing(Boolean(editingRequested || embedded));
+          setIsEditing(editingRequested);
         } else {
           setCurrentUser(null);
           setIsAdmin(false);
@@ -57,13 +59,35 @@ const PageTextEditor = () => {
       .finally(() => {
         setAuthChecked(true);
       });
-  }, [editingRequested, embedded]);
+  }, [editingRequested, editParam]);
 
   useEffect(() => {
     checkAuth();
     window.addEventListener('lfjp_auth_changed', checkAuth);
     return () => window.removeEventListener('lfjp_auth_changed', checkAuth);
   }, [checkAuth]);
+
+  // Synchronize route change to parent admin iframe
+  useEffect(() => {
+    if (embedded) {
+      window.parent.postMessage({ type: 'lfjp-route-change', path: location.pathname }, window.location.origin);
+    }
+  }, [embedded, location.pathname]);
+
+  // Listen to dynamic edit mode toggle messages from parent admin window
+  useEffect(() => {
+    const handleMsg = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'lfjp-set-edit-mode') {
+        setIsEditing(Boolean(event.data.active));
+        if (!event.data.active) {
+          setSelectedElement(null);
+        }
+      }
+    };
+    window.addEventListener('message', handleMsg);
+    return () => window.removeEventListener('message', handleMsg);
+  }, []);
 
   const handleLogout = async () => {
     window.sessionStorage.removeItem('lfjp_admin_local_session');
@@ -104,6 +128,27 @@ const PageTextEditor = () => {
     return () => observer.disconnect();
   }, [isEditorRoute, location.pathname, overrides]);
 
+  // CRITICAL: When modification mode is active, intercept clicks on links and buttons in capture phase
+  // so that clicking anywhere on the page allows selecting and editing the text/content instead of navigating away!
+  useEffect(() => {
+    if (!isAdmin || !isEditing || isEditorRoute) return;
+    const interceptClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      const root = document.getElementById('root');
+      if (!root || !root.contains(target)) return;
+
+      const element = target instanceof Element ? target : target.parentElement;
+      if (element?.closest('[data-page-text-editor]')) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    document.addEventListener('click', interceptClick, true);
+    return () => document.removeEventListener('click', interceptClick, true);
+  }, [isAdmin, isEditing, isEditorRoute]);
+
   useEffect(() => {
     if (!isAdmin || !isEditing || isEditorRoute) return;
     const handlePointerDown = (event: PointerEvent) => {
@@ -114,10 +159,12 @@ const PageTextEditor = () => {
 
       const element = target instanceof Element ? target : target.parentElement;
       if (!element || element.closest('[data-page-text-editor]')) return;
-      if (element.closest('button,input,textarea,select,[data-radix-collection-item]')) return;
+      if (!embedded && element.closest('button,input,textarea,select,[data-radix-collection-item]')) return;
 
       const image = element.closest('img');
       const anchor = element.closest('a');
+      const button = element.closest('button');
+
       const findTextNode = (node: Node): Text | null => {
         if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) return node as Text;
         for (const child of Array.from(node.childNodes)) {
@@ -134,24 +181,29 @@ const PageTextEditor = () => {
           : findTextNode(element);
 
       if (embedded) {
-        if (element.closest('button,[role="tab"],input,textarea,select,[data-radix-collection-item]')) return;
         let selectedPath: string | null = null;
         let selected: PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string; rect?: { left: number; top: number; width: number; height: number } } | null = null;
+
         if (image instanceof HTMLImageElement) {
           selectedPath = getNodePath(root, image);
           const rect = image.getBoundingClientRect();
           if (selectedPath) selected = { kind: 'image', path: selectedPath, src: image.getAttribute('src') || '', alt: image.alt, rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
-        } else if (target === anchor && anchor instanceof HTMLAnchorElement) {
-          selectedPath = getNodePath(root, anchor);
-          const rect = anchor.getBoundingClientRect();
-          if (selectedPath) selected = { kind: 'link', path: selectedPath, href: anchor.getAttribute('href') || '', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
         } else if (textNode?.nodeType === Node.TEXT_NODE && textNode.textContent?.trim()) {
           selectedPath = getNodePath(root, textNode);
-          const textAnchor = textNode.parentElement?.closest('a');
+          const textAnchor = textNode.parentElement?.closest('a') || anchor;
           const linkPath = textAnchor ? getNodePath(root, textAnchor) || undefined : undefined;
-          const rect = (textNode as Text).parentElement?.getBoundingClientRect();
+          const rect = (textNode as Text).parentElement?.getBoundingClientRect() || element.getBoundingClientRect();
           if (selectedPath) selected = { kind: 'text', path: selectedPath, text: textNode.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath, rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined };
+        } else if (anchor instanceof HTMLAnchorElement) {
+          selectedPath = getNodePath(root, anchor);
+          const rect = anchor.getBoundingClientRect();
+          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: anchor.textContent?.trim() || 'Lien', href: anchor.getAttribute('href') || '', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
+        } else if (button instanceof HTMLButtonElement) {
+          selectedPath = getNodePath(root, button);
+          const rect = button.getBoundingClientRect();
+          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: button.textContent?.trim() || 'Bouton', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
         }
+
         if (!selected) return;
         event.preventDefault();
         event.stopPropagation();
