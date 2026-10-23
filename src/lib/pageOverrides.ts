@@ -44,12 +44,87 @@ export const resolveNodePath = (root: Node, path: string): Node | null => {
   return path.split('.').reduce<Node | null>((node, index) => node?.childNodes[Number(index)] || null, root);
 };
 
+const XOF_TO_EUR_RATE = 655.957;
+
+const parseCurrencyText = (text: string): { amount: number; currency: 'XOF' | 'EUR' } | null => {
+  const trimmed = text.trim();
+  const hasXof = /F\s*CFA|FCFA|CFA|XOF/i.test(trimmed);
+  const hasEuro = /[€]|EUR/i.test(trimmed);
+  if (!hasXof && !hasEuro) return null;
+
+  const digits = trimmed.replace(/[^0-9]/g, '');
+  if (!digits) return null;
+  const num = parseInt(digits, 10);
+  if (isNaN(num) || num <= 0) return null;
+
+  return {
+    amount: num,
+    currency: hasEuro ? 'EUR' : 'XOF',
+  };
+};
+
+const detectTargetCurrency = (node: Node): 'XOF' | 'EUR' => {
+  const el = node instanceof Element ? node : node.parentElement;
+  if (!el) return 'XOF';
+  const currencyContainer = el.closest('[data-currency]');
+  if (currencyContainer) {
+    const val = currencyContainer.getAttribute('data-currency');
+    if (val === 'EUR' || val === 'XOF') return val;
+  }
+  const eurBtn = document.querySelector('button[aria-pressed="true"]');
+  if (eurBtn && /EUR|Euro/i.test(eurBtn.textContent || '')) {
+    return 'EUR';
+  }
+  if (node.textContent && /[€]/.test(node.textContent)) {
+    return 'EUR';
+  }
+  return 'XOF';
+};
+
+const formatConvertedCurrency = (amount: number, fromCurrency: 'XOF' | 'EUR', targetCurrency: 'XOF' | 'EUR'): string => {
+  let valueInTarget: number;
+  if (fromCurrency === targetCurrency) {
+    valueInTarget = amount;
+  } else if (fromCurrency === 'XOF' && targetCurrency === 'EUR') {
+    valueInTarget = Math.round(amount / XOF_TO_EUR_RATE);
+  } else {
+    valueInTarget = Math.round(amount * XOF_TO_EUR_RATE);
+  }
+
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: targetCurrency,
+    maximumFractionDigits: 0,
+  }).format(valueInTarget);
+};
+
 export const applyPageTextOverrides = (root: HTMLElement, pathname: string, overrides: PageTextOverrides) => {
   Object.entries(overrides[pathname] || {}).forEach(([path, override]) => {
     const node = resolveNodePath(root, path);
     if (!node) return;
-    if (override.text !== undefined && node.nodeType === Node.TEXT_NODE && node.textContent !== override.text) {
-      node.textContent = override.text;
+    if (override.text !== undefined && node.nodeType === Node.TEXT_NODE) {
+      let nextText = override.text;
+      const parsed = parseCurrencyText(override.text);
+      if (parsed) {
+        const targetCurrency = detectTargetCurrency(node);
+        nextText = formatConvertedCurrency(parsed.amount, parsed.currency, targetCurrency);
+      } else {
+        const parentEl = node.parentElement;
+        const currencyAttr = parentEl?.getAttribute('data-currency-amount');
+        if (currencyAttr) {
+          const baseAmount = parseInt(currencyAttr, 10);
+          if (!isNaN(baseAmount) && baseAmount > 0) {
+            const userNum = parseInt(override.text.replace(/[^0-9]/g, ''), 10);
+            const amountToUse = !isNaN(userNum) && userNum > 0 ? userNum : baseAmount;
+            const targetCurrency = detectTargetCurrency(node);
+            nextText = formatConvertedCurrency(amountToUse, 'XOF', targetCurrency);
+          }
+        }
+      }
+
+      if (node.textContent !== nextText) {
+        node.textContent = nextText;
+      }
     }
     if (node instanceof HTMLImageElement) {
       if (override.src !== undefined && node.getAttribute('src') !== override.src) node.setAttribute('src', override.src);

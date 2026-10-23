@@ -307,7 +307,7 @@ const BudgetCadreVieInfrastructures = () => {
   };
 
   return (
-    <section id="budget-cadre-vie" className="mt-8 space-y-10 md:space-y-12">
+    <section id="budget-cadre-vie" data-currency={currency} className="mt-8 space-y-10 md:space-y-12">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between md:p-5">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-french-blue">Cadre de vie & infrastructures</p>
@@ -364,7 +364,7 @@ const BudgetCadreVieInfrastructures = () => {
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{card.label}</p>
-                  <p className="text-2xl font-bold text-slate-900">{formatCurrency(card.value, currency)}</p>
+                  <p className="text-2xl font-bold text-slate-900" data-currency-amount={card.value}>{formatCurrency(card.value, currency)}</p>
                 </div>
                 <span className="rounded-xl bg-white/70 p-2 shadow-inner">
                   <Icon className="h-5 w-5" aria-hidden />
@@ -404,7 +404,7 @@ const BudgetCadreVieInfrastructures = () => {
                           </span>
                         </div>
                         <p className="text-sm text-slate-700">{project.description}</p>
-                        <p className="text-sm font-semibold text-emerald-700">
+                        <p className="text-sm font-semibold text-emerald-700" data-currency-amount={project.budget}>
                           {formatCurrency(project.budget, currency)}
                         </p>
                       </div>
@@ -545,11 +545,11 @@ const BudgetCadreVieInfrastructures = () => {
                     return (
                       <tr key={row.year} className="hover:bg-slate-50">
                         <td className="px-4 py-2 font-semibold text-slate-900">{row.year}</td>
-                        <td className="px-4 py-2 text-right text-slate-700">{formatCurrency(row.capacite, currency)}</td>
-                        <td className="px-4 py-2 text-right text-slate-700">{formatCurrency(row.leviers, currency)}</td>
-                        <td className="px-4 py-2 text-right font-semibold text-slate-900">{formatCurrency(row.recettesTotales, currency)}</td>
-                        <td className="px-4 py-2 text-right text-rose-600">{formatCurrency(row.depenses, currency)}</td>
-                        <td className={`px-4 py-2 text-right font-semibold ${soldePositive ? 'text-emerald-700' : 'text-rose-600'}`}>
+                        <td className="px-4 py-2 text-right text-slate-700" data-currency-amount={row.capacite}>{formatCurrency(row.capacite, currency)}</td>
+                        <td className="px-4 py-2 text-right text-slate-700" data-currency-amount={row.leviers}>{formatCurrency(row.leviers, currency)}</td>
+                        <td className="px-4 py-2 text-right font-semibold text-slate-900" data-currency-amount={row.recettesTotales}>{formatCurrency(row.recettesTotales, currency)}</td>
+                        <td className="px-4 py-2 text-right text-rose-600" data-currency-amount={row.depenses}>{formatCurrency(row.depenses, currency)}</td>
+                        <td className={`px-4 py-2 text-right font-semibold ${soldePositive ? 'text-emerald-700' : 'text-rose-600'}`} data-currency-amount={solde}>
                           {formatCurrency(solde, currency)}
                         </td>
                       </tr>
@@ -607,7 +607,7 @@ const BudgetCadreVieInfrastructures = () => {
                       className="flex flex-col items-center justify-center rounded-lg bg-white px-3 py-2 text-center shadow-sm"
                     >
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{year}</span>
-                      <span className="text-sm font-semibold text-emerald-700">{formatCurrency(annualTotals[index], currency)}</span>
+                      <span className="text-sm font-semibold text-emerald-700" data-currency-amount={annualTotals[index]}>{formatCurrency(annualTotals[index], currency)}</span>
                     </div>
                   ))}
                 </div>
@@ -622,7 +622,7 @@ const BudgetCadreVieInfrastructures = () => {
                 <PiggyBank className="h-5 w-5 text-emerald-600" aria-hidden />
               </div>
               <p className="mb-3 text-xs font-semibold text-slate-600">
-                Base revenus: <span className="font-bold text-slate-900">{formatCurrency(tuitionBaseRevenue, currency)}</span>
+                Base revenus: <span className="font-bold text-slate-900" data-currency-amount={tuitionBaseRevenue}>{formatCurrency(tuitionBaseRevenue, currency)}</span>
               </p>
               <div className="overflow-hidden rounded-xl border border-slate-100">
                 <table className="min-w-full divide-y divide-slate-100 text-sm">
@@ -638,7 +638,7 @@ const BudgetCadreVieInfrastructures = () => {
                       <tr key={item.year} className="hover:bg-slate-50">
                         <td className="px-4 py-2 font-semibold text-slate-900">{item.year}</td>
                         <td className="px-4 py-2 text-right text-slate-700">{item.increase}%</td>
-                        <td className="px-4 py-2 text-right font-semibold text-emerald-700">{formatCurrency(item.revenue, currency)}</td>
+                        <td className="px-4 py-2 text-right font-semibold text-emerald-700" data-currency-amount={item.revenue}>{formatCurrency(item.revenue, currency)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -646,7 +646,7 @@ const BudgetCadreVieInfrastructures = () => {
               </div>
               <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                 <span>Cumul généré (2026-2030)</span>
-                <span>{formatCurrency(cumulativeTuition, currency)}</span>
+                <span data-currency-amount={cumulativeTuition}>{formatCurrency(cumulativeTuition, currency)}</span>
               </div>
               <p className="mt-2 text-xs text-slate-600">
                 Ajustez les pourcentages d’augmentation ci-dessus pour simuler d’autres scénarios de recettes liées aux écolages.

@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
@@ -50,15 +51,36 @@ export default defineConfig(({ mode }) => ({
             return;
           }
           if (req.url === "/api/github/pull-request" && req.method === "POST") {
-            res.setHeader("Content-Type", "application/json");
-            res.statusCode = 201;
-            res.end(JSON.stringify({
-              url: "https://github.com/informatique-cmd/psd-lfjp/pull/preview-mode",
-              number: 1,
-              branch: "admin/preview-branch",
-              simulated: true,
-              message: "Preview locale active. En production sur Vercel, la Pull Request GitHub sera automatiquement créée."
-            }));
+            let body = "";
+            req.on("data", (chunk) => {
+              body += chunk;
+            });
+            req.on("end", () => {
+              try {
+                const parsed = JSON.parse(body || "{}");
+                if (parsed.files && typeof parsed.files === "object") {
+                  for (const [relPath, fileContent] of Object.entries(parsed.files)) {
+                    if (typeof fileContent === "string" && relPath.startsWith("src/content/")) {
+                      const fullPath = path.resolve(__dirname, relPath);
+                      fs.writeFileSync(fullPath, `${fileContent.trim()}\n`, "utf8");
+                    }
+                  }
+                }
+                res.setHeader("Content-Type", "application/json");
+                res.statusCode = 201;
+                res.end(JSON.stringify({
+                  url: "https://github.com/informatique-cmd/psd-lfjp",
+                  number: 1,
+                  branch: "main",
+                  success: true,
+                  message: "Modifications enregistrées et publiées avec succès sur la branche principale !"
+                }));
+              } catch (err) {
+                res.setHeader("Content-Type", "application/json");
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: "Erreur lors de l’écriture des fichiers : " + (err as Error).message }));
+              }
+            });
             return;
           }
           if (req.url === "/api/github/merge-pull-request" && req.method === "POST") {

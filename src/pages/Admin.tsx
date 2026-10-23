@@ -431,7 +431,22 @@ const Admin = () => {
   const handleEditorSubmitForDeploy = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     saveDraft();
-    const req = submitEditorDraft(userProfile.email, userProfile.name, editorDeployNotes);
+    const currentDraftText = window.localStorage.getItem(pageTextDraftStorageKey) || pageTextJson;
+    const currentDraftData = window.localStorage.getItem(pageDataDraftStorageKey) || pageDataJson;
+    const currentDraftContent = window.localStorage.getItem(draftStorageKey) || serializedContent;
+    const currentDraftPages = window.localStorage.getItem(pagesDraftStorageKey) || serializedPages;
+
+    const req = submitEditorDraft(
+      userProfile.email,
+      userProfile.name,
+      editorDeployNotes,
+      {
+        siteContent: currentDraftContent,
+        pages: currentDraftPages,
+        pageData: currentDraftData,
+        pageText: currentDraftText,
+      }
+    );
     setPendingDeployment(req);
     setIsEditorDeployModalOpen(false);
     setEditorDeployNotes('');
@@ -441,16 +456,15 @@ const Admin = () => {
   const handleAdminApproveAndDeploy = async () => {
     if (!pendingDeployment) return;
     setIsSaving(true);
-    setStatus('⏳ Validation des modifications et déclenchement du déploiement vers Vercel...');
+    setStatus('⏳ Validation des modifications et déploiement vers Vercel (branche principale)...');
     try {
-      await createPullRequest();
+      await createPullRequest(true, pendingDeployment.draftFiles);
       approveDeploymentRequest(pendingDeployment.id, userProfile.email);
       setPendingDeployment(loadPendingDeploymentRequest());
-      setStatus('🚀 Modifications validées et déploiement Vercel lancé avec succès !');
-    } catch {
-      approveDeploymentRequest(pendingDeployment.id, userProfile.email);
-      setPendingDeployment(loadPendingDeploymentRequest());
-      setStatus('✅ Modifications validées ! Déploiement Vercel pris en charge.');
+      setStatus('🚀 Modifications publiées et déploiement Vercel lancé avec succès ! La production sera à jour pour tous les navigateurs.');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Échec du déploiement GitHub / Vercel.';
+      setStatus(`❌ Échec du déploiement : ${msg}`);
     } finally {
       setIsSaving(false);
     }
@@ -1277,20 +1291,31 @@ const Admin = () => {
     reader.readAsText(file);
   };
 
-  const createPullRequest = async () => {
+  const createPullRequest = async (
+    directDeploy: boolean = false,
+    customFiles?: { siteContent?: string; pages?: string; pageData?: string; pageText?: string }
+  ) => {
     setIsSaving(true);
     setStatus('');
     try {
       const validationErrors = validateManagedPages(pages);
       if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
-      const parsedPageData: unknown = JSON.parse(pageDataJson);
+
+      const pageDataStr = customFiles?.pageData || window.localStorage.getItem(pageDataDraftStorageKey) || pageDataJson;
+      const parsedPageData: unknown = JSON.parse(pageDataStr);
       if (!isValidPageData(parsedPageData)) {
-        throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de créer la Preview.');
+        throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de déployer.');
       }
-      const parsedPageText: unknown = JSON.parse(pageTextJson);
+
+      const pageTextStr = customFiles?.pageText || window.localStorage.getItem(pageTextDraftStorageKey) || pageTextJson;
+      const parsedPageText: unknown = JSON.parse(pageTextStr);
       if (!isValidPageTextOverrides(parsedPageText)) {
-        throw new Error('Les modifications visuelles des pages sont invalides. Vérifiez leur JSON avant de créer la Preview.');
+        throw new Error('Les modifications visuelles des pages sont invalides. Vérifiez leur JSON avant de déployer.');
       }
+
+      const contentStr = customFiles?.siteContent || window.localStorage.getItem(draftStorageKey) || serializedContent;
+      const pagesStr = customFiles?.pages || window.localStorage.getItem(pagesDraftStorageKey) || serializedPages;
+
       const managedPaths = new Set(pages.map((page) => normalizePageSlug(page.slug)));
       const knownPaths = new Set(Object.keys(breadcrumbRoutes));
       const invalidCard = content.home.cards.find((card) => {
@@ -1298,30 +1323,42 @@ const Admin = () => {
         return !managedPaths.has(path) && !knownPaths.has(path);
       });
       if (invalidCard) throw new Error(`La rubrique « ${invalidCard.title} » pointe vers une page inexistante (${invalidCard.path}). Créez ou rattachez cette page avant la Preview.`);
+
       const response = await fetch('/api/github/pull-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: {
-          'src/content/siteContent.json': serializedContent,
-          'src/content/pages.json': serializedPages,
-          'src/content/pageData.json': JSON.stringify(parsedPageData, null, 2),
-          'src/content/pageText.json': JSON.stringify(parsedPageText, null, 2),
-        } }),
+        body: JSON.stringify({
+          directDeploy,
+          files: {
+            'src/content/siteContent.json': contentStr,
+            'src/content/pages.json': pagesStr,
+            'src/content/pageData.json': JSON.stringify(parsedPageData, null, 2),
+            'src/content/pageText.json': JSON.stringify(parsedPageText, null, 2),
+          },
+        }),
       });
       const responseText = await response.text();
-      let result: { error?: string; url?: string; number?: number };
+      let result: { error?: string; url?: string; number?: number; message?: string };
       try {
-        result = responseText ? JSON.parse(responseText) as { error?: string; url?: string; number?: number } : {};
+        result = responseText ? JSON.parse(responseText) as { error?: string; url?: string; number?: number; message?: string } : {};
       } catch {
         throw new Error(
-          `L’API Vercel a renvoyé une réponse non JSON (HTTP ${response.status}). Vérifie les variables d’environnement Vercel et redéploie.`
+          `L’API a renvoyé une réponse non JSON (HTTP ${response.status}). Vérifiez vos configurations.`
         );
       }
-      if (!response.ok) throw new Error(result.error || 'La Pull Request n’a pas pu être créée.');
+      if (!response.ok) throw new Error(result.error || 'La requête vers GitHub a échoué.');
       if (result.url && result.number) setPullRequest({ url: result.url, number: result.number });
-      setStatus(`Preview demandée : ${result.url || 'Pull Request créée'}`);
+
+      if (directDeploy) {
+        setStatus(result.message || '🚀 Déploiement Vercel réussi ! Les modifications sont publiées sur la branche principale.');
+      } else {
+        setStatus(`Preview demandée : ${result.url || 'Pull Request créée'}`);
+      }
+      return result;
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Une erreur inattendue est survenue.');
+      const msg = error instanceof Error ? error.message : 'Une erreur inattendue est survenue.';
+      setStatus(msg);
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -2839,22 +2876,6 @@ const Admin = () => {
             </Button>
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block" />
-
-            {/* Quick Switch to SuperAdmin Dashboard */}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                switchUserProfile(defaultAccounts[0]);
-              }}
-              className="h-8 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/40 px-2.5 flex items-center gap-1.5"
-              title="Accéder au Tableau de bord SuperAdmin (Arborescence, gestion des rubriques et déploiement direct)"
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <span className="hidden sm:inline">Espace SuperAdmin</span>
-              <span className="sm:hidden">Admin</span>
-            </Button>
 
             {/* User and Logout */}
             <div className="flex items-center gap-1.5">

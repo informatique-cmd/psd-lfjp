@@ -34,7 +34,11 @@ export const getCookies = (header = '') => Object.fromEntries(
     .filter(([key, value]) => key && value),
 );
 
-export const getSessionToken = (req: { headers: { cookie?: string } }) => {
+export const getSessionToken = (req: { headers: { cookie?: string; 'x-github-token'?: string; authorization?: string } }) => {
+  if (req.headers['x-github-token']) return req.headers['x-github-token'];
+  if (req.headers.authorization?.startsWith('Bearer ')) {
+    return req.headers.authorization.slice(7).trim();
+  }
   const cookie = getCookies(req.headers.cookie).lfjp_admin_session;
   return cookie ? decryptToken(cookie) : (process.env.GITHUB_TOKEN || null);
 };

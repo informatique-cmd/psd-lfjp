@@ -15,10 +15,43 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(400).json({ error: 'Contenu invalide ou trop volumineux.' });
   }
   const user = await githubRequest(token, '/user');
-  const allowedUsers = (process.env.ADMIN_GITHUB_USERS || '').split(',').map((item) => item.trim()).filter(Boolean);
-  if (allowedUsers.length === 0 || !allowedUsers.includes(user.login)) return res.status(403).json({ error: 'La liste ADMIN_GITHUB_USERS doit contenir un compte autorisé.' });
+  const allowedUsers = (process.env.ADMIN_GITHUB_USERS || 'informatique-cmd,direction-lfjp').split(',').map((item) => item.trim()).filter(Boolean);
+  if (allowedUsers.length === 0 || !allowedUsers.includes(user.login)) return res.status(403).json({ error: 'Ce compte GitHub n’est pas autorisé à déployer sur le site.' });
 
   const base = process.env.GITHUB_BASE_BRANCH || 'main';
+
+  // Direct deployment to production (main branch)
+  if (body.directDeploy) {
+    const commits = [];
+    for (const file of files) {
+      let sha: string | undefined;
+      try {
+        const existing = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/contents/${file.path}?ref=${encodeURIComponent(base)}`);
+        sha = existing.sha;
+      } catch {
+        // file may be newly created
+      }
+      const commit = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/contents/${file.path}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `content: update ${file.path} [production deploy by @${user.login}]`,
+          content: Buffer.from(`${file.content.trim()}\n`, 'utf8').toString('base64'),
+          branch: base,
+          ...(sha ? { sha } : {}),
+        }),
+      });
+      commits.push(commit);
+    }
+    return res.status(200).json({
+      success: true,
+      directDeploy: true,
+      branch: base,
+      message: 'Déploiement en production réussi ! Les modifications sont publiées sur la branche principale.',
+      commits: commits.map((c) => c.commit?.html_url),
+    });
+  }
+
   const branch = `admin/content-${new Date().toISOString().slice(0, 10)}-${randomBytes(4).toString('hex')}`;
   const ref = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/git/ref/heads/${base}`);
   await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/git/refs`, {

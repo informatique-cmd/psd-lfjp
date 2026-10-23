@@ -9,6 +9,12 @@ export interface PendingDeploymentRequest {
   reviewedAt?: string;
   reviewedBy?: string;
   feedback?: string;
+  draftFiles?: {
+    siteContent?: string;
+    pages?: string;
+    pageData?: string;
+    pageText?: string;
+  };
 }
 
 export const DEPLOYMENT_REQUEST_KEY = 'lfjp_pending_deployment_request';
@@ -45,7 +51,13 @@ export function savePendingDeploymentRequest(request: PendingDeploymentRequest |
 export function submitEditorDraft(
   submittedBy: string,
   authorName: string,
-  notes: string = ''
+  notes: string = '',
+  draftFiles?: {
+    siteContent?: string;
+    pages?: string;
+    pageData?: string;
+    pageText?: string;
+  }
 ): PendingDeploymentRequest {
   const newRequest: PendingDeploymentRequest = {
     id: `req-${Date.now()}`,
@@ -55,6 +67,7 @@ export function submitEditorDraft(
     authorName,
     notes: notes.trim(),
     modifiedSummary: 'Modifications de contenus effectuées en mode Édition In-Situ (textes, visuels, pages).',
+    draftFiles,
   };
   savePendingDeploymentRequest(newRequest);
   return newRequest;
