@@ -2774,56 +2774,47 @@ const Admin = () => {
             </div>
           </div>
 
-          {/* Center: Toggle Button Activer / Désactiver les modifications */}
+          {/* Center: Harmonized Toggle Button Activer / Désactiver les modifications */}
           <div className="flex items-center gap-2">
             <Button
               type="button"
               size="sm"
+              variant="outline"
               onClick={() => {
                 const nextState = !editorModeActive;
                 setEditorModeActive(nextState);
                 if (!nextState) setSelectedVisualElement(null);
                 previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-set-edit-mode', active: nextState }, window.location.origin);
               }}
-              className={`h-8 text-xs font-bold px-3 shadow-md flex items-center gap-2 transition-all ${
+              className={`h-8 text-xs font-semibold px-3 transition-colors ${
                 editorModeActive
-                  ? 'bg-amber-400 hover:bg-amber-500 text-slate-950 ring-2 ring-amber-300'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                  ? 'border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300'
+                  : 'border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200'
               }`}
-              title={editorModeActive ? "Cliquez pour désactiver les modifications et pouvoir naviguer sur les liens du site" : "Cliquez pour activer les modifications de textes et d'images"}
+              title={editorModeActive ? "Désactiver la modification (permet de naviguer sur les liens du site)" : "Activer la modification des textes, liens et images"}
             >
+              <Pencil className={`mr-1.5 h-3.5 w-3.5 shrink-0 ${editorModeActive ? 'text-amber-400' : 'text-slate-400'}`} />
               {editorModeActive ? (
                 <>
-                  <Pencil className="h-3.5 w-3.5 fill-current" />
-                  <span>Modifications : ACTIVÉES</span>
-                  <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+                  <span className="hidden sm:inline">Désactiver la modification</span>
+                  <span className="sm:hidden">Désactiver</span>
                 </>
               ) : (
                 <>
-                  <Eye className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Activer les modifications</span>
+                  <span className="hidden sm:inline">Activer la modification</span>
+                  <span className="sm:hidden">Modifier</span>
                 </>
               )}
             </Button>
-            {!editorModeActive && (
-              <span className="hidden xl:inline text-[11px] text-slate-400">
-                (Mode navigation : cliquez sur les liens pour explorer le site)
-              </span>
-            )}
           </div>
 
           {/* Right: Actions (Save draft, Publish on Vercel, Logout) */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Status indicator */}
-            {pendingDeployment?.status === 'pending_admin_approval' ? (
+            {/* Status indicator: only when pending admin approval */}
+            {pendingDeployment?.status === 'pending_admin_approval' && (
               <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
                 <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
                 <span>En attente validation Admin</span>
-              </span>
-            ) : (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                <span>Brouillon actif</span>
               </span>
             )}
 
@@ -2850,7 +2841,8 @@ const Admin = () => {
               title="Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"
             >
               <Send className="h-3.5 w-3.5" />
-              <span>Enregistrer pour publier sur Vercel</span>
+              <span className="hidden sm:inline">Enregistrer pour publier sur Vercel</span>
+              <span className="sm:hidden">Publier Vercel</span>
             </Button>
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block" />
