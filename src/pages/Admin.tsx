@@ -2714,64 +2714,28 @@ const Admin = () => {
       <div className="flex flex-col h-screen w-screen bg-slate-900 text-slate-100 overflow-hidden font-raleway select-none">
         {/* Simple & Clean Top Navigation Bar for Editor */}
         <header className="shrink-0 h-14 bg-slate-950 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between z-30 shadow-md">
-          {/* Left: Brand & Page Switcher */}
+          {/* Left: Brand clickable to go to Home */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-french-blue text-sm font-bold text-white shadow-sm font-playfair">
+            <button
+              type="button"
+              onClick={() => {
+                setVisualRoute('/');
+                setSelectedVisualElement(null);
+                if (previewFrame.current) {
+                  previewFrame.current.src = `/?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+                }
+              }}
+              className="flex items-center gap-2 shrink-0 text-left hover:opacity-85 transition-opacity focus:outline-hidden group cursor-pointer"
+              title="Retourner à l'accueil du site (/)"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-french-blue text-sm font-bold text-white shadow-sm font-playfair group-hover:scale-105 transition-transform">
                 L
               </span>
               <div className="hidden sm:block leading-tight">
-                <span className="font-playfair font-bold text-sm text-white">LFJP · Édition du Site</span>
+                <span className="font-playfair font-bold text-sm text-white group-hover:text-blue-300 transition-colors">LFJP · Édition du Site</span>
                 <span className="text-[10px] text-amber-400 font-semibold block">Profil Éditeur</span>
               </div>
-            </div>
-
-            <div className="h-5 w-px bg-slate-800 hidden sm:block shrink-0" />
-
-            {/* Direct Page Selector for the Site */}
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs text-slate-400 hidden md:inline shrink-0 font-medium">Page du site :</span>
-              <select
-                value={visualRoute}
-                onChange={(e) => {
-                  setVisualRoute(e.target.value);
-                  setSelectedVisualElement(null);
-                }}
-                className="bg-slate-900 border border-slate-700 text-white text-xs h-8 px-2.5 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-french-blue font-semibold max-w-[200px] sm:max-w-[280px] truncate"
-              >
-                <optgroup label="🏛️ Les 5 Grandes Rubriques">
-                  <option value="/">1. Accueil (/)</option>
-                  <option value="/methode">2. Méthode (/methode)</option>
-                  <option value="/vision-missions-valeurs">3. Vision, Missions & Valeurs</option>
-                  <option value="/diagnostic">4. Diagnostic (/diagnostic)</option>
-                  <option value="/plan-strategique">5. Plan Stratégique (/plan-strategique)</option>
-                </optgroup>
-                <optgroup label="🎯 Axes du Plan Stratégique">
-                  <option value="/axe-1">Axe 1 : Excellence pédagogique</option>
-                  <option value="/axe-2">Axe 2 : Épanouissement & citoyenneté</option>
-                  <option value="/axe-3">Axe 3 : Rayonnement & partenariats</option>
-                  <option value="/axe-4">Axe 4 : Gouvernance & cadre</option>
-                </optgroup>
-                <optgroup label="📊 Données & Restauration">
-                  <option value="/restaurant-scolaire">Restauration scolaire</option>
-                  <option value="/elcs-analyse-complete">Diagnostic ELCS complet</option>
-                  <option value="/budget-previsionnel">Budget prévisionnel</option>
-                  <option value="/plan-transports">Plan des transports</option>
-                  <option value="/bac-blanc">Planning Bac Blanc</option>
-                </optgroup>
-                {pages.filter((p) => !['/', '/methode', '/vision-missions-valeurs', '/diagnostic', '/plan-strategique', '/axe-1', '/axe-2', '/axe-3', '/axe-4', '/restaurant-scolaire', '/elcs-analyse-complete', '/budget-previsionnel', '/plan-transports', '/bac-blanc'].includes(p.slug)).length > 0 && (
-                  <optgroup label="📄 Autres Pages">
-                    {pages
-                      .filter((p) => !['/', '/methode', '/vision-missions-valeurs', '/diagnostic', '/plan-strategique', '/axe-1', '/axe-2', '/axe-3', '/axe-4', '/restaurant-scolaire', '/elcs-analyse-complete', '/budget-previsionnel', '/plan-transports', '/bac-blanc'].includes(p.slug))
-                      .map((p) => (
-                        <option key={p.slug} value={normalizePageSlug(p.slug)}>
-                          {p.title}
-                        </option>
-                      ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
+            </button>
           </div>
 
           {/* Center: Harmonized Toggle Button Activer / Désactiver les modifications */}
