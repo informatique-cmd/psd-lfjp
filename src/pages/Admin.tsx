@@ -244,7 +244,7 @@ const Admin = () => {
       return JSON.stringify(publishedPageText, null, 2);
     }
   });
-  const [visualRoute, setVisualRoute] = useState('/methode');
+  const [visualRoute, setVisualRoute] = useState('/');
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -262,7 +262,7 @@ const Admin = () => {
   const [visualExpanded, setVisualExpanded] = useState(false);
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
-  const [editorModeActive, setEditorModeActive] = useState(true);
+  const [editorModeActive, setEditorModeActive] = useState(false);
   const [previewViewport, setPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [focusInspector, setFocusInspector] = useState(false);
   const previewCanvas = useRef<HTMLDivElement>(null);
@@ -762,15 +762,16 @@ const Admin = () => {
     setGateError('');
     const userFound = authenticateUser(gateEmail, gatePassword);
     if (userFound) {
+      const isSuper = userFound.role === 'superadmin' || userFound.id === 'superadmin' || userFound.email === 'informatique@lfjpsaly.org';
       const newProfile: UserProfile = {
         id: userFound.id,
         email: userFound.email,
         name: userFound.name,
-        role: userFound.role,
-        canDelete: userFound.canDelete,
-        canEdit: userFound.canEdit,
-        canCreate: userFound.canCreate,
-        canPublish: userFound.canPublish,
+        role: isSuper ? 'superadmin' : userFound.role,
+        canDelete: isSuper ? true : userFound.canDelete,
+        canEdit: true,
+        canCreate: true,
+        canPublish: true,
       };
       setUserProfile(newProfile);
       saveActiveUserProfile(newProfile);
@@ -779,6 +780,8 @@ const Admin = () => {
       window.sessionStorage.setItem('lfjp_admin_local_session', '1');
       window.localStorage.setItem('lfjp_admin_active_session', '1');
       setGateError('');
+      setVisualRoute('/');
+      setEditorModeActive(false);
       setStatus(`Connexion réussie : Bienvenue ${newProfile.name} (${newProfile.email}).`);
       window.dispatchEvent(new Event('lfjp_auth_changed'));
     } else {
@@ -790,26 +793,42 @@ const Admin = () => {
     window.sessionStorage.removeItem('lfjp_admin_local_session');
     window.localStorage.removeItem('lfjp_admin_active_session');
     window.localStorage.removeItem('lfjp_preview_active');
+    window.localStorage.removeItem('lfjp-admin-auth-user-v4');
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (err) {
       void err;
     }
     setUser(null);
+    setUserProfile(defaultAccounts[0]);
+    setVisualRoute('/');
+    setEditorModeActive(false);
     setStatus('Vous êtes déconnecté de l’espace d’administration.');
     window.dispatchEvent(new Event('lfjp_auth_changed'));
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.sessionStorage.getItem('lfjp_admin_local_session') === '1') {
-      return;
-    }
     fetch('/api/auth/me')
-      .then(async (response) => response.ok ? response.json() : null)
+      .then(async (response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (data?.user) {
           setUser(data.user);
           setAuthorizedUsers(Array.isArray(data?.authorizedUsers) ? data.authorizedUsers : []);
+          const superAdminProfile: UserProfile = {
+            id: 'superadmin',
+            email: 'informatique@lfjpsaly.org',
+            name: `SuperAdmin (${data.user.login})`,
+            role: 'superadmin',
+            canDelete: true,
+            canEdit: true,
+            canCreate: true,
+            canPublish: true,
+            githubLogin: data.user.login,
+          };
+          setUserProfile(superAdminProfile);
+          saveActiveUserProfile(superAdminProfile);
+          setVisualRoute('/');
+          setEditorModeActive(false);
         }
       })
       .catch(() => {})
@@ -2583,7 +2602,12 @@ const Admin = () => {
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => { setGateTab('editor'); setGateError(''); }}
+                onClick={() => {
+                  setGateTab('editor');
+                  setGateError('');
+                  setGateEmail(editorAccount.email);
+                  setGatePassword(editorAccount.password);
+                }}
                 className={`py-2.5 px-3 rounded-lg text-center transition-all flex items-center justify-center gap-2 ${
                   gateTab === 'editor'
                     ? 'bg-white text-french-blue shadow-sm font-bold'
@@ -2595,14 +2619,19 @@ const Admin = () => {
               </button>
               <button
                 type="button"
-                onClick={() => { setGateTab('superadmin'); setGateError(''); }}
+                onClick={() => {
+                  setGateTab('superadmin');
+                  setGateError('');
+                  setGateEmail(superAdminAccount.email);
+                  setGatePassword(superAdminAccount.password || 'admin');
+                }}
                 className={`py-2.5 px-3 rounded-lg text-center transition-all flex items-center justify-center gap-2 ${
                   gateTab === 'superadmin'
                     ? 'bg-white text-french-blue shadow-sm font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Github className="h-4 w-4 text-slate-800" />
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
                 <span>SuperAdmin</span>
               </button>
             </div>
@@ -2672,22 +2701,79 @@ const Admin = () => {
               </form>
             )}
 
-            {/* OPTION 2: ADMINISTRATEUR / SUPERADMIN (GitHub OAuth) */}
+            {/* OPTION 2: ADMINISTRATEUR / SUPERADMIN */}
             {gateTab === 'superadmin' && (
-              <div className="space-y-4 py-1">
+              <div className="space-y-4 py-1 text-left">
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-left">
                   <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
                     <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                    <span>Profil Administrateur (SuperAdmin GitHub)</span>
+                    <span>Profil Administrateur (SuperAdmin)</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed text-[11px]">
-                    Connexion officielle via GitHub pour le compte administrateur <strong>informatique-cmd</strong>. Confère l’ensemble des droits : création, modification, suppressions de rubriques et déploiement direct vers Vercel.
+                    Accès complet pour <strong>informatique-cmd</strong> : gestion de l’arborescence, création & suppression de rubriques, validation des brouillons et déploiement direct vers Vercel.
                   </p>
                 </div>
 
-                <Button asChild className="w-full bg-slate-900 hover:bg-black text-white font-semibold text-xs h-11 shadow">
+                {gateError && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700 flex items-start gap-2 animate-in fade-in">
+                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                    <span>{gateError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleGateLogin} className="space-y-3">
+                  <div className="space-y-1 text-left">
+                    <label className="text-xs font-bold text-slate-700">Adresse Email SuperAdmin</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        type="email"
+                        required
+                        value={gateEmail}
+                        onChange={(e) => setGateEmail(e.target.value)}
+                        placeholder="informatique@lfjpsaly.org"
+                        className="pl-9 text-xs h-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 text-left">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700">Mot de passe SuperAdmin</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowGatePassword(!showGatePassword)}
+                        className="text-[11px] text-french-blue hover:underline"
+                      >
+                        {showGatePassword ? 'Masquer' : 'Afficher'}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        type={showGatePassword ? 'text' : 'password'}
+                        required
+                        value={gatePassword}
+                        onChange={(e) => setGatePassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="pl-9 pr-9 text-xs h-10 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full bg-slate-900 hover:bg-black text-white font-semibold text-xs h-10 shadow">
+                    <ShieldCheck className="mr-2 h-4 w-4 text-emerald-400" /> Se connecter comme SuperAdmin
+                  </Button>
+                </form>
+
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200" /></div>
+                  <div className="relative flex justify-center text-[10px] uppercase"><span className="bg-white px-2 text-slate-400 font-semibold">Ou via GitHub</span></div>
+                </div>
+
+                <Button asChild variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold text-xs h-10 shadow-xs">
                   <a href="/api/auth/github">
-                    <Github className="mr-2 h-4 w-4" /> Se connecter avec GitHub (SuperAdmin)
+                    <Github className="mr-2 h-4 w-4 text-slate-800" /> Connexion avec compte GitHub
                   </a>
                 </Button>
               </div>
@@ -2811,6 +2897,22 @@ const Admin = () => {
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
+            {/* Quick Switch to SuperAdmin Dashboard */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                switchUserProfile(defaultAccounts[0]);
+              }}
+              className="h-8 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/40 px-2.5 flex items-center gap-1.5"
+              title="Accéder au Tableau de bord SuperAdmin (Arborescence, gestion des rubriques et déploiement direct)"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span className="hidden sm:inline">Espace SuperAdmin</span>
+              <span className="sm:hidden">Admin</span>
+            </Button>
+
             {/* User and Logout */}
             <div className="flex items-center gap-1.5">
               <span className="hidden lg:inline text-[11px] font-mono text-slate-400 px-1">
@@ -2870,6 +2972,21 @@ const Admin = () => {
           </div>
         )}
 
+        {/* Clear Helper Banner when Edit Mode is active */}
+        {editorModeActive && (
+          <div className="shrink-0 bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-200 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2">
+              <Pencil className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>
+                <strong>Mode modification activé :</strong> Cliquez sur n'importe quel texte ou image sur la page pour le modifier facilement.
+              </span>
+            </div>
+            <span className="text-[11px] text-amber-300/80 hidden sm:inline">
+              Pour naviguer sur les liens du site, désactivez la modification en haut
+            </span>
+          </div>
+        )}
+
         {/* Main Workspace: 100% Full-Screen Grand Format Live Site + Content Inspector */}
         <div className="flex min-h-0 flex-1 overflow-hidden relative">
           {/* 100% Full Width Live Site Iframe */}
@@ -2883,93 +3000,92 @@ const Admin = () => {
                 className="block w-full h-full bg-white border-0 shadow-inner"
               />
 
-              {/* Floating Edit Pin directly on clicked element in the page: ONLY when editorModeActive is true */}
+              {/* Visual Indicator pin on clicked element: ONLY when editorModeActive is true */}
               {editorModeActive && selectedVisualElement?.rect && (
-                <button
-                  type="button"
-                  className="absolute z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 text-slate-950 shadow-2xl ring-2 ring-white hover:bg-amber-500 animate-in fade-in text-xs font-bold"
+                <div
+                  className="absolute z-20 pointer-events-none inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-400 text-slate-950 shadow-xl ring-2 ring-white animate-in fade-in text-[11px] font-bold"
                   style={{
                     left: Math.max(8, selectedVisualElement.rect.left),
-                    top: Math.max(8, selectedVisualElement.rect.top - 40),
-                  }}
-                  title="Modifier cet élément"
-                  onClick={() => {
-                    setInspectorCollapsed(false);
-                    setFocusInspector(true);
+                    top: Math.max(8, selectedVisualElement.rect.top - 36),
                   }}
                 >
-                  <Pencil className="h-3.5 w-3.5 fill-current" />
-                  <span>Modifier ce contenu</span>
-                </button>
+                  <Pencil className="h-3 w-3 fill-current" />
+                  <span>En cours de modification</span>
+                </div>
               )}
             </div>
           </main>
 
           {/* Right Slide-over Inspector for Selected Content (Text or Image): ONLY when editorModeActive is true */}
           {editorModeActive && selectedVisualElement && !inspectorCollapsed && (
-            <aside className="w-88 shrink-0 border-l border-slate-800 bg-slate-950 flex flex-col overflow-hidden text-slate-100 shadow-2xl animate-in slide-in-from-right-4 duration-200">
-              <div className="p-3.5 border-b border-slate-800 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-300 bg-slate-900">
-                <span className="flex items-center gap-2">
-                  <Pencil className="h-4 w-4 text-amber-400" />
-                  <span>Modification du contenu</span>
+            <aside className="w-96 shrink-0 border-l border-slate-800 bg-slate-950 flex flex-col overflow-hidden text-slate-100 shadow-2xl animate-in slide-in-from-right-4 duration-200">
+              <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900">
+                <span className="flex items-center gap-2 font-bold text-sm text-amber-300">
+                  <Pencil className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span>
+                    {selectedVisualElement.kind === 'image'
+                      ? 'Changer l’image'
+                      : selectedVisualElement.kind === 'link'
+                      ? 'Modifier le bouton / lien'
+                      : 'Modifier le texte'}
+                  </span>
                 </span>
                 <Button
                   type="button"
-                  size="icon"
+                  size="sm"
                   variant="ghost"
                   onClick={() => setSelectedVisualElement(null)}
-                  className="h-6 w-6 text-slate-400 hover:text-white"
+                  className="h-7 text-xs text-slate-400 hover:text-white hover:bg-slate-800 px-2 flex items-center gap-1"
                   title="Fermer"
                 >
                   <X className="h-4 w-4" />
+                  <span>Fermer</span>
                 </Button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                  <span className="font-bold text-xs uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                    {selectedVisualElement.kind === 'image' ? (
-                      <>
-                        <Image className="h-4 w-4" />
-                        <span>Image / Illustration</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        <span>Texte / Titre</span>
-                      </>
-                    )}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono">Modif directe</span>
-                </div>
-
                 {/* Text Editing Field */}
                 {(selectedVisualElement.kind === 'text' || selectedVisualElement.kind === 'link') && (
                   <div className="space-y-3">
                     <div className="space-y-1.5">
-                      <Label className="text-slate-200 text-xs font-semibold">Contenu du texte :</Label>
+                      <Label className="text-slate-200 text-xs font-semibold flex items-center justify-between">
+                        <span>Contenu du texte :</span>
+                        <span className="text-[11px] text-emerald-400 font-normal">Aperçu direct sur la page</span>
+                      </Label>
                       <Textarea
                         autoFocus={focusInspector}
                         value={selectedVisualElement.text || ''}
                         onFocus={() => setFocusInspector(false)}
                         onChange={(e) => updateVisualElement('text', e.target.value)}
-                        placeholder="Rédigez le texte ici..."
-                        className="bg-slate-900 border-slate-700 text-white min-h-[140px] text-xs leading-relaxed focus:border-amber-400"
+                        placeholder="Tapez votre texte ici..."
+                        className="bg-slate-900 border-slate-700 text-white min-h-[160px] text-sm leading-relaxed focus:border-amber-400 rounded-lg p-3"
                       />
-                      <p className="text-[11px] text-slate-400 flex items-center justify-between">
-                        <span>Le texte s’actualise immédiatement sur la page.</span>
-                        <span className="font-mono">{(selectedVisualElement.text || '').length} car.</span>
-                      </p>
                     </div>
 
-                    <div className="pt-2">
+                    {selectedVisualElement.href !== undefined && (
+                      <div className="space-y-1.5 pt-2 border-t border-slate-800">
+                        <Label className="text-slate-300 text-xs font-medium">Adresse du lien (optionnel) :</Label>
+                        <Input
+                          value={selectedVisualElement.href || ''}
+                          onChange={(e) => updateVisualElement('href', e.target.value)}
+                          placeholder="/axe-1 ou https://..."
+                          className="bg-slate-900 border-slate-700 text-white text-xs h-9 font-mono"
+                        />
+                      </div>
+                    )}
+
+                    <div className="pt-2 space-y-2">
                       <Button
                         type="button"
                         size="sm"
-                        onClick={saveDraft}
-                        className="w-full bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold py-2"
+                        onClick={() => {
+                          saveDraft();
+                          setSelectedVisualElement(null);
+                        }}
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 shadow-md flex items-center justify-center gap-2 h-9"
                       >
-                        <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer ce texte
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Enregistrer et fermer</span>
                       </Button>
                     </div>
                   </div>
@@ -2978,20 +3094,10 @@ const Admin = () => {
                 {/* Image Editing Field */}
                 {selectedVisualElement.kind === 'image' && (
                   <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-slate-200 text-xs font-semibold">Adresse URL de l’image :</Label>
-                      <Input
-                        value={selectedVisualElement.src || ''}
-                        onChange={(e) => updateVisualElement('src', e.target.value)}
-                        placeholder="https://... ou chemin d'image"
-                        className="bg-slate-900 border-slate-700 text-white text-xs font-mono"
-                      />
-                    </div>
-
                     <div>
-                      <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 transition-colors">
-                        <Upload className="h-4 w-4 text-french-blue" />
-                        <span>Importer une image depuis l’ordinateur</span>
+                      <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-500/50 bg-amber-500/10 px-4 py-3 text-xs font-bold text-amber-200 hover:bg-amber-500/20 transition-colors shadow-sm">
+                        <Upload className="h-4 w-4 text-amber-400 shrink-0" />
+                        <span>Choisir une photo sur mon ordinateur</span>
                         <input
                           className="sr-only"
                           type="file"
@@ -3009,54 +3115,50 @@ const Admin = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-slate-200 text-xs font-semibold">Description de l’image (texte alternatif) :</Label>
+                      <Label className="text-slate-300 text-xs font-medium">Ou coller l'adresse URL de l'image :</Label>
                       <Input
-                        value={selectedVisualElement.alt || ''}
-                        onChange={(e) => updateVisualElement('alt', e.target.value)}
-                        placeholder="Description pour l'accessibilité..."
-                        className="bg-slate-900 border-slate-700 text-white text-xs"
+                        value={selectedVisualElement.src || ''}
+                        onChange={(e) => updateVisualElement('src', e.target.value)}
+                        placeholder="https://... ou /assets/..."
+                        className="bg-slate-900 border-slate-700 text-white text-xs font-mono h-9"
                       />
                     </div>
 
                     {selectedVisualElement.src && (
-                      <div className="rounded-xl border border-slate-800 bg-slate-900 p-2.5 overflow-hidden">
-                        <p className="text-[10px] text-slate-400 mb-1 font-semibold uppercase">Aperçu visuel :</p>
+                      <div className="rounded-xl border border-slate-800 bg-slate-900 p-2 overflow-hidden">
+                        <p className="text-[10px] text-slate-400 mb-1 font-semibold uppercase">Aperçu :</p>
                         <img
                           src={selectedVisualElement.src}
                           alt={selectedVisualElement.alt || 'Aperçu'}
-                          className="max-h-40 w-full object-cover rounded-lg border border-slate-800"
+                          className="max-h-44 w-full object-cover rounded-lg border border-slate-800"
                         />
                       </div>
                     )}
 
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-2">
                       <Button
                         type="button"
                         size="sm"
-                        onClick={saveDraft}
-                        className="w-full bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold py-2"
+                        onClick={() => {
+                          saveDraft();
+                          setSelectedVisualElement(null);
+                        }}
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 shadow-md flex items-center justify-center gap-2 h-9"
                       >
-                        <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer cette image
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Enregistrer l'image et fermer</span>
                       </Button>
                     </div>
                   </div>
                 )}
 
-                <div className="rounded-lg bg-slate-900/90 border border-slate-800/80 p-3 text-[11px] text-slate-400 space-y-1">
-                  <p className="font-semibold text-slate-300">ℹ️ Rôle Éditeur :</p>
-                  <p>Vous pouvez modifier librement tous les textes, images et données du site. L'arborescence, les liens et la structure des pages sont gérés par le SuperAdmin.</p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800 flex justify-end">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedVisualElement(null)}
-                    className="text-slate-400 hover:text-white text-xs w-full"
-                  >
-                    Fermer l’inspecteur
-                  </Button>
+                <div className="rounded-xl bg-slate-900 border border-slate-800 p-3 text-[11px] text-slate-300 space-y-1.5">
+                  <p className="font-bold text-amber-400 flex items-center gap-1.5">
+                    <span>💡 Simple & Sécurisé</span>
+                  </p>
+                  <p className="leading-relaxed text-slate-400">
+                    Modifiez simplement vos textes et photos. Lorsque tout est prêt, cliquez sur « Enregistrer pour publier sur Vercel » en haut pour envoyer la mise en ligne au SuperAdmin.
+                  </p>
                 </div>
               </div>
             </aside>
@@ -3222,6 +3324,20 @@ const Admin = () => {
 
         {/* Right side of Topbar: Status, Draft indicator, Save button, User */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              switchUserProfile(defaultAccounts[1]);
+            }}
+            className="h-8 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/40 px-2.5 flex items-center gap-1.5"
+            title="Passer en vue Éditeur du site (édition directe in-situ)"
+          >
+            <Pencil className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+            <span className="hidden sm:inline">Vue Éditeur</span>
+          </Button>
+
           <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Brouillon actif</span>
