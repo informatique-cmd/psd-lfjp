@@ -1,1 +1,1110 @@
-{}
+{
+  "bacBlancSchedule": [
+    {
+      "date": "2024-12-10",
+      "label": "Mardi 10 décembre 2024",
+      "focus": "Philosophie – Bac blanc",
+      "note": "Toutes les salles concernées partagent le même créneau de philosophie du bac blanc. Les équipes de surveillance et de support sont coordonnées pour assurer l'installation, la distribution des copies et la gestion des imprévus.",
+      "rooms": [
+        {
+          "room": "S12",
+          "examTitle": "Philosophie",
+          "examTime": "08h00 – 12h00",
+          "leadExaminer": "GOMIS A.",
+          "surveillanceTeam": [
+            "NDIAYE L.",
+            "SAMB R."
+          ],
+          "supportTeam": {
+            "names": [
+              "DIOP N."
+            ],
+            "mission": "Accueil des candidats et distribution des copies au démarrage de l'épreuve.",
+            "presence": "Présence requise dès 07h30 pour préparer la salle."
+          }
+        },
+        {
+          "room": "S13",
+          "examTitle": "Philosophie",
+          "examTime": "08h00 – 12h00",
+          "leadExaminer": "MOURAIN DIOP F.",
+          "surveillanceTeam": [
+            "DIALLO P.",
+            "FALL C."
+          ],
+          "supportTeam": {
+            "names": [
+              "NDAO K.",
+              "SARR T."
+            ],
+            "mission": "Gestion des flux d'entrée, assistance aux surveillants et collecte des copies en fin d'épreuve."
+          }
+        },
+        {
+          "room": "S14",
+          "examTitle": "Philosophie",
+          "examTime": "08h00 – 12h00",
+          "leadExaminer": "MICHON G. M.",
+          "surveillanceTeam": [
+            "BAH I.",
+            "DIOUF Y."
+          ],
+          "supportTeam": {
+            "names": [
+              "FRAYON A.",
+              "GIBUS A."
+            ],
+            "mission": "Couverture support dédiée à la salle 14 : installation du matériel, sécurisation des sujets et accompagnement des besoins logistiques en continu.",
+            "presence": "Astuce logistique : passage toutes les 30 minutes pour vérifier l'état des copies et des feuilles de brouillon."
+          },
+          "notes": "Ce binôme assure la relève sur la salle 14 afin de garantir la présence d'un support opérationnel pendant toute la durée de l'épreuve."
+        },
+        {
+          "room": "S15",
+          "examTitle": "Philosophie",
+          "examTime": "08h00 – 12h00",
+          "leadExaminer": "DRAMÉ C.",
+          "surveillanceTeam": [
+            "SY A.",
+            "GAYE B."
+          ],
+          "supportTeam": {
+            "names": [
+              "SOW J."
+            ],
+            "mission": "Remise en état de la salle et accompagnement des candidats lors des pauses sanitaires."
+          }
+        }
+      ]
+    }
+  ],
+  "filmAnnuelData": {
+    "3e": {
+      "level": "3e",
+      "subtitle": "Naviguez parmi les actions clés pour préparer l'orientation des élèves de 3e.",
+      "actions": [
+        {
+          "title": "Atelier forces et centres d'intérêt",
+          "period": "Septembre",
+          "description": "Séances animées par la PRIO pour identifier les talents personnels et poser les bases du projet d'orientation.",
+          "actors": "Élèves, PRIO, professeurs principaux",
+          "phase": "Mieux se connaître"
+        },
+        {
+          "title": "Stage d'observation en entreprise",
+          "period": "Décembre",
+          "description": "Immersion d'une semaine pour découvrir la réalité d'un métier et préparer le rapport de stage.",
+          "actors": "Élèves, familles, tuteurs de stage",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Atelier rapport de stage",
+          "period": "Janvier",
+          "description": "Accompagnement méthodologique pour structurer le rapport, valoriser les compétences et préparer l'oral.",
+          "actors": "Professeurs de français, professeurs principaux",
+          "phase": "Finaliser les projets"
+        },
+        {
+          "title": "Forum des métiers",
+          "period": "Février",
+          "description": "Rencontres avec des professionnels et des anciens élèves pour questionner les parcours de formation.",
+          "actors": "Parents, alumni, équipe pédagogique",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Découverte des lycées et filières",
+          "period": "Mars",
+          "description": "Présentation des voies générale, technologique et professionnelle afin d'éclairer les choix d'affectation.",
+          "actors": "PRIO, proviseur adjoint, professeurs",
+          "phase": "Finaliser les projets"
+        },
+        {
+          "title": "Entretien d'orientation personnalisé",
+          "period": "Mai",
+          "description": "Bilan individualisé pour valider les intentions et préparer les voeux d'affectation sur la plateforme nationale.",
+          "actors": "Élèves, PRIO, familles",
+          "phase": "Finaliser les projets"
+        }
+      ]
+    },
+    "2nde": {
+      "level": "2nde",
+      "subtitle": "Naviguez parmi les actions clés pour préparer l'orientation des élèves de 2nde.",
+      "actions": [
+        {
+          "title": "Séminaire de rentrée : mieux se connaître",
+          "period": "Septembre",
+          "description": "Ateliers d'introspection et de connaissance de soi pour clarifier valeurs, intérêts et modes d'apprentissage.",
+          "actors": "Professeurs principaux, PRIO",
+          "phase": "Mieux se connaître"
+        },
+        {
+          "title": "Parcours Avenir - modules Onisep",
+          "period": "Octobre",
+          "description": "Exploration guidée de l'abonnement Onisep et prise en main des outils d'aide au choix.",
+          "actors": "CDI, PRIO",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Journées d'immersion au lycée",
+          "period": "Novembre",
+          "description": "Découverte des spécialités et options via observations de cours et échanges avec les enseignants.",
+          "actors": "Équipe pédagogique, élèves ambassadeurs",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Salon des études post-bac",
+          "period": "Janvier",
+          "description": "Participation à un salon régional pour repérer les voies de formation et poser des questions ciblées.",
+          "actors": "Élèves, familles, PRIO",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Choix des enseignements de spécialité",
+          "period": "Mars",
+          "description": "Accompagnement collectif et individuel pour élaborer la combinaison de spécialités cohérente avec le projet.",
+          "actors": "Professeurs principaux, PRIO",
+          "phase": "Finaliser les projets"
+        },
+        {
+          "title": "Conseil de classe et entretiens",
+          "period": "Juin",
+          "description": "Entretiens personnalisés pour valider les choix et préparer l'entrée en classe de 1ère.",
+          "actors": "Chefs d'établissement, PRIO, familles",
+          "phase": "Finaliser les projets"
+        }
+      ]
+    },
+    "1ere": {
+      "level": "1ère",
+      "subtitle": "Naviguez parmi les actions clés pour préparer l'orientation des élèves de 1ère.",
+      "actions": [
+        {
+          "title": "Bilan des spécialités",
+          "period": "Septembre",
+          "description": "Analyse des résultats de 1ère pour ajuster les méthodes de travail et conforter le projet post-bac.",
+          "actors": "Professeurs principaux, PRIO",
+          "phase": "Mieux se connaître"
+        },
+        {
+          "title": "Parcoursup - découverte anticipée",
+          "period": "Octobre",
+          "description": "Prise en main de la plateforme Parcoursup et identification des attendus des formations.",
+          "actors": "PRIO, équipe de direction",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Entretiens métiers avec les alumni",
+          "period": "Novembre",
+          "description": "Rencontres thématiques permettant d'explorer des trajectoires inspirantes et de questionner les parcours.",
+          "actors": "Alumni, élèves, PRIO",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Mini-stage dans l'enseignement supérieur",
+          "period": "Janvier",
+          "description": "Immersions dans des établissements partenaires pour vivre une journée de cours et affiner le projet.",
+          "actors": "Universités partenaires, élèves, familles",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Construction du dossier post-bac",
+          "period": "Mars",
+          "description": "Ateliers méthodologiques pour rédiger CV, lettres de motivation et préparer les épreuves orales.",
+          "actors": "Professeurs de lettres, PRIO",
+          "phase": "Finaliser les projets"
+        },
+        {
+          "title": "Conseil d'orientation approfondi",
+          "period": "Mai",
+          "description": "Entretien tripartite pour valider la stratégie Parcoursup et choisir les spécialités conservées en Terminale.",
+          "actors": "Élèves, familles, PRIO",
+          "phase": "Finaliser les projets"
+        }
+      ]
+    },
+    "terminale": {
+      "level": "Terminale",
+      "subtitle": "Naviguez parmi les actions clés pour préparer l'orientation des élèves de Terminale.",
+      "actions": [
+        {
+          "title": "Lancement Parcoursup",
+          "period": "Septembre",
+          "description": "Présentation du calendrier, des attendus et des stratégies de candidatures pour réussir son orientation.",
+          "actors": "PRIO, proviseur, élèves, familles",
+          "phase": "Finaliser les projets"
+        },
+        {
+          "title": "Coaching projet professionnel",
+          "period": "Octobre",
+          "description": "Accompagnement individualisé pour aligner ambitions, compétences et voies d'études réalistes.",
+          "actors": "PRIO, coachs externes",
+          "phase": "Mieux se connaître"
+        },
+        {
+          "title": "Préparation aux oraux et concours",
+          "period": "Décembre",
+          "description": "Simulations d'entretiens, pitchs et épreuves orales animées par des professionnels.",
+          "actors": "Professeurs, intervenants professionnels",
+          "phase": "Finaliser les projets"
+        },
+        {
+          "title": "Rencontres écoles et universités",
+          "period": "Janvier",
+          "description": "Conférences et stands d'établissements supérieurs pour préciser les choix et poser des questions pointues.",
+          "actors": "Universités partenaires, PRIO",
+          "phase": "Plonger dans le monde professionnel"
+        },
+        {
+          "title": "Finalisation des voeux Parcoursup",
+          "period": "Mars",
+          "description": "Ateliers de vérification des dossiers, rédaction des projets de formation motivés et saisie des voeux.",
+          "actors": "Élèves, PRIO, professeurs référents",
+          "phase": "Finaliser les projets"
+        },
+        {
+          "title": "Suivi des admissions",
+          "period": "Mai-Juillet",
+          "description": "Accompagnement personnalisé pendant la phase d'admission pour sécuriser une place et préparer la transition.",
+          "actors": "PRIO, CPE, familles",
+          "phase": "Finaliser les projets"
+        }
+      ]
+    }
+  },
+  "planStrategique": {
+    "title": "PLAN STRATÉGIQUE DE DÉVELOPPEMENT",
+    "subtitle": "Lycée Français Jacques Prévert (2026-2030)"
+  },
+  "planificationBacBlanc": {
+    "badge": "Planification des épreuves",
+    "title": "Organisation du bac blanc – session de décembre",
+    "description": "Vue synthétique de l’organisation de la journée du 10 décembre. Chaque carte détaille la surveillance principale, le support dédié et les consignes logistiques pour garantir une couverture complète des salles."
+  },
+  "restaurant": {
+    "studentDistributionData": [
+      {
+        "name": "Maternelle",
+        "value": 15,
+        "percentage": 17.2
+      },
+      {
+        "name": "Élémentaire",
+        "value": 53,
+        "percentage": 60.9
+      },
+      {
+        "name": "Collège",
+        "value": 45,
+        "percentage": 51.7
+      },
+      {
+        "name": "Lycée",
+        "value": 23,
+        "percentage": 26.4
+      }
+    ],
+    "restaurationInterestData": [
+      {
+        "name": "Oui",
+        "value": 92
+      },
+      {
+        "name": "Non",
+        "value": 8
+      }
+    ],
+    "currentLunchData": [
+      {
+        "name": "À la maison ou chez un proche",
+        "value": 28,
+        "percentage": 35
+      },
+      {
+        "name": "Un repas préparé à la maison (lunch-box)",
+        "value": 35,
+        "percentage": 43.8
+      },
+      {
+        "name": "Un plat ou repas livré",
+        "value": 25,
+        "percentage": 31.3
+      },
+      {
+        "name": "Un repas acheté à proximité de l’établissement",
+        "value": 36,
+        "percentage": 45
+      },
+      {
+        "name": "À la maison et un repas préparé",
+        "value": 1,
+        "percentage": 1.3
+      }
+    ],
+    "serviceInterestByDayData": [
+      {
+        "name": "Lundi",
+        "value": 75,
+        "percentage": 93.8
+      },
+      {
+        "name": "Mardi",
+        "value": 66,
+        "percentage": 82.5
+      },
+      {
+        "name": "Mercredi",
+        "value": 29,
+        "percentage": 36.3
+      },
+      {
+        "name": "Jeudi",
+        "value": 75,
+        "percentage": 93.8
+      },
+      {
+        "name": "Vendredi",
+        "value": 60,
+        "percentage": 75
+      }
+    ],
+    "mealTypePreferenceData": [
+      {
+        "name": "Des plats chauds",
+        "value": 65,
+        "percentage": 81.3
+      },
+      {
+        "name": "Des plats froids",
+        "value": 39,
+        "percentage": 48.8
+      },
+      {
+        "name": "Des sandwichs ou du fast-food",
+        "value": 21,
+        "percentage": 26.3
+      },
+      {
+        "name": "Des repas complets (menu)",
+        "value": 48,
+        "percentage": 60
+      }
+    ],
+    "priceForDishData": [
+      {
+        "name": "Moins de 1 500 FCFA",
+        "value": 22.5
+      },
+      {
+        "name": "Entre 1 500 FCFA et 2 000 FCFA",
+        "value": 55
+      },
+      {
+        "name": "Entre 2 000 FCFA et 3 000 FCFA",
+        "value": 20
+      },
+      {
+        "name": "Plus de 3 000 FCFA",
+        "value": 2.5
+      }
+    ],
+    "priceForMenuData": [
+      {
+        "name": "Moins de 1 500 FCFA",
+        "value": 2.5
+      },
+      {
+        "name": "Entre 1 500 FCFA et 2 000 FCFA",
+        "value": 23.8
+      },
+      {
+        "name": "Entre 2 000 FCFA et 3 000 FCFA",
+        "value": 58.8
+      },
+      {
+        "name": "Plus de 3 000 FCFA",
+        "value": 13.8
+      },
+      {
+        "name": "Dépend du menu",
+        "value": 1.1
+      }
+    ],
+    "keyMetrics": [
+      {
+        "name": "Intérêt global pour la restauration scolaire",
+        "value": 92,
+        "label": "des parents intéressés",
+        "trend": "up"
+      },
+      {
+        "name": "Plats chauds",
+        "value": 81.3,
+        "label": "des parents souhaitent des plats chauds",
+        "trend": "up"
+      },
+      {
+        "name": "Budget moyen par plat",
+        "value": "1500-2000 FCFA",
+        "label": "pour 55% des parents",
+        "trend": "up"
+      }
+    ],
+    "alertPoints": [
+      {
+        "name": "Mercredi",
+        "value": "36.3%",
+        "label": "d'intérêt seulement (vs +80% autres jours)",
+        "trend": "down"
+      },
+      {
+        "name": "Options alimentaires spécifiques",
+        "value": "33.3%",
+        "label": "demandent l'option végétarienne",
+        "trend": "down"
+      },
+      {
+        "name": "Tarification",
+        "value": "58.8%",
+        "label": "acceptent 2000-3000 FCFA pour un menu complet",
+        "trend": "down"
+      }
+    ]
+  },
+  "psdTimelines": {
+    "axe1": {
+      "startYear": 2025,
+      "endYear": 2031,
+      "actions": [
+        {
+          "title": "Programmes bien-être & participation",
+          "description": "Médiation entre pairs, Savoir nager / Savoir rouler, expression & participation, parentalité-coéducation",
+          "start": 2025,
+          "end": 2031,
+          "color": "from-purple-400/80 to-purple-500"
+        },
+        {
+          "title": "Climatisation durable",
+          "description": "Prototype 2025, étude des offres et déploiement progressif à partir de 2026",
+          "start": 2025,
+          "end": 2027,
+          "color": "from-sky-400/80 to-sky-500"
+        },
+        {
+          "title": "Cantine scolaire",
+          "description": "Études, consultation des prestataires, mise en service en 2027 puis montée en charge jusqu’en 2029",
+          "start": 2027,
+          "end": 2029,
+          "color": "from-orange-300/80 to-orange-500"
+        },
+        {
+          "title": "Plan peinture & ravalement",
+          "description": "Programme de maintenance intérieure/extérieure sur 5 années",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-amber-300/80 to-amber-500"
+        },
+        {
+          "title": "Plafonds acoustiques",
+          "description": "Priorités collège (2026-2027), lycée (2028) et laboratoires/primaires (2029-2030)",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-emerald-300/80 to-emerald-500"
+        },
+        {
+          "title": "Renouvellement vidéoprojecteurs",
+          "description": "Phases annuelles de 2026 à 2031 pour homogénéiser le parc",
+          "start": 2026,
+          "end": 2031,
+          "color": "from-french-blue/70 to-french-blue"
+        }
+      ]
+    },
+    "axe2": {
+      "startYear": 2026,
+      "endYear": 2030,
+      "actions": [
+        {
+          "title": "Continuité DNBi / SIA (collège)",
+          "description": "Déploiement de la Section Internationale Américaine sur tout le collège et articulation avec la SI primaire",
+          "start": 2026,
+          "end": 2028,
+          "color": "from-sky-400/80 to-sky-500"
+        },
+        {
+          "title": "Ouverture et montée en puissance du BFI (lycée)",
+          "description": "Ouverture simultanée de la Seconde SIA et du cycle BFI en 2028-2029, suivi et ajustements",
+          "start": 2028,
+          "end": 2030,
+          "color": "from-indigo-400/80 to-indigo-600"
+        },
+        {
+          "title": "Mobilités scolaires ADN-AEFE",
+          "description": "Stabiliser 10 à 12 mobilités par an, diversifier les destinations et systématiser la préparation/retour",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-emerald-300/80 to-emerald-500"
+        },
+        {
+          "title": "Voyages internationaux & séjours locaux",
+          "description": "Équilibrer 1 à 2 voyages internationaux et 3 à 5 séjours locaux/régionaux par an, avec fonds de solidarité",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-orange-300/80 to-orange-500"
+        },
+        {
+          "title": "Semaine des cultures & PEAC",
+          "description": "Thématiques annuelles, inventaire PEAC, valorisation des projets artistiques et coordination primaire-collège-lycée",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-pink-300/80 to-pink-500"
+        },
+        {
+          "title": "Médiation entre pairs & médiation interculturelle",
+          "description": "Formation, suivi et extension du dispositif du primaire vers le collège pour améliorer le climat scolaire",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-amber-200/80 to-amber-400"
+        },
+        {
+          "title": "Jumelages et projets collaboratifs",
+          "description": "Diplomatie éducative, ancrage territorial et coopérations internationales à consolider chaque année",
+          "start": 2027,
+          "end": 2030,
+          "color": "from-french-blue/70 to-french-blue"
+        }
+      ]
+    },
+    "axe3": {
+      "startYear": 2026,
+      "endYear": 2030,
+      "actions": [
+        {
+          "title": "Classe numérique mobile",
+          "description": "Phase 2 (2026) puis finalisation de la phase 3 et homogénéité du parc en 2027.",
+          "start": 2026,
+          "end": 2027,
+          "color": "from-indigo-300/80 to-indigo-500"
+        },
+        {
+          "title": "Renouvellement du matériel informatique",
+          "description": "Plan pluriannuel de remplacement des PC et vidéoprojecteurs (2026-2030).",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-emerald-300/80 to-emerald-500"
+        },
+        {
+          "title": "Curriculum numérique & introduction au code",
+          "description": "Déploiement du curriculum spiralaire, algorithmique visuelle et Python collège/lycée.",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-sky-300/80 to-sky-500"
+        },
+        {
+          "title": "Module IA & citoyenneté numérique",
+          "description": "Sensibilisation IA, PIX IA et ateliers éthiques/cybersécurité sur toute la période.",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-amber-200/80 to-amber-400"
+        },
+        {
+          "title": "Connectivité 2.0",
+          "description": "Nouvelles bornes Wi-Fi, administration réseau, extension et éventuelle ligne pro THD.",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-purple-300/80 to-purple-500"
+        },
+        {
+          "title": "Mécénat numérique",
+          "description": "Création du fonds, appels à projets puis financements et pérennisation (2026-2030).",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-rose-300/80 to-rose-500"
+        },
+        {
+          "title": "1 PC par lycéen",
+          "description": "Distribution progressive aux cohortes de Seconde (2028-2030) jusqu’à couverture complète.",
+          "start": 2028,
+          "end": 2030,
+          "color": "from-orange-300/80 to-orange-500"
+        }
+      ]
+    },
+    "axe4": {
+      "startYear": 2026,
+      "endYear": 2030,
+      "actions": [
+        {
+          "title": "Curriculum Soft Skills & Éloquence",
+          "description": "Prise de parole, confiance, coopération et esprit critique de la maternelle au lycée",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-purple-400/80 to-purple-500"
+        },
+        {
+          "title": "Valorisation de l’erreur & Persévérance",
+          "description": "Rapports d’évaluation positive, culture du rebond et ateliers d’apprentissage",
+          "start": 2026,
+          "end": 2029,
+          "color": "from-sky-400/80 to-sky-500"
+        },
+        {
+          "title": "Célébration des réussites & Réseau Alumni",
+          "description": "Cérémonie des diplômés, mentorat des anciens élèves et conférences inspirantes",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-amber-300/80 to-amber-500"
+        },
+        {
+          "title": "Éducation financière & Vie autonome",
+          "description": "Gestion budgétaire, projets d’entrepreneuriat solidaire et autonomie des lycéens",
+          "start": 2027,
+          "end": 2030,
+          "color": "from-emerald-300/80 to-emerald-500"
+        },
+        {
+          "title": "Parcours Avenir & Orientation",
+          "description": "Forums des métiers, stages d’observation, partenariats avec les universités internationales",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-indigo-400/80 to-indigo-600"
+        },
+        {
+          "title": "Implication des familles & Coéducation",
+          "description": "Cafés des parents, ateliers thématiques et renforcement de l’alliance éducative",
+          "start": 2026,
+          "end": 2030,
+          "color": "from-rose-300/80 to-rose-500"
+        }
+      ]
+    }
+  },
+  "elcsData": {
+    "satisfaction": {
+      "title": "Satisfaction des Infrastructures",
+      "primary": [
+        {
+          "name": "Lycée",
+          "value": 33,
+          "label": "Appréciation positive des bâtiments",
+          "average": 75,
+          "trend": "down"
+        },
+        {
+          "name": "Élémentaire",
+          "value": 84.8,
+          "label": "Appréciation positive des bâtiments",
+          "average": 75,
+          "trend": "up"
+        }
+      ],
+      "secondary": [
+        {
+          "name": "Demande de climatisation (Collège)",
+          "value": 40,
+          "label": "des verbatim",
+          "trend": "up"
+        },
+        {
+          "name": "Demande de climatisation (Lycée)",
+          "value": 53,
+          "label": "des verbatim",
+          "trend": "up"
+        },
+        {
+          "name": "Demande de cantine",
+          "value": "Forte",
+          "label": "à tous les niveaux",
+          "trend": "up"
+        }
+      ]
+    },
+    "relations": {
+      "title": "Relations Humaines",
+      "primary": [
+        {
+          "name": "Relations élèves-enseignants",
+          "value": 81.7,
+          "label": "de satisfaction au lycée",
+          "average": 87.5,
+          "trend": "down"
+        },
+        {
+          "name": "Relations avec autres adultes",
+          "value": 97.4,
+          "label": "de satisfaction au lycée",
+          "average": 90,
+          "trend": "up"
+        },
+        {
+          "name": "Relations avec vie scolaire",
+          "value": 90.4,
+          "label": "de satisfaction au lycée",
+          "average": 85,
+          "trend": "up"
+        }
+      ],
+      "secondary": [
+        {
+          "name": "Violence psychologique",
+          "value": "Sup",
+          "label": "à la moyenne nationale",
+          "trend": "up"
+        },
+        {
+          "name": "Harcèlement",
+          "value": "Fort",
+          "label": "besoin de prévention",
+          "trend": "up"
+        }
+      ]
+    },
+    "travail": {
+      "title": "Charge de Travail",
+      "primary": [
+        {
+          "name": "Intérêt des apprentissages",
+          "value": 66.1,
+          "label": "au lycée",
+          "average": 72,
+          "trend": "down"
+        },
+        {
+          "name": "Encouragement des enseignants",
+          "value": "Mitigé",
+          "label": "au lycée",
+          "trend": "down"
+        }
+      ],
+      "secondary": [
+        {
+          "name": "Critique des emplois du temps",
+          "value": "Forte",
+          "label": "au lycée",
+          "trend": "up"
+        }
+      ]
+    },
+    "securite": {
+      "title": "Sécurité et Violence",
+      "primary": [
+        {
+          "name": "Absentéisme lié à la violence",
+          "value": 9.6,
+          "label": "des élèves",
+          "average": 15,
+          "trend": "down"
+        },
+        {
+          "name": "Multivictimation",
+          "value": "Sup",
+          "label": "à la moyenne nationale",
+          "trend": "up"
+        }
+      ],
+      "secondary": [
+        {
+          "name": "Perception de la violence (Personnel Élémentaire)",
+          "value": 6.3,
+          "label": "Plutôt souvent",
+          "trend": "down"
+        },
+        {
+          "name": "Perception de la violence (Personnel Lycée)",
+          "value": 23.1,
+          "label": "Plutôt souvent",
+          "trend": "up"
+        }
+      ]
+    }
+  },
+  "budgetData": {
+    "summaryCards": {
+      "totalInvestment": 775000000,
+      "fundingGap": 89860582,
+      "estimatedCapacity": 685139418
+    },
+    "projects": [
+      {
+        "id": "proj-clim",
+        "title": "Climatisation (phases 2 & 3)",
+        "description": "Déploiement progressif sur les bâtiments restants",
+        "period": "2026 – 2027",
+        "budget": 60000000,
+        "color": "from-sky-100 to-sky-50",
+        "link": "/climatisation-durable"
+      },
+      {
+        "id": "proj-sport-couv",
+        "title": "Couverture terrain de sport",
+        "description": "Protection solaire et confort thermique pour les cours d’EPS et compétitions",
+        "period": "2026",
+        "budget": 75000000,
+        "color": "from-amber-100 to-orange-50",
+        "link": "/couverture-terrain-sport"
+      },
+      {
+        "id": "proj-solaire",
+        "title": "Solaire terrain de sport",
+        "description": "Installation photovoltaïque complémentaire pour l’autoconsommation énergétique",
+        "period": "2028 – 2029",
+        "budget": 55000000,
+        "color": "from-emerald-100 to-emerald-50"
+      },
+      {
+        "id": "proj-piscine",
+        "title": "Piscine",
+        "description": "Réhabilitation et sécurisation du bassin pour le parcours Savoir-nager",
+        "period": "2028 – 2029",
+        "budget": 125000000,
+        "color": "from-sky-100 to-blue-50"
+      },
+      {
+        "id": "proj-cantine",
+        "title": "Restauration scolaire & Cantine",
+        "description": "Montée en charge cuisine, réfectoire & self-service pour 450 repas/jour",
+        "period": "2027 – 2029",
+        "budget": 20000000,
+        "color": "from-orange-100 to-amber-50",
+        "link": "/construction-cantine"
+      },
+      {
+        "id": "proj-foncier",
+        "title": "Acquisition terrain & réserve foncière",
+        "description": "Réserve foncière pour extensions futures et aménagements extérieurs",
+        "period": "2026 – 2027",
+        "budget": 60000000,
+        "color": "from-lime-100 to-emerald-50"
+      },
+      {
+        "id": "proj-extension",
+        "title": "Projet d’extension phase 1",
+        "description": "Création de nouvelles surfaces pédagogiques, salles de cours et laboratoires",
+        "period": "2030",
+        "budget": 20000000,
+        "color": "from-indigo-100 to-indigo-50"
+      }
+    ],
+    "financialTimeline": [
+      {
+        "year": 2026,
+        "capacite": 43000000,
+        "leviers": 64969911,
+        "recettesTotales": 107969911,
+        "depenses": 135000000
+      },
+      {
+        "year": 2027,
+        "capacite": 37000000,
+        "leviers": 70042377,
+        "recettesTotales": 107042377,
+        "depenses": 126666667
+      },
+      {
+        "year": 2028,
+        "capacite": 62000000,
+        "leviers": 70042377,
+        "recettesTotales": 132042377,
+        "depenses": 156666667
+      },
+      {
+        "year": 2029,
+        "capacite": 54000001,
+        "leviers": 70042377,
+        "recettesTotales": 124042378,
+        "depenses": 156666667
+      },
+      {
+        "year": 2030,
+        "capacite": 54000000,
+        "leviers": 70042377,
+        "recettesTotales": 124042377,
+        "depenses": 200000000
+      }
+    ],
+    "tuitionSimulations": [
+      {
+        "year": 2026,
+        "increase": 5.4,
+        "revenue": 64969911
+      },
+      {
+        "year": 2027,
+        "increase": 0.4,
+        "revenue": 70042377
+      },
+      {
+        "year": 2028,
+        "increase": 0,
+        "revenue": 70042377
+      },
+      {
+        "year": 2029,
+        "increase": 0,
+        "revenue": 70042377
+      },
+      {
+        "year": 2030,
+        "increase": 0,
+        "revenue": 70042377
+      }
+    ],
+    "projectSchedule": [
+      {
+        "project": "Climatisation (phases 2 & 3)",
+        "start": 2026,
+        "end": 2027,
+        "annualSpend": {
+          "2026": 30000000,
+          "2027": 30000000
+        }
+      },
+      {
+        "project": "Couverture terrain de sport",
+        "start": 2026,
+        "end": 2026,
+        "annualSpend": {
+          "2026": 75000000
+        }
+      },
+      {
+        "project": "Solaire terrain de sport",
+        "start": 2028,
+        "end": 2029,
+        "annualSpend": {
+          "2028": 27500000,
+          "2029": 27500000
+        }
+      },
+      {
+        "project": "Piscine",
+        "start": 2028,
+        "end": 2029,
+        "annualSpend": {
+          "2028": 62500000,
+          "2029": 62500000
+        }
+      },
+      {
+        "project": "Restauration scolaire & Cantine",
+        "start": 2027,
+        "end": 2029,
+        "annualSpend": {
+          "2027": 66666667,
+          "2028": 66666667,
+          "2029": 66666666
+        }
+      },
+      {
+        "project": "Acquisition terrain & réserve foncière",
+        "start": 2026,
+        "end": 2027,
+        "annualSpend": {
+          "2026": 30000000,
+          "2027": 30000000
+        }
+      },
+      {
+        "project": "Projet d’extension phase 1",
+        "start": 2030,
+        "end": 2030,
+        "annualSpend": {
+          "2030": 200000000
+        }
+      }
+    ],
+    "tuitionBaseRevenue": 1203146500,
+    "cumulativeTuition": 345139418
+  },
+  "transportData": {
+    "communes": [
+      {
+        "ville": "Saly",
+        "total": 291,
+        "part": "49 %"
+      },
+      {
+        "ville": "Ngaparou",
+        "total": 120,
+        "part": "20 %"
+      },
+      {
+        "ville": "Mbour",
+        "total": 99,
+        "part": "17 %"
+      },
+      {
+        "ville": "Somone",
+        "total": 30,
+        "part": "5 %"
+      },
+      {
+        "ville": "Malicounda",
+        "total": 23,
+        "part": "4 %"
+      },
+      {
+        "ville": "Nguerigne",
+        "total": 14,
+        "part": "2 %"
+      },
+      {
+        "ville": "Autres (> 30 km)",
+        "total": 16,
+        "part": "3 %"
+      }
+    ],
+    "stats": {
+      "totalEleves": 593,
+      "partSaly": "49 %",
+      "partPeripherie": "42 %",
+      "partEloignee": "9 %"
+    },
+    "circuits": [
+      {
+        "name": "Ligne 1 : Mbour Centre → Saly → LFJP",
+        "eleves": 99,
+        "arrets": "Rond-Point Total Mbour, Stade Caroline Faye, Croisement Saly, Lycée",
+        "horaireDepart": "07h10"
+      },
+      {
+        "name": "Ligne 2 : Somone → Ngaparou → Nguerigne → LFJP",
+        "eleves": 164,
+        "arrets": "Somone Plage, Mairie Ngaparou, Nguerigne Bambara, Route du Lycée",
+        "horaireDepart": "07h15"
+      },
+      {
+        "name": "Ligne 3 : Saly Port & Résidences → Malicounda → LFJP",
+        "eleves": 65,
+        "arrets": "Saly Port, Golf Club, Saly Joseph, Malicounda Échangeur, Lycée",
+        "horaireDepart": "07h25"
+      }
+    ],
+    "tarifs": [
+      {
+        "zone": "Zone 1 (Saly & proximité immédiate)",
+        "description": "Trajets inférieurs à 5 km",
+        "mensuel": 28000,
+        "annuel": 280000
+      },
+      {
+        "zone": "Zone 2 (Ngaparou / Mbour centre)",
+        "description": "Trajets entre 5 et 12 km",
+        "mensuel": 38000,
+        "annuel": 380000
+      },
+      {
+        "zone": "Zone 3 (Somone / Malicounda / Nguerigne)",
+        "description": "Trajets supérieurs à 12 km",
+        "mensuel": 48000,
+        "annuel": 480000
+      }
+    ],
+    "pointsCles": [
+      "Forte concentration : 91 % des élèves résident à moins de 15 km de l’établissement.",
+      "Sujet secondaire pour 68 % des familles qui privilégient le co-voiturage ou les déplacements individuels.",
+      "Levier d’attractivité ciblé pour les communes de Ngaparou, Somone et la périphérie de Mbour.",
+      "Scénario préconisé : service mutualisé avec bus scolaires sécurisés et accompagnateurs formés."
+    ]
+  }
+}
