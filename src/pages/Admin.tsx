@@ -2701,79 +2701,22 @@ const Admin = () => {
               </form>
             )}
 
-            {/* OPTION 2: ADMINISTRATEUR / SUPERADMIN */}
+            {/* OPTION 2: ADMINISTRATEUR / SUPERADMIN (Compte GitHub) */}
             {gateTab === 'superadmin' && (
-              <div className="space-y-4 py-1 text-left">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-left">
+              <div className="space-y-4 py-2 text-left">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-left">
                   <div className="flex items-center gap-2 text-slate-900 font-bold text-xs">
                     <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                    <span>Profil Administrateur (SuperAdmin)</span>
+                    <span>Profil Administrateur (SuperAdmin GitHub)</span>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed text-[11px]">
-                    Accès complet pour <strong>informatique-cmd</strong> : gestion de l’arborescence, création & suppression de rubriques, validation des brouillons et déploiement direct vers Vercel.
+                    Connexion officielle via votre compte GitHub pour le profil <strong>informatique-cmd</strong>. Confère l’accès complet au tableau de bord SuperAdmin : arborescence, gestion des pages, fiches projets et publication sur Vercel.
                   </p>
                 </div>
 
-                {gateError && (
-                  <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700 flex items-start gap-2 animate-in fade-in">
-                    <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-                    <span>{gateError}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleGateLogin} className="space-y-3">
-                  <div className="space-y-1 text-left">
-                    <label className="text-xs font-bold text-slate-700">Adresse Email SuperAdmin</label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        type="email"
-                        required
-                        value={gateEmail}
-                        onChange={(e) => setGateEmail(e.target.value)}
-                        placeholder="informatique@lfjpsaly.org"
-                        className="pl-9 text-xs h-10"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 text-left">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700">Mot de passe SuperAdmin</label>
-                      <button
-                        type="button"
-                        onClick={() => setShowGatePassword(!showGatePassword)}
-                        className="text-[11px] text-french-blue hover:underline"
-                      >
-                        {showGatePassword ? 'Masquer' : 'Afficher'}
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        type={showGatePassword ? 'text' : 'password'}
-                        required
-                        value={gatePassword}
-                        onChange={(e) => setGatePassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="pl-9 pr-9 text-xs h-10 font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full bg-slate-900 hover:bg-black text-white font-semibold text-xs h-10 shadow">
-                    <ShieldCheck className="mr-2 h-4 w-4 text-emerald-400" /> Se connecter comme SuperAdmin
-                  </Button>
-                </form>
-
-                <div className="relative my-2">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200" /></div>
-                  <div className="relative flex justify-center text-[10px] uppercase"><span className="bg-white px-2 text-slate-400 font-semibold">Ou via GitHub</span></div>
-                </div>
-
-                <Button asChild variant="outline" className="w-full border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold text-xs h-10 shadow-xs">
+                <Button asChild className="w-full bg-slate-950 hover:bg-black text-white font-semibold text-xs h-11 shadow-md">
                   <a href="/api/auth/github">
-                    <Github className="mr-2 h-4 w-4 text-slate-800" /> Connexion avec compte GitHub
+                    <Github className="mr-2 h-4 w-4 text-white" /> Se connecter avec le compte GitHub
                   </a>
                 </Button>
               </div>
