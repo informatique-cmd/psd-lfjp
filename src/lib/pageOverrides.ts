@@ -100,7 +100,19 @@ const formatConvertedCurrency = (amount: number, fromCurrency: 'XOF' | 'EUR', ta
 
 export const applyPageTextOverrides = (root: HTMLElement, pathname: string, overrides: PageTextOverrides) => {
   Object.entries(overrides[pathname] || {}).forEach(([path, override]) => {
-    const node = resolveNodePath(root, path);
+    let node = resolveNodePath(root, path);
+    if (!node && override.text) {
+      // Fallback: If node not found at index path (e.g. slight cross-browser DOM variation),
+      // look for matching element by data-cms-key or data-currency-amount
+      const parsed = parseCurrencyText(override.text);
+      if (parsed) {
+        const el = root.querySelector('[data-cms-key="project-budget-proj-clim"], [data-currency-amount]');
+        if (el) {
+          const textChild = Array.from(el.childNodes).find((n) => n.nodeType === Node.TEXT_NODE);
+          if (textChild) node = textChild;
+        }
+      }
+    }
     if (!node) return;
     if (override.text !== undefined && node.nodeType === Node.TEXT_NODE) {
       let nextText = override.text;

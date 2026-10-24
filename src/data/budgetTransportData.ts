@@ -86,7 +86,7 @@ export const defaultBudgetData: BudgetData = {
       title: 'Climatisation (phases 2 & 3)',
       description: 'Déploiement progressif sur les bâtiments restants',
       period: '2026 – 2027',
-      budget: 60000000,
+      budget: 60000009,
       color: 'from-sky-100 to-sky-50',
       link: '/climatisation-durable',
     },

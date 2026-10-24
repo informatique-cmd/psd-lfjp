@@ -22,34 +22,88 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   // Direct deployment to production (main branch)
   if (body.directDeploy) {
-    const commits = [];
-    for (const file of files) {
-      let sha: string | undefined;
-      try {
-        const existing = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/contents/${file.path}?ref=${encodeURIComponent(base)}`);
-        sha = existing.sha;
-      } catch {
-        // file may be newly created
-      }
-      const commit = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/contents/${file.path}`, {
-        method: 'PUT',
+    try {
+      // 1. Get latest commit SHA on base branch
+      const ref = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/git/ref/heads/${base}`);
+      const parentSha = ref.object.sha;
+
+      // 2. Create Tree with all modified files in a single atomic transaction
+      const treePayload = {
+        base_tree: parentSha,
+        tree: files.map((file) => ({
+          path: file.path,
+          mode: '100644',
+          type: 'blob',
+          content: `${file.content.trim()}\n`,
+        })),
+      };
+      const tree = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/git/trees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(treePayload),
+      });
+
+      // 3. Create a single commit referencing the new tree
+      const commit = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/git/commits`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `content: update ${file.path} [production deploy by @${user.login}]`,
-          content: Buffer.from(`${file.content.trim()}\n`, 'utf8').toString('base64'),
-          branch: base,
-          ...(sha ? { sha } : {}),
+          message: `content: publication des modifications [production deploy by @${user.login}]`,
+          tree: tree.sha,
+          parents: [parentSha],
         }),
       });
-      commits.push(commit);
+
+      // 4. Update the branch ref to point to the new commit
+      await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/git/refs/heads/${base}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sha: commit.sha,
+          force: false,
+        }),
+      });
+
+      return res.status(200).json({
+        success: true,
+        directDeploy: true,
+        branch: base,
+        commitSha: commit.sha,
+        commitUrl: commit.html_url,
+        message: 'Déploiement en production réussi ! Les modifications sont publiées sur la branche principale et le site Vercel est en cours de mise à jour.',
+        commits: [commit.html_url],
+      });
+    } catch (atomicErr) {
+      console.warn('Atomic tree commit failed, falling back to sequential contents update:', atomicErr);
+      const commits = [];
+      for (const file of files) {
+        let sha: string | undefined;
+        try {
+          const existing = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/contents/${file.path}?ref=${encodeURIComponent(base)}`);
+          sha = existing.sha;
+        } catch {
+          // file may be newly created
+        }
+        const commit = await githubRequest(token, `/repos/${repositoryOwner}/${repositoryName}/contents/${file.path}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `content: update ${file.path} [production deploy by @${user.login}]`,
+            content: Buffer.from(`${file.content.trim()}\n`, 'utf8').toString('base64'),
+            branch: base,
+            ...(sha ? { sha } : {}),
+          }),
+        });
+        commits.push(commit);
+      }
+      return res.status(200).json({
+        success: true,
+        directDeploy: true,
+        branch: base,
+        message: 'Déploiement en production réussi ! Les modifications sont publiées sur la branche principale.',
+        commits: commits.map((c) => c.commit?.html_url),
+      });
     }
-    return res.status(200).json({
-      success: true,
-      directDeploy: true,
-      branch: base,
-      message: 'Déploiement en production réussi ! Les modifications sont publiées sur la branche principale.',
-      commits: commits.map((c) => c.commit?.html_url),
-    });
   }
 
   const branch = `admin/content-${new Date().toISOString().slice(0, 10)}-${randomBytes(4).toString('hex')}`;

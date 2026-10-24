@@ -5,9 +5,25 @@ export const isContentDraftPreview = () =>
     new URLSearchParams(window.location.search).get('draft') === '1' ||
     new URLSearchParams(window.location.search).get('edit') === '1' ||
     window.sessionStorage.getItem('lfjp-preview-mode') === '1' ||
-    window.localStorage.getItem('lfjp_preview_active') === '1' ||
-    Boolean(window.localStorage.getItem('lfjp-admin-draft'))
+    window.sessionStorage.getItem('lfjp_preview_active') === '1'
   );
+
+export const clearAllDraftStorage = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem('lfjp-admin-draft');
+    window.localStorage.removeItem('lfjp-admin-pages-draft');
+    window.localStorage.removeItem('lfjp-admin-page-data-draft');
+    window.localStorage.removeItem('lfjp-admin-page-text-draft');
+    window.localStorage.removeItem('lfjp_preview_active');
+    window.sessionStorage.removeItem('lfjp-preview-mode');
+    window.sessionStorage.removeItem('lfjp_preview_active');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('lfjp_draft_cleared'));
+  } catch {
+    // ignore
+  }
+};
 
 export const readContentDraft = <T,>(key: string, fallback: T): T => {
   if (!isContentDraftPreview()) return fallback;

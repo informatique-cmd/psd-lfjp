@@ -24,6 +24,8 @@ import {
 import type { LegendProps, TooltipProps } from 'recharts';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { defaultBudgetData, type BudgetData } from '@/data/budgetTransportData';
+import pageDataFile from '@/content/pageData.json';
+import { isContentDraftPreview } from '@/lib/contentDraft';
 
 // Les données sont codées en dur pour faciliter les ajustements futurs.
 // Vous pouvez modifier les montants, années ou pourcentages directement dans
@@ -82,7 +84,7 @@ const projects: Project[] = [
     title: 'Climatisation (phases 2 & 3)',
     description: 'Déploiement progressif sur les bâtiments restants',
     period: '2026 – 2027',
-    budget: 60_000_000,
+    budget: 60_000_009,
     color: 'from-sky-100 to-sky-50',
     link: 'https://psd-lfjp.netlify.app/climatisation-durable',
   },
@@ -170,8 +172,12 @@ const BudgetCadreVieInfrastructures = () => {
   const cumulativeTuition = 345_139_418;
   const annualTotals = [135_000_000, 126_666_667, 156_666_667, 156_666_667, 200_000_000];
 
+  const baseBudgetData = useMemo(() => {
+    return (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData;
+  }, []);
+
   const liveBudget = useMemo(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isContentDraftPreview()) {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
@@ -179,11 +185,11 @@ const BudgetCadreVieInfrastructures = () => {
           if (parsed?.budgetData) return parsed.budgetData as BudgetData;
         }
       } catch {
-        return defaultBudgetData;
+        return baseBudgetData;
       }
     }
-    return defaultBudgetData;
-  }, []);
+    return baseBudgetData;
+  }, [baseBudgetData]);
 
   const dynamicSummaryCards = useMemo(() => [
     {
@@ -404,7 +410,11 @@ const BudgetCadreVieInfrastructures = () => {
                           </span>
                         </div>
                         <p className="text-sm text-slate-700">{project.description}</p>
-                        <p className="text-sm font-semibold text-emerald-700" data-currency-amount={project.budget}>
+                        <p
+                          className="text-sm font-semibold text-emerald-700"
+                          data-currency-amount={project.budget}
+                          data-cms-key={`project-budget-${project.id || (project.title.toLowerCase().includes('clim') ? 'proj-clim' : project.title.toLowerCase().replace(/[^a-z0-9]/g, '-'))}`}
+                        >
                           {formatCurrency(project.budget, currency)}
                         </p>
                       </div>

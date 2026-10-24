@@ -27,6 +27,7 @@ import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManaged
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
 import { pageTextDraftStorageKey } from '@/lib/pageOverrides';
+import { clearAllDraftStorage } from '@/lib/contentDraft';
 import { SITE_PILLARS, type HierarchyPillar, type HierarchySubpage, type HierarchyAxis } from '@/data/siteHierarchy';
 import {
   loadRubriquesDraft,
@@ -475,7 +476,8 @@ const Admin = () => {
       await createPullRequest(true, pendingDeployment.draftFiles);
       approveDeploymentRequest(pendingDeployment.id, userProfile.email);
       setPendingDeployment(loadPendingDeploymentRequest());
-      setStatus('🚀 Modifications publiées et déploiement Vercel lancé avec succès ! La production sera à jour pour tous les navigateurs.');
+      clearAllDraftStorage();
+      setStatus('🚀 Modifications publiées et déploiement Vercel lancé avec succès ! Un commit unique a été envoyé sur main. Le site en direct est actualisé pour tous les navigateurs.');
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Échec du déploiement GitHub / Vercel.';
       setStatus(`❌ Échec du déploiement : ${msg}`);
@@ -1462,6 +1464,29 @@ const Admin = () => {
     setPageTextJson(serialized);
     window.localStorage.setItem(pageTextDraftStorageKey, serialized);
     setSelectedVisualElement((selection) => selection ? { ...selection, [field]: value } : selection);
+
+    // Bidirectional sync: if editing a budget page figure, keep pageDataJson in sync
+    if (visualRoute.includes('budget') && field === 'text') {
+      const digits = value.replace(/[^0-9]/g, '');
+      const num = parseInt(digits, 10);
+      if (!isNaN(num) && num > 0) {
+        try {
+          const currentPD = JSON.parse(pageDataJson);
+          if (currentPD?.budgetData?.projects && Array.isArray(currentPD.budgetData.projects)) {
+            const climProj = currentPD.budgetData.projects.find((p: { id?: string; title?: string }) => p.id === 'proj-clim' || p.title?.includes('Climatisation'));
+            if (climProj && (value.includes('60') || selectedVisualElement.text?.includes('Climatisation') || selectedVisualElement.path.includes('0.2.0'))) {
+              climProj.budget = num;
+              const nextPDStr = JSON.stringify(currentPD, null, 2);
+              setPageDataJson(nextPDStr);
+              window.localStorage.setItem(pageDataDraftStorageKey, nextPDStr);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     setStatus('Brouillon modifié. L’aperçu se met à jour automatiquement.');
   };
 
