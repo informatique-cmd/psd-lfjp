@@ -417,24 +417,31 @@ const Admin = () => {
   const [editorDeployNotes, setEditorDeployNotes] = useState('');
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectFeedback, setRejectFeedback] = useState('');
+  const [dismissedBannerId, setDismissedBannerId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return window.sessionStorage.getItem('lfjp_dismissed_deployment_banner');
+  });
 
   useEffect(() => {
-    const handler = () => {
-      setPendingDeployment(loadPendingDeploymentRequest());
+    const handler = (e?: Event) => {
+      const custom = e as CustomEvent<PendingDeploymentRequest | null>;
+      if (custom && 'detail' in custom) {
+        setPendingDeployment(custom.detail);
+      } else {
+        setPendingDeployment(loadPendingDeploymentRequest());
+      }
     };
     window.addEventListener('lfjp_deployment_workflow_changed', handler);
     window.addEventListener('storage', handler);
 
-    // Initial server fetch and recurring 4s polling for cross-browser synchronization
+    // Initial server fetch and recurring 3.5s polling for cross-browser synchronization
     const syncServer = () => {
       fetchPendingDeploymentFromServer().then((req) => {
-        if (req) {
-          setPendingDeployment(req);
-        }
+        setPendingDeployment(req);
       });
     };
     syncServer();
-    const pollInterval = window.setInterval(syncServer, 4000);
+    const pollInterval = window.setInterval(syncServer, 3500);
 
     return () => {
       window.removeEventListener('lfjp_deployment_workflow_changed', handler);
@@ -463,6 +470,10 @@ const Admin = () => {
       }
     );
     setPendingDeployment(req);
+    setDismissedBannerId(null);
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem('lfjp_dismissed_deployment_banner');
+    }
     setIsEditorDeployModalOpen(false);
     setEditorDeployNotes('');
     setStatus('✅ Modifications transmises pour déploiement Vercel ! En attente de validation par le SuperAdmin.');
@@ -2817,10 +2828,10 @@ const Admin = () => {
   if (userProfile.role === 'editor') {
     return (
       <div className="flex flex-col h-screen w-screen bg-slate-900 text-slate-100 overflow-hidden font-raleway select-none">
-        {/* Simple & Clean Top Navigation Bar for Editor */}
-        <header className="shrink-0 h-14 bg-slate-950 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between z-30 shadow-md">
+        {/* Simple, Non-Overflowing & Responsive Top Navigation Bar for Editor */}
+        <header className="shrink-0 h-14 bg-slate-950 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between gap-2 z-30 shadow-md">
           {/* Left: Brand clickable to go to Home */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -2833,18 +2844,19 @@ const Admin = () => {
               className="flex items-center gap-2 shrink-0 text-left hover:opacity-85 transition-opacity focus:outline-hidden group cursor-pointer"
               title="Retourner à l'accueil du site (/)"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-french-blue text-sm font-bold text-white shadow-sm font-playfair group-hover:scale-105 transition-transform">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-french-blue text-sm font-bold text-white shadow-sm font-playfair group-hover:scale-105 transition-transform shrink-0">
                 L
               </span>
               <div className="hidden sm:block leading-tight">
-                <span className="font-playfair font-bold text-sm text-white group-hover:text-blue-300 transition-colors">LFJP · Édition du Site</span>
+                <span className="font-playfair font-bold text-sm text-white group-hover:text-blue-300 transition-colors whitespace-nowrap">LFJP · Édition</span>
                 <span className="text-[10px] text-amber-400 font-semibold block">Profil Éditeur</span>
               </div>
             </button>
           </div>
 
-          {/* Center: Harmonized Toggle Button Activer / Désactiver les modifications */}
-          <div className="flex items-center gap-2">
+          {/* Right: Harmonized, Non-Overflowing Responsive Actions Toolbar */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Toggle Button Activer / Désactiver les modifications */}
             <Button
               type="button"
               size="sm"
@@ -2855,35 +2867,35 @@ const Admin = () => {
                 if (!nextState) setSelectedVisualElement(null);
                 previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-set-edit-mode', active: nextState }, window.location.origin);
               }}
-              className={`h-8 text-xs font-semibold px-3 transition-colors ${
+              className={`h-8 text-xs font-semibold px-2.5 sm:px-3 shrink-0 transition-colors ${
                 editorModeActive
-                  ? 'border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300'
+                  ? 'border-amber-500 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/30'
                   : 'border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200'
               }`}
-              title={editorModeActive ? "Désactiver la modification (permet de naviguer sur les liens du site)" : "Activer la modification des textes, liens et images"}
+              title={editorModeActive ? "Désactiver la modification (naviguer sur les liens du site)" : "Activer la modification directe des textes et images"}
             >
-              <Pencil className={`mr-1.5 h-3.5 w-3.5 shrink-0 ${editorModeActive ? 'text-amber-400' : 'text-slate-400'}`} />
+              <Pencil className={`h-3.5 w-3.5 shrink-0 ${editorModeActive ? 'text-amber-400 mr-1 sm:mr-1.5' : 'text-slate-400 mr-1 sm:mr-1.5'}`} />
               {editorModeActive ? (
                 <>
-                  <span className="hidden sm:inline">Désactiver la modification</span>
-                  <span className="sm:hidden">Désactiver</span>
+                  <span className="hidden md:inline">Édition active</span>
+                  <span className="md:hidden">Actif</span>
                 </>
               ) : (
                 <>
-                  <span className="hidden sm:inline">Activer la modification</span>
-                  <span className="sm:hidden">Modifier</span>
+                  <span className="hidden md:inline">Modifier le site</span>
+                  <span className="md:hidden">Modifier</span>
                 </>
               )}
             </Button>
-          </div>
 
-          {/* Right: Actions (Save draft, Publish on Vercel, Logout) */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Status indicator: only when pending admin approval */}
             {pendingDeployment?.status === 'pending_admin_approval' && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                <span>En attente validation Admin</span>
+              <span
+                className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-semibold shrink-0 whitespace-nowrap"
+                title="Modifications transmises au SuperAdmin pour validation"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>En attente Admin</span>
               </span>
             )}
 
@@ -2893,12 +2905,12 @@ const Admin = () => {
               size="sm"
               variant="outline"
               onClick={saveDraft}
-              className="h-8 text-xs border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200"
+              className="h-8 text-xs px-2 sm:px-2.5 border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 shrink-0"
               title="Enregistrer le brouillon sur cet appareil"
             >
-              <Save className="mr-1.5 h-3.5 w-3.5 text-french-blue" />
-              <span className="hidden sm:inline">Enregistrer le brouillon</span>
-              <span className="sm:hidden">Enregistrer</span>
+              <Save className="h-3.5 w-3.5 text-french-blue sm:mr-1.5 shrink-0" />
+              <span className="hidden lg:inline">Enregistrer le brouillon</span>
+              <span className="hidden sm:inline lg:hidden">Brouillon</span>
             </Button>
 
             {/* Deploy to Vercel Request Button */}
@@ -2906,19 +2918,19 @@ const Admin = () => {
               type="button"
               size="sm"
               onClick={() => setIsEditorDeployModalOpen(true)}
-              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5"
+              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
               title="Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"
             >
-              <Send className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Enregistrer pour publier sur Vercel</span>
-              <span className="sm:hidden">Publier Vercel</span>
+              <Send className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden md:inline">Déployer sur Vercel</span>
+              <span className="md:hidden">Déployer</span>
             </Button>
 
-            <div className="h-4 w-px bg-slate-800 hidden sm:block" />
+            <div className="h-4 w-px bg-slate-800 hidden sm:block shrink-0" />
 
             {/* User and Logout */}
-            <div className="flex items-center gap-1.5">
-              <span className="hidden lg:inline text-[11px] font-mono text-slate-400 px-1">
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="hidden 2xl:inline text-[11px] font-mono text-slate-400 px-1 truncate max-w-[140px]">
                 {userProfile.email}
               </span>
               <Button
@@ -2926,52 +2938,85 @@ const Admin = () => {
                 size="sm"
                 variant="ghost"
                 onClick={logout}
-                className="h-8 text-xs text-slate-300 hover:text-red-400 hover:bg-slate-800 px-2"
+                className="h-8 text-xs text-slate-300 hover:text-red-400 hover:bg-slate-800 px-2 shrink-0"
                 title="Se déconnecter"
               >
-                <LogOut className="h-3.5 w-3.5 sm:mr-1 text-slate-400" />
+                <LogOut className="h-3.5 w-3.5 sm:mr-1 text-slate-400 shrink-0" />
                 <span className="hidden sm:inline">Déconnexion</span>
               </Button>
             </div>
           </div>
         </header>
 
-        {/* Status notification banner if pending approval or feedback from Admin */}
-        {pendingDeployment?.status === 'pending_admin_approval' && (
-          <div className="shrink-0 bg-gradient-to-r from-amber-600/90 to-amber-700/90 border-b border-amber-500/40 px-4 py-2 text-xs text-white flex items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
-              <span>
+        {/* Status notification banner if pending approval with close option */}
+        {pendingDeployment?.status === 'pending_admin_approval' && dismissedBannerId !== pendingDeployment.id && (
+          <div className="shrink-0 bg-gradient-to-r from-amber-600 to-amber-700 border-b border-amber-500/40 px-3 sm:px-4 py-2 text-xs text-white flex items-center justify-between gap-3 shadow-sm transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="h-2 w-2 rounded-full bg-white animate-pulse shrink-0" />
+              <span className="truncate sm:whitespace-normal">
                 <strong>Demande en cours transmise au SuperAdmin :</strong> Vos modifications ont été soumises pour déploiement Vercel le{' '}
-                {new Date(pendingDeployment.submittedAt).toLocaleTimeString('fr-FR')}. Elles restent en brouillon sécurisé et seront mises en ligne dès que le SuperAdmin aura validé.
+                {new Date(pendingDeployment.submittedAt).toLocaleTimeString('fr-FR')}. Elles restent en brouillon sécurisé et seront mises en ligne dès validation.
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsEditorDeployModalOpen(true)}
-              className="bg-white/20 hover:bg-white/30 text-white font-semibold px-2 py-0.5 rounded text-[11px] shrink-0 transition-colors"
-            >
-              Modifier la note
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsEditorDeployModalOpen(true)}
+                className="bg-white/20 hover:bg-white/30 text-white font-semibold px-2.5 py-1 rounded text-[11px] transition-colors whitespace-nowrap"
+                title="Modifier la note transmise au SuperAdmin"
+              >
+                Modifier la note
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDismissedBannerId(pendingDeployment.id);
+                  if (typeof window !== 'undefined') {
+                    window.sessionStorage.setItem('lfjp_dismissed_deployment_banner', pendingDeployment.id);
+                  }
+                }}
+                className="p-1 rounded-md text-amber-100 hover:text-white hover:bg-white/20 transition-colors"
+                title="Fermer cette notification"
+                aria-label="Fermer la notification"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
 
-        {pendingDeployment?.status === 'rejected' && (
-          <div className="shrink-0 bg-red-600/90 border-b border-red-500 px-4 py-2 text-xs text-white flex items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-center gap-2">
+        {pendingDeployment?.status === 'rejected' && dismissedBannerId !== pendingDeployment.id && (
+          <div className="shrink-0 bg-red-600/90 border-b border-red-500 px-3 sm:px-4 py-2 text-xs text-white flex items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
               <AlertCircle className="h-4 w-4 text-white shrink-0" />
-              <span>
+              <span className="truncate sm:whitespace-normal">
                 <strong>Retour du SuperAdmin :</strong> « {pendingDeployment.feedback || 'Modifications à ajuster'} ». Vous pouvez continuer à éditer et renvoyer la demande dès que c’est prêt.
               </span>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setIsEditorDeployModalOpen(true)}
-              className="h-6 text-[11px] bg-white text-red-900 hover:bg-red-50 font-bold shrink-0"
-            >
-              Renvoyer pour déploiement
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsEditorDeployModalOpen(true)}
+                className="h-6 text-[11px] bg-white text-red-900 hover:bg-red-50 font-bold shrink-0 px-2"
+              >
+                Renvoyer
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDismissedBannerId(pendingDeployment.id);
+                  if (typeof window !== 'undefined') {
+                    window.sessionStorage.setItem('lfjp_dismissed_deployment_banner', pendingDeployment.id);
+                  }
+                }}
+                className="p-1 rounded-md text-red-100 hover:text-white hover:bg-white/20 transition-colors"
+                title="Fermer cette notification"
+                aria-label="Fermer la notification"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
 

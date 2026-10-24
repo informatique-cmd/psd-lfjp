@@ -65,6 +65,14 @@ export async function fetchPendingDeploymentFromServer(): Promise<PendingDeploym
     const data = await res.json();
     if (data?.request) {
       const req = data.request as PendingDeploymentRequest;
+      // If the admin approved and deployed the request, clear it so orange message disappears
+      if (req.status === 'approved_and_deployed') {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(DEPLOYMENT_REQUEST_KEY);
+          window.dispatchEvent(new CustomEvent('lfjp_deployment_workflow_changed', { detail: null }));
+        }
+        return null;
+      }
       const current = loadPendingDeploymentRequest();
       if (!current || current.id !== req.id || current.status !== req.status) {
         if (typeof window !== 'undefined') {
@@ -73,6 +81,16 @@ export async function fetchPendingDeploymentFromServer(): Promise<PendingDeploym
         }
       }
       return req;
+    } else {
+      // Server returned null request: clear local storage if it was pending
+      const current = loadPendingDeploymentRequest();
+      if (current && current.status === 'pending_admin_approval') {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(DEPLOYMENT_REQUEST_KEY);
+          window.dispatchEvent(new CustomEvent('lfjp_deployment_workflow_changed', { detail: null }));
+        }
+      }
+      return null;
     }
   } catch {
     // silent catch on network lag
@@ -118,6 +136,12 @@ export function approveDeploymentRequest(
       reviewedBy,
     };
     savePendingDeploymentRequest(updated);
+    // After marking approved, clear from server so other browsers remove the orange notification
+    setTimeout(() => {
+      savePendingDeploymentRequest(null);
+    }, 1500);
+  } else {
+    savePendingDeploymentRequest(null);
   }
 }
 
