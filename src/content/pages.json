@@ -1,3 +1,28 @@
 {
-  "pages": []
+  "pages": [
+    {
+      "slug": "/contact",
+      "title": "Contact",
+      "description": "Présentation et fiches de cette rubrique.",
+      "showInNavigation": true,
+      "order": 1,
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Contact"
+        },
+        {
+          "type": "paragraph",
+          "text": "Présentation et fiches de cette rubrique."
+        },
+        {
+          "type": "callout",
+          "title": "Points clés",
+          "text": "Présentation des enjeux et objectifs de cette rubrique.",
+          "tone": "blue"
+        }
+      ]
+    }
+  ]
 }
