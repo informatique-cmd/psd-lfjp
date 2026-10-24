@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle, AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown,
-  BarChart3, Bold, BookOpen, BusFront, Calculator, Check, CheckCircle2, ChevronDown, ChevronRight, ChartNoAxesCombined, Coins, Copy, CornerDownRight, Database, Download, ExternalLink, Eye, FileDown, FilePlus, FileText, FileUp, FolderPlus, FolderTree,
+  BarChart3, Bell, Bold, BookOpen, BusFront, Calculator, Check, CheckCircle2, ChevronDown, ChevronRight, ChartNoAxesCombined, Coins, Copy, CornerDownRight, Database, Download, ExternalLink, Eye, FileDown, FilePlus, FileText, FileUp, FolderPlus, FolderTree,
   Github, Globe2, GraduationCap, Heart, Home as HomeIcon, Image, Italic, Key, Layers3, ListPlus, Lock, LogOut, Mail, MapPin, Maximize2,
   Menu, MessageSquareText, Minimize2, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose,
   PanelRightOpen, Pencil, Plus, RefreshCw, Save, Search, Send, Settings2, ShieldCheck, Sliders, Smartphone, Sparkles, Tablet,
@@ -48,6 +48,7 @@ import {
   submitEditorDraft,
   approveDeploymentRequest,
   rejectDeploymentRequest,
+  fetchPendingDeploymentFromServer,
   type PendingDeploymentRequest,
 } from '@/data/deploymentWorkflow';
 
@@ -422,9 +423,22 @@ const Admin = () => {
     };
     window.addEventListener('lfjp_deployment_workflow_changed', handler);
     window.addEventListener('storage', handler);
+
+    // Initial server fetch and recurring 4s polling for cross-browser synchronization
+    const syncServer = () => {
+      fetchPendingDeploymentFromServer().then((req) => {
+        if (req) {
+          setPendingDeployment(req);
+        }
+      });
+    };
+    syncServer();
+    const pollInterval = window.setInterval(syncServer, 4000);
+
     return () => {
       window.removeEventListener('lfjp_deployment_workflow_changed', handler);
       window.removeEventListener('storage', handler);
+      window.clearInterval(pollInterval);
     };
   }, []);
 
@@ -3357,6 +3371,24 @@ const Admin = () => {
               <ChevronDown className="h-3 w-3 text-slate-400 hidden sm:block" />
             </button>
 
+            {/* Notification Badge for Pending Editor Deployments */}
+            {pendingDeployment?.status === 'pending_admin_approval' && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const el = document.getElementById('pending-deploy-banner');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="h-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-2.5 flex items-center gap-1.5 shadow-md animate-pulse ring-2 ring-amber-300"
+                title="1 demande de déploiement Vercel en attente par l'éditeur"
+              >
+                <Bell className="h-3.5 w-3.5 fill-current" />
+                <span className="hidden md:inline">1 Déploiement en attente</span>
+                <span className="md:hidden">1</span>
+              </Button>
+            )}
+
             <Button
               type="button"
               size="sm"
@@ -3397,7 +3429,7 @@ const Admin = () => {
 
       {/* SuperAdmin Notification Banner for Editor Deployment Request */}
       {pendingDeployment?.status === 'pending_admin_approval' && (
-        <div className="shrink-0 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white px-4 py-3 shadow-md border-b border-amber-600 flex flex-wrap items-center justify-between gap-3 animate-in slide-in-from-top-2 z-40">
+        <div id="pending-deploy-banner" className="shrink-0 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white px-4 py-3 shadow-md border-b border-amber-600 flex flex-wrap items-center justify-between gap-3 animate-in slide-in-from-top-2 z-40">
           <div className="flex items-center gap-3 min-w-0">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white shadow-inner shrink-0 animate-pulse">
               <AlertCircle className="h-6 w-6" />

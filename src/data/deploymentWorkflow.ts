@@ -43,9 +43,41 @@ export function savePendingDeploymentRequest(request: PendingDeploymentRequest |
       window.localStorage.setItem(DEPLOYMENT_REQUEST_KEY, JSON.stringify(request));
     }
     window.dispatchEvent(new CustomEvent('lfjp_deployment_workflow_changed', { detail: request }));
+
+    // Sync with backend API so other browsers / SuperAdmin see the notification in real time
+    if (typeof fetch !== 'undefined') {
+      fetch('/api/deployment/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      }).catch(() => {});
+    }
   } catch (err) {
     console.error('Failed to save pending deployment request', err);
   }
+}
+
+export async function fetchPendingDeploymentFromServer(): Promise<PendingDeploymentRequest | null> {
+  if (typeof fetch === 'undefined') return null;
+  try {
+    const res = await fetch('/api/deployment/request', { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.request) {
+      const req = data.request as PendingDeploymentRequest;
+      const current = loadPendingDeploymentRequest();
+      if (!current || current.id !== req.id || current.status !== req.status) {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(DEPLOYMENT_REQUEST_KEY, JSON.stringify(req));
+          window.dispatchEvent(new CustomEvent('lfjp_deployment_workflow_changed', { detail: req }));
+        }
+      }
+      return req;
+    }
+  } catch {
+    // silent catch on network lag
+  }
+  return null;
 }
 
 export function submitEditorDraft(

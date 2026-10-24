@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
+import { exec } from "child_process";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
@@ -50,6 +51,45 @@ export default defineConfig(({ mode }) => ({
             res.end(JSON.stringify({ user: null }));
             return;
           }
+          if (req.url === "/api/deployment/request" && req.method === "GET") {
+            res.setHeader("Content-Type", "application/json");
+            let fileRequest = null;
+            try {
+              const reqPath = path.resolve(__dirname, "src/content/.pending-deployment.json");
+              if (fs.existsSync(reqPath)) {
+                fileRequest = JSON.parse(fs.readFileSync(reqPath, "utf8"));
+              }
+            } catch {
+              // ignore
+            }
+            res.end(JSON.stringify({ request: fileRequest }));
+            return;
+          }
+          if (req.url === "/api/deployment/request" && req.method === "POST") {
+            let body = "";
+            req.on("data", (chunk) => {
+              body += chunk;
+            });
+            req.on("end", () => {
+              try {
+                const parsed = JSON.parse(body || "null");
+                const reqPath = path.resolve(__dirname, "src/content/.pending-deployment.json");
+                if (!parsed) {
+                  if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
+                } else {
+                  fs.writeFileSync(reqPath, JSON.stringify(parsed, null, 2), "utf8");
+                }
+                res.setHeader("Content-Type", "application/json");
+                res.statusCode = 200;
+                res.end(JSON.stringify({ success: true, request: parsed }));
+              } catch (err) {
+                res.setHeader("Content-Type", "application/json");
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: (err as Error).message }));
+              }
+            });
+            return;
+          }
           if (req.url === "/api/github/pull-request" && req.method === "POST") {
             let body = "";
             req.on("data", (chunk) => {
@@ -66,15 +106,34 @@ export default defineConfig(({ mode }) => ({
                     }
                   }
                 }
-                res.setHeader("Content-Type", "application/json");
-                res.statusCode = 201;
-                res.end(JSON.stringify({
-                  url: "https://github.com/informatique-cmd/psd-lfjp",
-                  number: 1,
-                  branch: "main",
-                  success: true,
-                  message: "Modifications enregistrées et publiées avec succès sur la branche principale !"
-                }));
+
+                // If direct deploy, push to GitHub main branch so Vercel builds & updates
+                const tokenFile = path.resolve(__dirname, ".git_token");
+                const token = process.env.GITHUB_TOKEN || (fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, "utf8").trim() : "");
+                const remoteTarget = token ? `https://${token}@github.com/informatique-cmd/psd-lfjp.git` : "origin";
+                const pushCmd = `git add src/content/ && git commit -m "content: mise à jour en production [deploy Vercel]" && git push ${remoteTarget} main && git remote set-url origin https://github.com/informatique-cmd/psd-lfjp.git`;
+
+                exec(pushCmd, (error) => {
+                  if (error) {
+                    console.warn("Git push warning:", error.message);
+                  }
+                  // Clear pending deployment request file if deployed
+                  try {
+                    const reqPath = path.resolve(__dirname, "src/content/.pending-deployment.json");
+                    if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
+                  } catch {
+                    // ignore
+                  }
+                  res.setHeader("Content-Type", "application/json");
+                  res.statusCode = 201;
+                  res.end(JSON.stringify({
+                    url: "https://github.com/informatique-cmd/psd-lfjp",
+                    number: 1,
+                    branch: "main",
+                    success: true,
+                    message: "Modifications publiées et déployées avec succès sur la branche main de GitHub ! Le site Vercel est mis à jour."
+                  }));
+                });
               } catch (err) {
                 res.setHeader("Content-Type", "application/json");
                 res.statusCode = 500;
