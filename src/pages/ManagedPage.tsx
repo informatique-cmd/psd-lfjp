@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import BackToTop from '@/components/BackToTop';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NotFound from '@/pages/NotFound';
-import { getManagedPages, isValidContentBlock, type ContentBlock, type ManagedPage as ManagedPageData, type TextStyle } from '@/content/pageTypes';
+import { getManagedPages, isValidContentBlock, normalizePageSlug, type ContentBlock, type ManagedPage as ManagedPageData, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 
 import pagesFile from '@/content/pages.json';
@@ -69,9 +69,10 @@ const Block = ({ block }: { block: ContentBlock }) => {
 };
 
 const ManagedPage = () => {
-  const pathname = window.location.pathname.replace(/\/+$/, '') || '/';
+  const location = useLocation();
+  const pathname = normalizePageSlug(location.pathname);
   const draftPages = useMemo(() => getManagedPages(), []);
-  const page = draftPages.find((item) => item.slug === pathname);
+  const page = draftPages.find((item) => normalizePageSlug(item.slug) === pathname);
   if (!page) return <NotFound />;
 
   return (

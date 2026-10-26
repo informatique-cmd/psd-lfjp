@@ -7,8 +7,8 @@ const PageTextEditor = () => {
   const location = useLocation();
   const isEditorRoute = location.pathname === '/espace-direction' || location.pathname === '/admin';
   const editParam = new URLSearchParams(location.search).get('edit');
-  const embedded = new URLSearchParams(location.search).get('embedded') === '1' || (typeof window !== 'undefined' && window.self !== window.top);
-  const editingRequested = editParam === '1' || (embedded && editParam !== '0');
+  const embedded = new URLSearchParams(location.search).get('embedded') === '1';
+  const editingRequested = editParam === '1' && embedded;
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [overrides, setOverrides] = useState<PageTextOverrides>(loadPageTextOverrides);
@@ -19,7 +19,7 @@ const PageTextEditor = () => {
     if (hasLocal) {
       setIsAdmin(true);
       if (editingRequested) setIsEditing(true);
-      else if (editParam === '0') setIsEditing(false);
+      else setIsEditing(false);
       return;
     }
 
@@ -46,7 +46,7 @@ const PageTextEditor = () => {
         setIsAdmin(false);
         setIsEditing(false);
       });
-  }, [editingRequested, editParam, embedded]);
+  }, [editingRequested, embedded]);
 
   useEffect(() => {
     checkAuth();
@@ -112,10 +112,10 @@ const PageTextEditor = () => {
     };
   }, [isEditorRoute, location.pathname, overrides]);
 
-  // When modification mode is active, intercept clicks on links and buttons in capture phase
+  // When modification mode is active inside the Visual Editor iframe, intercept clicks on links and buttons in capture phase
   // so that clicking anywhere on the page allows selecting and editing the text/content instead of navigating away!
   useEffect(() => {
-    if (!isAdmin || !isEditing || isEditorRoute) return;
+    if (!embedded || !isAdmin || !isEditing || isEditorRoute) return;
     const interceptClick = (event: MouseEvent) => {
       const target = event.target as Node | null;
       if (!target) return;
@@ -131,10 +131,10 @@ const PageTextEditor = () => {
 
     document.addEventListener('click', interceptClick, true);
     return () => document.removeEventListener('click', interceptClick, true);
-  }, [isAdmin, isEditing, isEditorRoute]);
+  }, [embedded, isAdmin, isEditing, isEditorRoute]);
 
   useEffect(() => {
-    if (!isAdmin || !isEditing || isEditorRoute) return;
+    if (!embedded || !isAdmin || !isEditing || isEditorRoute) return;
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
