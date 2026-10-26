@@ -5,8 +5,8 @@ import {
   BarChart3, Bell, Bold, BookOpen, BusFront, Calculator, Check, CheckCircle2, ChevronDown, ChevronRight, ChartNoAxesCombined, Coins, Copy, CornerDownRight, Database, Download, ExternalLink, Eye, FileDown, FilePlus, FileText, FileUp, FolderPlus, FolderTree,
   Github, Globe2, GraduationCap, Heart, Home as HomeIcon, Image, Italic, Key, Layers3, ListPlus, Lock, LogOut, Mail, MapPin, Maximize2,
   Menu, MessageSquareText, Minimize2, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose,
-  PanelRightOpen, Pencil, Plus, RefreshCw, Save, Search, Send, Settings2, ShieldCheck, Sliders, Smartphone, Sparkles, Tablet,
-  Target, Trash2, TrendingUp, Underline, Unlock, Upload, User, UsersRound, Wallet, X
+  PanelRightOpen, Pencil, Plus, RefreshCw, Rocket, Save, Search, Send, Settings2, ShieldCheck, Sliders, Smartphone, Sparkles, Tablet,
+  Target, Trash2, TrendingUp, Underline, Unlock, Upload, User, UsersRound, Wallet, X, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -415,6 +415,8 @@ const Admin = () => {
   const [pendingDeployment, setPendingDeployment] = useState<PendingDeploymentRequest | null>(loadPendingDeploymentRequest);
   const [isEditorDeployModalOpen, setIsEditorDeployModalOpen] = useState(false);
   const [editorDeployNotes, setEditorDeployNotes] = useState('');
+  const [isSuperAdminDeployModalOpen, setIsSuperAdminDeployModalOpen] = useState(false);
+  const [superAdminDeployNotes, setSuperAdminDeployNotes] = useState('');
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectFeedback, setRejectFeedback] = useState('');
   const [dismissedBannerId, setDismissedBannerId] = useState<string | null>(() => {
@@ -505,6 +507,33 @@ const Admin = () => {
     setIsRejectModalOpen(false);
     setRejectFeedback('');
     setStatus('Demande de déploiement rejetée. Les remarques ont été enregistrées pour l’éditeur.');
+  };
+
+  const handleSuperAdminDirectDeploy = async () => {
+    setIsSaving(true);
+    setStatus('⏳ Publication directe et déploiement vers Vercel (branche principale)...');
+    try {
+      saveDraft();
+      const payloadFiles = {
+        siteContent: serializedContent,
+        pages: serializedPages,
+        pageData: pageDataJson,
+        pageText: pageTextJson,
+      };
+      await createPullRequest(true, payloadFiles);
+      if (pendingDeployment) {
+        approveDeploymentRequest(pendingDeployment.id, userProfile.email);
+        setPendingDeployment(loadPendingDeploymentRequest());
+      }
+      setIsSuperAdminDeployModalOpen(false);
+      setSuperAdminDeployNotes('');
+      setStatus('🚀 Déploiement Vercel réussi ! Toutes vos modifications (rubriques, pages, données) ont été publiées sur la branche main. Vercel met à jour le site psd-lfjp.vercel.app.');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Échec du déploiement GitHub / Vercel.';
+      setStatus(`❌ Échec du déploiement : ${msg}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // =========================================================================
@@ -1325,31 +1354,46 @@ const Admin = () => {
     setIsSaving(true);
     setStatus('');
     try {
-      const validationErrors = validateManagedPages(pages);
+      const currentPagesList = [...pages];
+      const managedPaths = new Set(currentPagesList.map((page) => normalizePageSlug(page.slug)));
+      const knownPaths = new Set(Object.keys(breadcrumbRoutes));
+
+      // Auto-ensure any card or rubrique path has a corresponding ManagedPage
+      content.home.cards.forEach((card) => {
+        const path = normalizePageSlug(card.path);
+        if (path !== '/' && !managedPaths.has(path) && !knownPaths.has(path)) {
+          currentPagesList.push({
+            slug: path,
+            title: card.title || 'Rubrique',
+            description: card.description || 'Description de la rubrique',
+            showInNavigation: true,
+            order: currentPagesList.length + 1,
+            blocks: [
+              { type: 'heading', level: 2, text: card.title || 'Rubrique' },
+              { type: 'paragraph', text: card.description || 'Contenu de la rubrique' },
+            ],
+          });
+          managedPaths.add(path);
+        }
+      });
+
+      const validationErrors = validateManagedPages(currentPagesList);
       if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
 
-      const pageDataStr = customFiles?.pageData || window.localStorage.getItem(pageDataDraftStorageKey) || pageDataJson;
+      const pageDataStr = customFiles?.pageData || pageDataJson || window.localStorage.getItem(pageDataDraftStorageKey) || '{}';
       const parsedPageData: unknown = JSON.parse(pageDataStr);
       if (!isValidPageData(parsedPageData)) {
         throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de déployer.');
       }
 
-      const pageTextStr = customFiles?.pageText || window.localStorage.getItem(pageTextDraftStorageKey) || pageTextJson;
+      const pageTextStr = customFiles?.pageText || pageTextJson || window.localStorage.getItem(pageTextDraftStorageKey) || '{}';
       const parsedPageText: unknown = JSON.parse(pageTextStr);
       if (!isValidPageTextOverrides(parsedPageText)) {
         throw new Error('Les modifications visuelles des pages sont invalides. Vérifiez leur JSON avant de déployer.');
       }
 
-      const contentStr = customFiles?.siteContent || window.localStorage.getItem(draftStorageKey) || serializedContent;
-      const pagesStr = customFiles?.pages || window.localStorage.getItem(pagesDraftStorageKey) || serializedPages;
-
-      const managedPaths = new Set(pages.map((page) => normalizePageSlug(page.slug)));
-      const knownPaths = new Set(Object.keys(breadcrumbRoutes));
-      const invalidCard = content.home.cards.find((card) => {
-        const path = normalizePageSlug(card.path);
-        return !managedPaths.has(path) && !knownPaths.has(path);
-      });
-      if (invalidCard) throw new Error(`La rubrique « ${invalidCard.title} » pointe vers une page inexistante (${invalidCard.path}). Créez ou rattachez cette page avant la Preview.`);
+      const contentStr = customFiles?.siteContent || serializedContent || window.localStorage.getItem(draftStorageKey) || '{}';
+      const pagesStr = customFiles?.pages || JSON.stringify({ pages: currentPagesList }, null, 2);
 
       const response = await fetch('/api/github/pull-request', {
         method: 'POST',
@@ -2849,7 +2893,9 @@ const Admin = () => {
               </span>
               <div className="hidden sm:block leading-tight">
                 <span className="font-playfair font-bold text-sm text-white group-hover:text-blue-300 transition-colors whitespace-nowrap">LFJP · Édition</span>
-                <span className="text-[10px] text-amber-400 font-semibold block">Profil Éditeur</span>
+                <span className={`text-[10px] font-semibold block ${userProfile.role === 'superadmin' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {userProfile.role === 'superadmin' ? 'Profil SuperAdmin' : userProfile.role === 'admin' ? 'Profil Admin' : 'Profil Éditeur'}
+                </span>
               </div>
             </button>
           </div>
@@ -2913,13 +2959,19 @@ const Admin = () => {
               <span className="hidden sm:inline lg:hidden">Brouillon</span>
             </Button>
 
-            {/* Deploy to Vercel Request Button */}
+            {/* Deploy to Vercel Button */}
             <Button
               type="button"
               size="sm"
-              onClick={() => setIsEditorDeployModalOpen(true)}
+              onClick={() => {
+                if (userProfile.role === 'superadmin' || userProfile.role === 'admin' || canPublish) {
+                  setIsSuperAdminDeployModalOpen(true);
+                } else {
+                  setIsEditorDeployModalOpen(true);
+                }
+              }}
               className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
-              title="Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"
+              title={userProfile.role === 'superadmin' || userProfile.role === 'admin' || canPublish ? "Déployer directement vers Vercel (branche main)" : "Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"}
             >
               <Send className="h-3.5 w-3.5 shrink-0" />
               <span className="hidden md:inline">Déployer sur Vercel</span>
@@ -3411,6 +3463,19 @@ const Admin = () => {
             <Save className="mr-1 h-3.5 w-3.5" />
             <span>Enregistrer</span>
           </Button>
+
+          {(userProfile.role === 'superadmin' || userProfile.role === 'admin' || canPublish) && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIsSuperAdminDeployModalOpen(true)}
+              className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
+              title="Publier directement toutes les modifications et déployer sur Vercel (branche main)"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Déployer vers Vercel</span>
+            </Button>
+          )}
 
           <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
@@ -8481,6 +8546,105 @@ const Admin = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Déploiement Direct Vercel pour SuperAdmin */}
+      {isSuperAdminDeployModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 text-slate-900">
+            <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-700 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-white/10 text-white">
+                  <Rocket className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-playfair font-bold text-lg text-white">Déployer sur Vercel</h3>
+                  <p className="text-xs text-emerald-100">Publication directe sur la branche main (SuperAdmin)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSuperAdminDeployModalOpen(false)}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs space-y-2">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  Prêt pour la mise en ligne immédiate
+                </p>
+                <p className="text-slate-600 leading-relaxed">
+                  Un commit atomique unique sera poussé sur la branche <strong className="text-slate-800">main</strong> du dépôt GitHub. Vercel lancera automatiquement la compilation de production sur <strong className="text-french-blue">psd-lfjp.vercel.app</strong>.
+                </p>
+                <div className="pt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700 font-medium">
+                  <div className="bg-white p-2 rounded border border-slate-200">
+                    📂 Rubriques : <strong>{rubriques.length}</strong>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-slate-200">
+                    📄 Pages CMS : <strong>{pages.length}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {pendingDeployment && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                  <p className="font-bold">Demande d’éditeur en attente :</p>
+                  <p className="text-[11px] text-amber-800">Ce déploiement validera et fusionnera également la demande soumise par {pendingDeployment.authorName} ({pendingDeployment.submittedBy}).</p>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">
+                  Note de version / message du commit (optionnel) :
+                </Label>
+                <Input
+                  value={superAdminDeployNotes}
+                  onChange={(e) => setSuperAdminDeployNotes(e.target.value)}
+                  placeholder="Ex : Ajout de la rubrique Contact et mise à jour des données"
+                  className="text-xs bg-slate-50 border-slate-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsSuperAdminDeployModalOpen(false)}
+                  disabled={isSaving}
+                  className="text-xs"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSuperAdminDirectDeploy}
+                  disabled={isSaving}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 px-4 shadow-md"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Déploiement en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      <span>Confirmer le déploiement Vercel</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

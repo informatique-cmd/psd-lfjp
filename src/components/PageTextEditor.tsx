@@ -23,6 +23,13 @@ const PageTextEditor = () => {
       return;
     }
 
+    // Do not burden normal site visitors with an auth network roundtrip on every page route
+    if (!editingRequested && !embedded) {
+      setIsAdmin(false);
+      setIsEditing(false);
+      return;
+    }
+
     fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(async (response) => (response.ok ? response.json() : null))
       .then((data) => {
@@ -39,7 +46,7 @@ const PageTextEditor = () => {
         setIsAdmin(false);
         setIsEditing(false);
       });
-  }, [editingRequested, editParam]);
+  }, [editingRequested, editParam, embedded]);
 
   useEffect(() => {
     checkAuth();
@@ -82,11 +89,27 @@ const PageTextEditor = () => {
   useEffect(() => {
     const root = document.getElementById('root');
     if (!root || isEditorRoute) return;
-    const apply = () => applyPageTextOverrides(root, location.pathname, overrides);
+
+    const pageOverrides = overrides[location.pathname];
+    if (!pageOverrides || Object.keys(pageOverrides).length === 0) {
+      return;
+    }
+
+    let rafId: number | null = null;
+    const apply = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        applyPageTextOverrides(root, location.pathname, overrides);
+      });
+    };
+
     apply();
     const observer = new MutationObserver(apply);
-    observer.observe(root, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    observer.observe(root, { childList: true, subtree: true, characterData: false });
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, [isEditorRoute, location.pathname, overrides]);
 
   // When modification mode is active, intercept clicks on links and buttons in capture phase

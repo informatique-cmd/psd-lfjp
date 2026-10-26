@@ -100,6 +100,16 @@ export const defaultRubriques: AdminRubrique[] = [
     isOfficial: true,
     order: 5,
   },
+  {
+    id: 'contact',
+    name: 'Contact & Accès',
+    path: '/contact',
+    badge: 'Contact',
+    description: 'Coordonnées, secrétariat, intendance et localisation du LFJP',
+    iconName: 'Mail',
+    isOfficial: false,
+    order: 6,
+  },
 ];
 
 const RUBRIQUES_STORAGE_KEY = 'lfjp-admin-rubriques-v3';

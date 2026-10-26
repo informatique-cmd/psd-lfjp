@@ -2,25 +2,41 @@
   "pages": [
     {
       "slug": "/contact",
-      "title": "Contact",
-      "description": "Présentation et fiches de cette rubrique.",
+      "title": "Contact & Accès",
+      "description": "Coordonnées, accès et formulaire de contact du Lycée Français Jacques Prévert à Saly.",
       "showInNavigation": true,
-      "order": 1,
+      "order": 5,
       "blocks": [
         {
           "type": "heading",
           "level": 2,
-          "text": "Contact"
+          "text": "Contactez le Lycée Français Jacques Prévert"
         },
         {
           "type": "paragraph",
-          "text": "Présentation et fiches de cette rubrique."
+          "text": "Pour toute demande d'information concernant les inscriptions, la scolarité, la vie scolaire ou le Plan Stratégique de Développement (2026-2030), nos équipes sont à votre entière disposition."
         },
         {
           "type": "callout",
-          "title": "Points clés",
-          "text": "Présentation des enjeux et objectifs de cette rubrique.",
+          "title": "Secrétariat & Accueil",
+          "text": "Accueil du public : du lundi au vendredi de 07h30 à 16h30. Téléphone : +221 33 957 20 62 — Email : administration@lfjpsaly.org",
           "tone": "blue"
+        },
+        {
+          "type": "table",
+          "headers": ["Service", "Contact", "Disponibilité"],
+          "rows": [
+            ["Direction & Secrétariat", "administration@lfjpsaly.org", "07h30 – 16h30"],
+            ["Vie Scolaire & Suivi Élèves", "viescolaire@lfjpsaly.org", "07h30 – 17h00"],
+            ["Service Financier & Intendance", "gestion@lfjpsaly.org", "08h00 – 15h30"],
+            ["Informatique & Support Digital", "informatique@lfjpsaly.org", "Permanence technique"]
+          ]
+        },
+        {
+          "type": "callout",
+          "title": "Localisation",
+          "text": "BP 185, Station Balnéaire de Saly Portudal, Petite Côte, Sénégal.",
+          "tone": "gold"
         }
       ]
     }
