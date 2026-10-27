@@ -908,13 +908,17 @@ const Admin = () => {
 
   useEffect(() => {
     const receiveSelection = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin || event.source !== previewFrame.current?.contentWindow) return;
+      if (event.origin !== window.location.origin) return;
+      if (previewFrame.current && event.source !== previewFrame.current.contentWindow) return;
       if (event.data?.type === 'lfjp-route-change' && typeof event.data.path === 'string') {
         setVisualRoute(event.data.path);
         setSelectedVisualElement(null);
         return;
       }
-      if (event.data?.type !== 'lfjp-cms-select' || event.data.page !== visualRoute || !isRecord(event.data.selection)) return;
+      if (event.data?.type !== 'lfjp-cms-select' || !isRecord(event.data.selection)) return;
+      if (event.data.page && typeof event.data.page === 'string') {
+        setVisualRoute(event.data.page);
+      }
       const selection = event.data.selection;
       if (typeof selection.path !== 'string' || !['text', 'image', 'link'].includes(String(selection.kind))) return;
       const rect = selection.rect as { left: number; top: number; width: number; height: number } | undefined;
@@ -3095,8 +3099,8 @@ const Admin = () => {
             <div ref={previewCanvas} className="relative flex-1 min-h-0 w-full h-full overflow-hidden bg-slate-900">
               <iframe
                 ref={previewFrame}
-                key={`${visualRoute}-${editorModeActive ? 'edit' : 'nav'}`}
-                title={`Aperçu interactif ${visualRoute}`}
+                name="lfjp-admin-preview"
+                title="Aperçu interactif du site"
                 src={`${visualRoute}?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`}
                 className="block w-full h-full bg-white border-0 shadow-inner"
               />
@@ -7430,6 +7434,7 @@ const Admin = () => {
                   <div className="relative min-h-full bg-white shadow-lg transition-[width] duration-200" style={{ width: previewViewport === 'desktop' ? '100%' : previewViewport === 'tablet' ? '820px' : '390px', maxWidth: '100%' }}>
                 <iframe
                   ref={previewFrame}
+                  name="lfjp-admin-preview"
                   key={visualRoute}
                   title={`Aperçu ${visualRoute}`}
                   src={`${visualRoute}?draft=1&edit=1&embedded=1`}

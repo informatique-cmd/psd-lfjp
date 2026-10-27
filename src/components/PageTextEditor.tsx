@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { applyPageTextOverrides, getNodePath, loadPageTextOverrides, pageTextDraftStorageKey, type PageElementOverride, type PageTextOverrides } from '@/lib/pageOverrides';
 import { loadActiveUserProfile } from '@/data/adminProfilesAndRubriques';
 
 const PageTextEditor = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isEditorRoute = location.pathname === '/espace-direction' || location.pathname === '/admin';
   const editParam = new URLSearchParams(location.search).get('edit');
-  const embedded = new URLSearchParams(location.search).get('embedded') === '1';
-  const editingRequested = editParam === '1' && embedded;
+  const isEmbeddedInAdmin = typeof window !== 'undefined' && (
+    window.name === 'lfjp-admin-preview' ||
+    new URLSearchParams(location.search).get('embedded') === '1'
+  );
+  const editingRequested = editParam === '1' && isEmbeddedInAdmin;
   const [isAdmin, setIsAdmin] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [overrides, setOverrides] = useState<PageTextOverrides>(loadPageTextOverrides);
@@ -24,7 +28,7 @@ const PageTextEditor = () => {
     }
 
     // Do not burden normal site visitors with an auth network roundtrip on every page route
-    if (!editingRequested && !embedded) {
+    if (!editingRequested && !isEmbeddedInAdmin) {
       setIsAdmin(false);
       setIsEditing(false);
       return;
@@ -46,7 +50,7 @@ const PageTextEditor = () => {
         setIsAdmin(false);
         setIsEditing(false);
       });
-  }, [editingRequested, embedded]);
+  }, [editingRequested, isEmbeddedInAdmin]);
 
   useEffect(() => {
     checkAuth();
@@ -56,22 +60,25 @@ const PageTextEditor = () => {
 
   // Synchronize route change to parent admin iframe
   useEffect(() => {
-    if (embedded) {
+    if (isEmbeddedInAdmin) {
       window.parent.postMessage({ type: 'lfjp-route-change', path: location.pathname }, window.location.origin);
     }
-  }, [embedded, location.pathname]);
+  }, [isEmbeddedInAdmin, location.pathname]);
 
-  // Listen to dynamic edit mode toggle messages from parent admin window
+  // Listen to dynamic messages from parent admin window (toggle edit mode or navigate)
   useEffect(() => {
     const handleMsg = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'lfjp-set-edit-mode') {
         setIsEditing(Boolean(event.data.active));
       }
+      if (event.data?.type === 'lfjp-navigate' && typeof event.data.path === 'string') {
+        navigate(event.data.path);
+      }
     };
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const syncOverrides = (event: StorageEvent) => {
@@ -115,7 +122,7 @@ const PageTextEditor = () => {
   // When modification mode is active inside the Visual Editor iframe, intercept clicks on links and buttons in capture phase
   // so that clicking anywhere on the page allows selecting and editing the text/content instead of navigating away!
   useEffect(() => {
-    if (!embedded || !isAdmin || !isEditing || isEditorRoute) return;
+    if (!isEmbeddedInAdmin || !isAdmin || !isEditing || isEditorRoute) return;
     const interceptClick = (event: MouseEvent) => {
       const target = event.target as Node | null;
       if (!target) return;
@@ -131,10 +138,10 @@ const PageTextEditor = () => {
 
     document.addEventListener('click', interceptClick, true);
     return () => document.removeEventListener('click', interceptClick, true);
-  }, [embedded, isAdmin, isEditing, isEditorRoute]);
+  }, [isEmbeddedInAdmin, isAdmin, isEditing, isEditorRoute]);
 
   useEffect(() => {
-    if (!embedded || !isAdmin || !isEditing || isEditorRoute) return;
+    if (!isEmbeddedInAdmin || !isAdmin || !isEditing || isEditorRoute) return;
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
@@ -163,7 +170,7 @@ const PageTextEditor = () => {
           ? rangeNode as Text
           : findTextNode(element);
 
-      if (embedded) {
+      if (isEmbeddedInAdmin) {
         let selectedPath: string | null = null;
         let selected: PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string; rect?: { left: number; top: number; width: number; height: number } } | null = null;
 
@@ -196,7 +203,7 @@ const PageTextEditor = () => {
 
     document.addEventListener('pointerdown', handlePointerDown, true);
     return () => document.removeEventListener('pointerdown', handlePointerDown, true);
-  }, [embedded, isAdmin, isEditing, isEditorRoute, location.pathname, overrides]);
+  }, [isEmbeddedInAdmin, isAdmin, isEditing, isEditorRoute, location.pathname, overrides]);
 
   // Bottom floating widget is removed entirely to keep the view clean and unhindered.
   return null;
