@@ -1,0 +1,8 @@
+{
+  "name": "LFJP - Plan Stratégique de Développement",
+  "description": "Plan Stratégique de Développement du Lycée Français Jacques Prévert",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
