@@ -24,12 +24,32 @@
         },
         {
           "type": "table",
-          "headers": ["Service", "Contact", "Disponibilité"],
+          "headers": [
+            "Service",
+            "Contact",
+            "Disponibilité"
+          ],
           "rows": [
-            ["Direction & Secrétariat", "administration@lfjpsaly.org", "07h30 – 16h30"],
-            ["Vie Scolaire & Suivi Élèves", "viescolaire@lfjpsaly.org", "07h30 – 17h00"],
-            ["Service Financier & Intendance", "gestion@lfjpsaly.org", "08h00 – 15h30"],
-            ["Informatique & Support Digital", "informatique@lfjpsaly.org", "Permanence technique"]
+            [
+              "Direction & Secrétariat",
+              "administration@lfjpsaly.org",
+              "07h30 – 16h30"
+            ],
+            [
+              "Vie Scolaire & Suivi Élèves",
+              "viescolaire@lfjpsaly.org",
+              "07h30 – 17h00"
+            ],
+            [
+              "Service Financier & Intendance",
+              "gestion@lfjpsaly.org",
+              "08h00 – 15h30"
+            ],
+            [
+              "Informatique & Support Digital",
+              "informatique@lfjpsaly.org",
+              "Permanence technique"
+            ]
           ]
         },
         {
