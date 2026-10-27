@@ -338,7 +338,7 @@ const Admin = () => {
   const [showGatePassword, setShowGatePassword] = useState(false);
 
   const canDelete = userProfile.canDelete && (userProfile.role === 'admin' || userProfile.role === 'superadmin');
-  const canPublish = Boolean(userProfile.canPublish) || userProfile.role === 'admin' || userProfile.role === 'superadmin';
+  const canPublish = (userProfile.role === 'admin' || userProfile.role === 'superadmin') || (userProfile.role !== 'editor' && Boolean(userProfile.canPublish));
 
   const assertCanDelete = (actionName = 'cette action'): boolean => {
     if (!canDelete) {
@@ -2964,23 +2964,29 @@ const Admin = () => {
               <span className="hidden sm:inline lg:hidden">Brouillon</span>
             </Button>
 
-            {/* Deploy to Vercel Button */}
+            {/* Deploy to Vercel / Submit to SuperAdmin Button */}
             <Button
               type="button"
               size="sm"
               onClick={() => {
-                if (canPublish) {
+                if (userProfile.role === 'editor') {
+                  setIsEditorDeployModalOpen(true);
+                } else if (canPublish) {
                   setIsSuperAdminDeployModalOpen(true);
                 } else {
                   setIsEditorDeployModalOpen(true);
                 }
               }}
               className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
-              title={canPublish ? "Déployer directement vers Vercel (branche main)" : "Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"}
+              title={userProfile.role === 'editor' ? "Transmettre vos modifications au SuperAdmin pour déploiement sur Vercel" : "Déployer directement vers Vercel (branche main)"}
             >
               <Send className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden md:inline">Déployer sur Vercel</span>
-              <span className="md:hidden">Déployer</span>
+              <span className="hidden md:inline">
+                {userProfile.role === 'editor' ? 'Envoyer au SuperAdmin' : 'Déployer sur Vercel'}
+              </span>
+              <span className="md:hidden">
+                {userProfile.role === 'editor' ? 'Envoyer' : 'Déployer'}
+              </span>
             </Button>
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block shrink-0" />

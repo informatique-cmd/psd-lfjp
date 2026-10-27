@@ -189,7 +189,7 @@ export const defaultAccounts: UserAccount[] = [
     canDelete: false, // Strict: no deletion allowed for editor!
     canEdit: true,
     canCreate: true,
-    canPublish: true,
+    canPublish: false, // Editor submits to SuperAdmin for deployment
   },
 ];
 
@@ -210,6 +210,7 @@ export function loadConfiguredAccounts(): UserAccount[] {
             map.set(acc.id, {
               ...acc,
               canDelete: acc.id === 'superadmin',
+              canPublish: acc.id === 'superadmin',
             });
           }
         });
