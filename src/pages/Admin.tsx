@@ -338,6 +338,7 @@ const Admin = () => {
   const [showGatePassword, setShowGatePassword] = useState(false);
 
   const canDelete = userProfile.canDelete && (userProfile.role === 'admin' || userProfile.role === 'superadmin');
+  const canPublish = Boolean(userProfile.canPublish) || userProfile.role === 'admin' || userProfile.role === 'superadmin';
 
   const assertCanDelete = (actionName = 'cette action'): boolean => {
     if (!canDelete) {
@@ -2893,8 +2894,8 @@ const Admin = () => {
               </span>
               <div className="hidden sm:block leading-tight">
                 <span className="font-playfair font-bold text-sm text-white group-hover:text-blue-300 transition-colors whitespace-nowrap">LFJP · Édition</span>
-                <span className={`text-[10px] font-semibold block ${userProfile.role === 'superadmin' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {userProfile.role === 'superadmin' ? 'Profil SuperAdmin' : userProfile.role === 'admin' ? 'Profil Admin' : 'Profil Éditeur'}
+                <span className="text-[10px] text-amber-400 font-semibold block">
+                  {userProfile.name}
                 </span>
               </div>
             </button>

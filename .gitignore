@@ -27,3 +27,4 @@ public/assets/aistudio
 .git_token
 .pending-deployment.json
 src/content/.pending-deployment.json
+*.tsbuildinfo
