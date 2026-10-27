@@ -2964,14 +2964,14 @@ const Admin = () => {
               type="button"
               size="sm"
               onClick={() => {
-                if (userProfile.role === 'superadmin' || userProfile.role === 'admin' || canPublish) {
+                if (canPublish) {
                   setIsSuperAdminDeployModalOpen(true);
                 } else {
                   setIsEditorDeployModalOpen(true);
                 }
               }}
               className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
-              title={userProfile.role === 'superadmin' || userProfile.role === 'admin' || canPublish ? "Déployer directement vers Vercel (branche main)" : "Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"}
+              title={canPublish ? "Déployer directement vers Vercel (branche main)" : "Enregistrer pour publier sur Vercel (Validation finale par le SuperAdmin)"}
             >
               <Send className="h-3.5 w-3.5 shrink-0" />
               <span className="hidden md:inline">Déployer sur Vercel</span>
@@ -3464,7 +3464,7 @@ const Admin = () => {
             <span>Enregistrer</span>
           </Button>
 
-          {(userProfile.role === 'superadmin' || userProfile.role === 'admin' || canPublish) && (
+          {canPublish && (
             <Button
               type="button"
               size="sm"
