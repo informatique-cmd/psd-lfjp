@@ -1,13 +1,13 @@
 {
   "/budget-cadre-vie-infrastructures": {
     "1.1.2.0.0.0.2.0.1.0.1.0.0.2.0": {
-      "text": "60 000 001 F CFA"
+      "text": "60 000 000 F CFA"
     },
     "1.1.2.0.0.0.2.0.1.0.2.0.0.2.0": {
-      "text": "75 000 001 F CFA"
+      "text": "75 000 000 F CFA"
     },
     "1.1.2.0.0.0.2.0.1.0.3.0.0.2.0": {
-      "text": "60 000 001 F CFA"
+      "text": "60 000 000 F CFA"
     }
   },
   "/vision-missions-valeurs": {
@@ -27,7 +27,7 @@
   },
   "/methode": {
     "1.1.2.1.0.0.0.3.1.0.0": {
-      "text": "Validation APES"
+      "text": "Validation APE"
     }
   }
 }
