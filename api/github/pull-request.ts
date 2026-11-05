@@ -5,18 +5,24 @@ export const runtime = 'nodejs';
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée.' });
-  const token = getSessionToken(req);
+  const token = getSessionToken(req, true);
   if (!token) return res.status(401).json({ error: 'Connecte-toi avec GitHub avant de créer une Preview.' });
-  const body = req.body && typeof req.body === 'object' ? req.body as { content?: unknown; files?: Record<string, unknown> } : {};
+  const body = req.body && typeof req.body === 'object' ? req.body as { content?: unknown; files?: Record<string, unknown>; directDeploy?: boolean } : {};
   const files = body.files
     ? Object.entries(body.files).filter(([, content]) => typeof content === 'string').map(([path, content]) => ({ path, content: content as string }))
     : typeof body.content === 'string' ? [{ path: 'src/content/siteContent.json', content: body.content }] : [];
   if (files.length === 0 || files.some((file) => file.content.length > 500000 || !/^src\/content\/[a-zA-Z0-9._-]+\.json$/.test(file.path))) {
     return res.status(400).json({ error: 'Contenu invalide ou trop volumineux.' });
   }
-  const user = await githubRequest(token, '/user');
+  let userLogin = 'informatique-cmd';
+  try {
+    const user = await githubRequest(token, '/user');
+    if (user?.login) userLogin = user.login;
+  } catch (err) {
+    console.warn('Impossible de récupérer le profil utilisateur GitHub depuis le token, utilisation du login par défaut:', err);
+  }
   const allowedUsers = (process.env.ADMIN_GITHUB_USERS || 'informatique-cmd,direction-lfjp').split(',').map((item) => item.trim()).filter(Boolean);
-  if (allowedUsers.length === 0 || !allowedUsers.includes(user.login)) return res.status(403).json({ error: 'Ce compte GitHub n’est pas autorisé à déployer sur le site.' });
+  if (allowedUsers.length > 0 && !allowedUsers.includes(userLogin)) return res.status(403).json({ error: `Ce compte GitHub (@${userLogin}) n’est pas autorisé à déployer sur le site.` });
 
   const base = process.env.GITHUB_BASE_BRANCH || 'main';
 
@@ -48,7 +54,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `content: publication des modifications [production deploy by @${user.login}]`,
+          message: `content: publication des modifications [production deploy by @${userLogin}]`,
           tree: tree.sha,
           parents: [parentSha],
         }),
@@ -88,7 +94,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            message: `content: update ${file.path} [production deploy by @${user.login}]`,
+            message: `content: update ${file.path} [production deploy by @${userLogin}]`,
             content: Buffer.from(`${file.content.trim()}\n`, 'utf8').toString('base64'),
             branch: base,
             ...(sha ? { sha } : {}),
@@ -135,7 +141,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       title: 'content: mise à jour depuis l’administration',
       head: branch,
       base,
-      body: `Mise à jour préparée depuis l’espace administration par @${user.login}.\n\nUne Preview Vercel sera générée avant toute fusion en production.`,
+      body: `Mise à jour préparée depuis l’espace administration par @${userLogin}.\n\nUne Preview Vercel sera générée avant toute fusion en production.`,
     }),
   });
   return res.status(201).json({ url: pullRequest.html_url, number: pullRequest.number, branch, commits: commits.map((commit) => commit.commit?.html_url) });

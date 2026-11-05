@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Méthode non autorisée.' });
-  const token = getSessionToken(req);
+  const token = getSessionToken(req, false);
   if (!token) return res.status(401).json({ user: null });
   try {
     const user = await githubRequest(token, '/user');
