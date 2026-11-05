@@ -4,6 +4,7 @@ export const isContentDraftPreview = () =>
   typeof window !== 'undefined' && (
     new URLSearchParams(window.location.search).get('draft') === '1' ||
     new URLSearchParams(window.location.search).get('edit') === '1' ||
+    window.location.pathname.startsWith('/espace-direction') ||
     window.sessionStorage.getItem('lfjp-preview-mode') === '1' ||
     window.sessionStorage.getItem('lfjp_preview_active') === '1'
   );

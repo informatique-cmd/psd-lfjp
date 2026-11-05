@@ -169,8 +169,6 @@ const getPeriodStartYear = (period: string) => Number(period.match(/\d{4}/)?.[0]
 
 const BudgetCadreVieInfrastructures = () => {
   const [currency, setCurrency] = useState<'XOF' | 'EUR'>('XOF');
-  const cumulativeTuition = 345_139_418;
-  const annualTotals = [135_000_000, 126_666_667, 156_666_667, 156_666_667, 200_000_000];
 
   const baseBudgetData = useMemo(() => {
     return (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData;
@@ -191,27 +189,6 @@ const BudgetCadreVieInfrastructures = () => {
     return baseBudgetData;
   }, [baseBudgetData]);
 
-  const dynamicSummaryCards = useMemo(() => [
-    {
-      label: 'Investissement total',
-      value: liveBudget.summaryCards?.totalInvestment ?? 775_000_000,
-      icon: PiggyBank,
-      accent: 'from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-100',
-    },
-    {
-      label: 'Manque à gagner / besoin de financement à l’horizon 2030',
-      value: liveBudget.summaryCards?.fundingGap ?? 89_860_582,
-      icon: AlertTriangle,
-      accent: 'from-rose-50 to-amber-50 text-amber-700 border-amber-100',
-    },
-    {
-      label: 'Capacité totale estimée (budget + ANEFE + écolages)',
-      value: liveBudget.summaryCards?.estimatedCapacity ?? 685_139_418,
-      icon: BadgeDollarSign,
-      accent: 'from-sky-50 to-indigo-50 text-sky-700 border-sky-100',
-    },
-  ], [liveBudget]);
-
   const activeProjects = useMemo(() => {
     return (liveBudget.projects && liveBudget.projects.length > 0) ? liveBudget.projects : projects;
   }, [liveBudget]);
@@ -220,17 +197,123 @@ const BudgetCadreVieInfrastructures = () => {
     return (liveBudget.financialTimeline && liveBudget.financialTimeline.length > 0) ? liveBudget.financialTimeline : financialTimeline;
   }, [liveBudget]);
 
+  // Dynamically derive years from timeline
+  const years = useMemo(() => {
+    if (activeTimeline && activeTimeline.length > 0) {
+      return activeTimeline.map((r) => r.year).sort((a, b) => a - b);
+    }
+    return [2026, 2027, 2028, 2029, 2030];
+  }, [activeTimeline]);
+
+  // Derived calculations for full dynamic correlation
+  const computedTotalInvestment = useMemo(() => {
+    return activeProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
+  }, [activeProjects]);
+
+  const computedTotalCapacity = useMemo(() => {
+    return activeTimeline.reduce(
+      (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
+      0
+    );
+  }, [activeTimeline]);
+
+  const computedFundingGap = useMemo(() => {
+    return Math.max(0, computedTotalInvestment - computedTotalCapacity);
+  }, [computedTotalInvestment, computedTotalCapacity]);
+
+  const dynamicSummaryCards = useMemo(() => [
+    {
+      label: 'Investissement total',
+      value: liveBudget.summaryCards?.totalInvestment && liveBudget.summaryCards.totalInvestment !== 775_000_000
+        ? liveBudget.summaryCards.totalInvestment
+        : computedTotalInvestment,
+      icon: PiggyBank,
+      accent: 'from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-100',
+    },
+    {
+      label: 'Manque à gagner / besoin de financement à l’horizon 2030',
+      value: liveBudget.summaryCards?.fundingGap && liveBudget.summaryCards.fundingGap !== 89_860_582
+        ? liveBudget.summaryCards.fundingGap
+        : computedFundingGap,
+      icon: AlertTriangle,
+      accent: 'from-rose-50 to-amber-50 text-amber-700 border-amber-100',
+    },
+    {
+      label: 'Capacité totale estimée (budget + ANEFE + écolages)',
+      value: liveBudget.summaryCards?.estimatedCapacity && liveBudget.summaryCards.estimatedCapacity !== 685_139_418
+        ? liveBudget.summaryCards.estimatedCapacity
+        : computedTotalCapacity,
+      icon: BadgeDollarSign,
+      accent: 'from-sky-50 to-indigo-50 text-sky-700 border-sky-100',
+    },
+  ], [liveBudget, computedTotalInvestment, computedFundingGap, computedTotalCapacity]);
+
+  // Dynamic annual expenses matching timeline rows per year
+  const annualTotals = useMemo(() => {
+    return years.map((year) => {
+      const row = activeTimeline.find((r) => r.year === year);
+      return row ? Number(row.depenses) || 0 : 0;
+    });
+  }, [years, activeTimeline]);
+
+  // Dynamic project schedule based on active projects and periods
+  const activeProjectSchedule = useMemo(() => {
+    if (liveBudget.projectSchedule && liveBudget.projectSchedule.length > 0) {
+      return liveBudget.projectSchedule;
+    }
+    return activeProjects.map((p) => {
+      const match = p.period.match(/(\d{4})/g);
+      const start = match && match[0] ? parseInt(match[0], 10) : 2026;
+      const end = match && match[1] ? parseInt(match[1], 10) : start;
+      const duration = Math.max(1, end - start + 1);
+      const spendPerYear = Math.round((Number(p.budget) || 0) / duration);
+      const annualSpend: Record<string, number> = {};
+      for (let y = start; y <= end; y++) {
+        annualSpend[String(y)] = spendPerYear;
+      }
+      return {
+        project: p.title,
+        start,
+        end,
+        annualSpend,
+      };
+    });
+  }, [liveBudget, activeProjects]);
+
+  // Tuition simulations and cumulative total
+  const activeTuitionSimulations = useMemo(() => {
+    if (liveBudget.tuitionSimulations && liveBudget.tuitionSimulations.length > 0) {
+      return liveBudget.tuitionSimulations;
+    }
+    return tuitionSimulations;
+  }, [liveBudget]);
+
+  const activeTuitionBaseRevenue = useMemo(() => {
+    return liveBudget.tuitionBaseRevenue || tuitionBaseRevenue;
+  }, [liveBudget]);
+
+  const cumulativeTuition = useMemo(() => {
+    return activeTuitionSimulations.reduce((acc, s) => acc + (Number(s.revenue) || 0), 0);
+  }, [activeTuitionSimulations]);
+
   const chartData = useMemo(
     () =>
       activeTimeline.map((row) => {
         const factor = currency === 'EUR' ? 1 / XOF_TO_EUR : 1;
+        const capacite = Number(row.capacite) || 0;
+        const leviers = Number(row.leviers) || 0;
+        const recettesTotales = row.recettesTotales !== undefined && Number(row.recettesTotales) > 0
+          ? Number(row.recettesTotales)
+          : (capacite + leviers);
+        const depenses = Number(row.depenses) || 0;
+        const solde = recettesTotales - depenses;
         return {
           ...row,
-          capacite: row.capacite * factor,
-          leviers: row.leviers * factor,
-          recettesTotales: row.recettesTotales * factor,
-          depenses: row.depenses * factor,
-          solde: (row.recettesTotales - row.depenses) * factor,
+          capacite: Math.round(capacite * factor),
+          leviers: Math.round(leviers * factor),
+          recettesTotales: Math.round(recettesTotales * factor),
+          depenses: Math.round(depenses * factor),
+          solde: Math.round(solde * factor),
         };
       }),
     [currency, activeTimeline],
@@ -246,10 +329,22 @@ const BudgetCadreVieInfrastructures = () => {
 
   const cashFlowRows = useMemo(
     () =>
-      activeTimeline.map((row) => ({
-        ...row,
-        solde: row.recettesTotales - row.depenses,
-      })),
+      activeTimeline.map((row) => {
+        const capacite = Number(row.capacite) || 0;
+        const leviers = Number(row.leviers) || 0;
+        const recettesTotales = row.recettesTotales !== undefined && Number(row.recettesTotales) > 0
+          ? Number(row.recettesTotales)
+          : (capacite + leviers);
+        const depenses = Number(row.depenses) || 0;
+        return {
+          ...row,
+          capacite,
+          leviers,
+          recettesTotales,
+          depenses,
+          solde: recettesTotales - depenses,
+        };
+      }),
     [activeTimeline],
   );
 
@@ -587,7 +682,7 @@ const BudgetCadreVieInfrastructures = () => {
                     ))}
                   </div>
                   <div className="space-y-2">
-                    {projectSchedule.map((item, index) => (
+                    {activeProjectSchedule.map((item, index) => (
                       <div key={item.project} className="grid grid-cols-[140px_repeat(5,1fr)] items-center gap-2">
                         <span className="text-sm font-semibold text-slate-800">{item.project}</span>
                         {years.map((year) => {
@@ -632,7 +727,7 @@ const BudgetCadreVieInfrastructures = () => {
                 <PiggyBank className="h-5 w-5 text-emerald-600" aria-hidden />
               </div>
               <p className="mb-3 text-xs font-semibold text-slate-600">
-                Base revenus: <span className="font-bold text-slate-900" data-currency-amount={tuitionBaseRevenue}>{formatCurrency(tuitionBaseRevenue, currency)}</span>
+                Base revenus: <span className="font-bold text-slate-900" data-currency-amount={activeTuitionBaseRevenue}>{formatCurrency(activeTuitionBaseRevenue, currency)}</span>
               </p>
               <div className="overflow-hidden rounded-xl border border-slate-100">
                 <table className="min-w-full divide-y divide-slate-100 text-sm">
@@ -644,7 +739,7 @@ const BudgetCadreVieInfrastructures = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
-                    {tuitionSimulations.map((item) => (
+                    {activeTuitionSimulations.map((item) => (
                       <tr key={item.year} className="hover:bg-slate-50">
                         <td className="px-4 py-2 font-semibold text-slate-900">{item.year}</td>
                         <td className="px-4 py-2 text-right text-slate-700">{item.increase}%</td>

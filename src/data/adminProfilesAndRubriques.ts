@@ -189,7 +189,7 @@ export const defaultAccounts: UserAccount[] = [
     canDelete: false, // Strict: no deletion allowed for editor!
     canEdit: true,
     canCreate: true,
-    canPublish: false, // Editor submits to SuperAdmin for deployment
+    canPublish: true, // Editor can deploy directly to Vercel & GitHub
   },
 ];
 
@@ -210,7 +210,7 @@ export function loadConfiguredAccounts(): UserAccount[] {
             map.set(acc.id, {
               ...acc,
               canDelete: acc.id === 'superadmin',
-              canPublish: acc.id === 'superadmin',
+              canPublish: true,
             });
           }
         });
@@ -288,6 +288,7 @@ export function loadActiveUserProfile(): UserProfile {
         return {
           ...parsed,
           canDelete: parsed.role === 'superadmin' || parsed.id === 'superadmin',
+          canPublish: true,
         };
       }
     }

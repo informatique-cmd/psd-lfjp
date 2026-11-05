@@ -338,7 +338,7 @@ const Admin = () => {
   const [showGatePassword, setShowGatePassword] = useState(false);
 
   const canDelete = userProfile.canDelete && (userProfile.role === 'admin' || userProfile.role === 'superadmin');
-  const canPublish = (userProfile.role === 'admin' || userProfile.role === 'superadmin') || (userProfile.role !== 'editor' && Boolean(userProfile.canPublish));
+  const canPublish = true;
 
   const assertCanDelete = (actionName = 'cette action'): boolean => {
     if (!canDelete) {
@@ -2033,11 +2033,25 @@ const Admin = () => {
       const projects = [...budget.projects];
       if (!projects[index]) return data;
       projects[index] = { ...projects[index], [field]: field === 'budget' ? Number(value) || 0 : value };
+      
+      // Keep summary cards in 100% correlation with projects
+      const totalInvestment = projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
+      const estimatedCapacity = budget.financialTimeline.reduce(
+        (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
+        0
+      );
+      const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
+
       return {
         ...data,
         budgetData: {
           ...budget,
           projects,
+          summaryCards: {
+            ...budget.summaryCards,
+            totalInvestment,
+            fundingGap,
+          },
         },
       };
     });
@@ -2054,11 +2068,24 @@ const Admin = () => {
         budget: 10000000,
         color: 'from-sky-100 to-sky-50',
       };
+      const updatedProjects = [...budget.projects, newProject];
+      const totalInvestment = updatedProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
+      const estimatedCapacity = budget.financialTimeline.reduce(
+        (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
+        0
+      );
+      const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
+
       return {
         ...data,
         budgetData: {
           ...budget,
-          projects: [...budget.projects, newProject],
+          projects: updatedProjects,
+          summaryCards: {
+            ...budget.summaryCards,
+            totalInvestment,
+            fundingGap,
+          },
         },
       };
     });
@@ -2068,11 +2095,24 @@ const Admin = () => {
     if (!assertCanDelete('la suppression d’un projet d’investissement')) return;
     updateEditablePageData((data) => {
       const budget = (data.budgetData as BudgetData) || defaultBudgetData;
+      const updatedProjects = budget.projects.filter((_, i) => i !== index);
+      const totalInvestment = updatedProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
+      const estimatedCapacity = budget.financialTimeline.reduce(
+        (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
+        0
+      );
+      const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
+
       return {
         ...data,
         budgetData: {
           ...budget,
-          projects: budget.projects.filter((_, i) => i !== index),
+          projects: updatedProjects,
+          summaryCards: {
+            ...budget.summaryCards,
+            totalInvestment,
+            fundingGap,
+          },
         },
       };
     });
@@ -2083,17 +2123,33 @@ const Admin = () => {
       const budget = (data.budgetData as BudgetData) || defaultBudgetData;
       const timeline = budget.financialTimeline.map((row, idx) => {
         if (idx !== yearIndex) return row;
-        const updated = { ...row, [field]: value };
+        const numVal = Number(value) || 0;
+        const updated = { ...row, [field]: numVal };
         if (field === 'capacite' || field === 'leviers') {
-          updated.recettesTotales = (field === 'capacite' ? value : row.capacite) + (field === 'leviers' ? value : row.leviers);
+          const cap = field === 'capacite' ? numVal : Number(row.capacite) || 0;
+          const lev = field === 'leviers' ? numVal : Number(row.leviers) || 0;
+          updated.recettesTotales = cap + lev;
         }
         return updated;
       });
+
+      const totalInvestment = budget.projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
+      const estimatedCapacity = timeline.reduce(
+        (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
+        0
+      );
+      const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
+
       return {
         ...data,
         budgetData: {
           ...budget,
           financialTimeline: timeline,
+          summaryCards: {
+            ...budget.summaryCards,
+            estimatedCapacity,
+            fundingGap,
+          },
         },
       };
     });
@@ -2102,12 +2158,23 @@ const Admin = () => {
   const updateTuitionSimulation = (index: number, field: keyof TuitionSimulation, value: number) => {
     updateEditablePageData((data) => {
       const budget = (data.budgetData as BudgetData) || defaultBudgetData;
-      const sims = budget.tuitionSimulations.map((sim, idx) => idx === index ? { ...sim, [field]: value } : sim);
+      const baseRev = budget.tuitionBaseRevenue || 1_203_146_500;
+      const sims = budget.tuitionSimulations.map((sim, idx) => {
+        if (idx !== index) return sim;
+        const numVal = Number(value) || 0;
+        const updated = { ...sim, [field]: numVal };
+        if (field === 'increase') {
+          updated.revenue = Math.round(baseRev * (numVal / 100));
+        }
+        return updated;
+      });
+      const cumulativeTuition = sims.reduce((sum, s) => sum + (Number(s.revenue) || 0), 0);
       return {
         ...data,
         budgetData: {
           ...budget,
           tuitionSimulations: sims,
+          cumulativeTuition,
         },
       };
     });
@@ -2964,28 +3031,22 @@ const Admin = () => {
               <span className="hidden sm:inline lg:hidden">Brouillon</span>
             </Button>
 
-            {/* Deploy to Vercel / Submit to SuperAdmin Button */}
+            {/* Deploy to Vercel / Direct Publish Button */}
             <Button
               type="button"
               size="sm"
               onClick={() => {
-                if (userProfile.role === 'editor') {
-                  setIsEditorDeployModalOpen(true);
-                } else if (canPublish) {
-                  setIsSuperAdminDeployModalOpen(true);
-                } else {
-                  setIsEditorDeployModalOpen(true);
-                }
+                setIsSuperAdminDeployModalOpen(true);
               }}
               className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
-              title={userProfile.role === 'editor' ? "Transmettre vos modifications au SuperAdmin pour déploiement sur Vercel" : "Déployer directement vers Vercel (branche main)"}
+              title="Envoyer les modifications directement vers le site (mise à jour immédiate sur GitHub et Vercel)"
             >
               <Send className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden md:inline">
-                {userProfile.role === 'editor' ? 'Envoyer au SuperAdmin' : 'Déployer sur Vercel'}
+              <span className="hidden sm:inline">
+                Envoyer les modifications vers le site
               </span>
-              <span className="md:hidden">
-                {userProfile.role === 'editor' ? 'Envoyer' : 'Déployer'}
+              <span className="sm:hidden">
+                Envoyer
               </span>
             </Button>
 
@@ -3480,11 +3541,11 @@ const Admin = () => {
               type="button"
               size="sm"
               onClick={() => setIsSuperAdminDeployModalOpen(true)}
-              className="h-8 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
-              title="Publier directement toutes les modifications et déployer sur Vercel (branche main)"
+              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
+              title="Envoyer les modifications directement vers le site (mise à jour immédiate sur GitHub et Vercel)"
             >
               <Send className="h-3.5 w-3.5" />
-              <span>Déployer vers Vercel</span>
+              <span>Envoyer les modifications vers le site</span>
             </Button>
           )}
 
@@ -8576,8 +8637,8 @@ const Admin = () => {
                   <Rocket className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-playfair font-bold text-lg text-white">Déployer sur Vercel</h3>
-                  <p className="text-xs text-emerald-100">Publication directe sur la branche main (SuperAdmin)</p>
+                  <h3 className="font-playfair font-bold text-lg text-white">Envoyer les modifications vers le site</h3>
+                  <p className="text-xs text-emerald-100">Publication directe sur GitHub (branche main) & mise à jour automatique sur Vercel</p>
                 </div>
               </div>
               <button
@@ -8650,8 +8711,8 @@ const Admin = () => {
                     </>
                   ) : (
                     <>
-                      <Send className="h-4 w-4" />
-                      <span>Confirmer le déploiement Vercel</span>
+                      <Rocket className="h-4 w-4" />
+                      <span>Envoyer vers le site maintenant</span>
                     </>
                   )}
                 </Button>
