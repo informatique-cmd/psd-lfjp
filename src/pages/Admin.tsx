@@ -259,7 +259,26 @@ const Admin = () => {
   const [diagnosticSubTab, setDiagnosticSubTab] = useState<'elcs' | 'restaurant' | 'rapports' | 'subpages'>('elcs');
   const [planStrategiqueSubTab, setPlanStrategiqueSubTab] = useState<'axes' | 'budgets' | 'transports' | 'bac-blanc' | 'film-annuel' | 'subpages'>('axes');
   const [customRubriqueSubTab, setCustomRubriqueSubTab] = useState<'content' | 'subpages'>('content');
-  const [selectedVisualElement, setSelectedVisualElement] = useState<{ path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string; rect?: { left: number; top: number; width: number; height: number } } | null>(null);
+  const [selectedVisualElement, setSelectedVisualElement] = useState<{
+    path: string;
+    linkPath?: string;
+    kind: 'text' | 'image' | 'link';
+    text?: string;
+    src?: string;
+    alt?: string;
+    href?: string;
+    rect?: { left: number; top: number; width: number; height: number };
+    meta?: {
+      budgetYear?: string;
+      budgetField?: string;
+      projectId?: string;
+      projectField?: string;
+      summaryField?: string;
+      tuitionYear?: string;
+      tuitionField?: string;
+      cmsKey?: string;
+    };
+  } | null>(null);
   const previewFrame = useRef<HTMLIFrameElement>(null);
   const [visualExpanded, setVisualExpanded] = useState(false);
   const [treeCollapsed, setTreeCollapsed] = useState(false);
@@ -929,7 +948,7 @@ const Admin = () => {
         left: rect.left + frameRect.left - canvasRect.left,
         top: rect.top + frameRect.top - canvasRect.top,
       } : rect;
-      setSelectedVisualElement({ ...selection, rect: relativeRect } as { path: string; linkPath?: string; kind: 'text' | 'image' | 'link'; text?: string; src?: string; alt?: string; href?: string; rect?: { left: number; top: number; width: number; height: number } });
+      setSelectedVisualElement({ ...selection, rect: relativeRect } as NonNullable<typeof selectedVisualElement>);
     };
     window.addEventListener('message', receiveSelection);
     return () => window.removeEventListener('message', receiveSelection);
@@ -967,6 +986,13 @@ const Admin = () => {
     const serialized = JSON.stringify(next, null, 2);
     setPageDataJson(serialized);
     window.localStorage.setItem(pageDataDraftStorageKey, serialized);
+    try {
+      previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-page-data-update', data: next }, window.location.origin);
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('lfjp_page_data_changed', { detail: next }));
+    } catch {
+      // ignore
+    }
   };
 
   const updateHome = (field: keyof Content['home'], value: string) => {
@@ -1525,25 +1551,149 @@ const Admin = () => {
     window.localStorage.setItem(pageTextDraftStorageKey, serialized);
     setSelectedVisualElement((selection) => selection ? { ...selection, [field]: value } : selection);
 
-    // Bidirectional sync: if editing a budget page figure, keep pageDataJson in sync
-    if (visualRoute.includes('budget') && field === 'text') {
-      const digits = value.replace(/[^0-9]/g, '');
-      const num = parseInt(digits, 10);
-      if (!isNaN(num) && num > 0) {
-        try {
-          const currentPD = JSON.parse(pageDataJson);
-          if (currentPD?.budgetData?.projects && Array.isArray(currentPD.budgetData.projects)) {
-            const climProj = currentPD.budgetData.projects.find((p: { id?: string; title?: string }) => p.id === 'proj-clim' || p.title?.includes('Climatisation'));
-            if (climProj && (value.includes('60') || selectedVisualElement.text?.includes('Climatisation') || selectedVisualElement.path.includes('0.2.0'))) {
-              climProj.budget = num;
-              const nextPDStr = JSON.stringify(currentPD, null, 2);
-              setPageDataJson(nextPDStr);
-              window.localStorage.setItem(pageDataDraftStorageKey, nextPDStr);
+    // Full bidirectional sync: if editing any data-linked page, budget, chart, calendar, or project figure
+    if (field === 'text') {
+      try {
+        const currentPD = JSON.parse(pageDataJson);
+        const meta = selectedVisualElement.meta;
+        let pdChanged = false;
+
+        if (currentPD?.budgetData) {
+          const bd = currentPD.budgetData;
+          const cleanDigits = value.replace(/[^0-9]/g, '');
+          const parsedNum = cleanDigits.length > 0 ? parseInt(cleanDigits, 10) : NaN;
+
+          // 1. Specific budget timeline sync (depenses, capacite, leviers, recettesTotales, solde)
+          if (meta?.budgetYear && meta?.budgetField && Array.isArray(bd.financialTimeline)) {
+            const row = bd.financialTimeline.find((r: { year?: string | number }) => String(r.year) === String(meta.budgetYear));
+            if (row && !isNaN(parsedNum)) {
+              if (meta.budgetField === 'depenses') {
+                row.depenses = parsedNum;
+                row.solde = (Number(row.recettesTotales) || 0) - parsedNum;
+                pdChanged = true;
+              } else if (meta.budgetField === 'capacite') {
+                row.capacite = parsedNum;
+                row.recettesTotales = parsedNum + (Number(row.leviers) || 0);
+                row.solde = row.recettesTotales - (Number(row.depenses) || 0);
+                pdChanged = true;
+              } else if (meta.budgetField === 'leviers') {
+                row.leviers = parsedNum;
+                row.recettesTotales = (Number(row.capacite) || 0) + parsedNum;
+                row.solde = row.recettesTotales - (Number(row.depenses) || 0);
+                pdChanged = true;
+              } else if (meta.budgetField === 'recettesTotales') {
+                row.recettesTotales = parsedNum;
+                row.solde = parsedNum - (Number(row.depenses) || 0);
+                pdChanged = true;
+              } else if (meta.budgetField === 'solde') {
+                row.solde = parsedNum;
+                pdChanged = true;
+              }
             }
           }
-        } catch {
-          // ignore
+
+          // 2. Specific project sync (budget, period, title, description)
+          if (meta?.projectId && Array.isArray(bd.projects)) {
+            const proj = bd.projects.find((p: { id?: string }) => p.id === meta.projectId);
+            if (proj) {
+              if (meta.projectField === 'budget' && !isNaN(parsedNum)) {
+                proj.budget = parsedNum;
+                pdChanged = true;
+              } else if (meta.projectField === 'period') {
+                proj.period = value.trim();
+                pdChanged = true;
+              } else if (meta.projectField === 'title') {
+                proj.title = value.trim();
+                pdChanged = true;
+              } else if (meta.projectField === 'description') {
+                proj.description = value.trim();
+                pdChanged = true;
+              }
+            }
+          }
+
+          // 3. Specific summary card sync
+          if (meta?.summaryField && bd.summaryCards && !isNaN(parsedNum)) {
+            bd.summaryCards[meta.summaryField] = parsedNum;
+            pdChanged = true;
+          }
+
+          // 4. Specific tuition simulation sync
+          if (meta?.tuitionYear && Array.isArray(bd.tuitionSimulations)) {
+            const sim = bd.tuitionSimulations.find((s: { year?: string | number }) => String(s.year) === String(meta.tuitionYear));
+            if (sim) {
+              if (meta.tuitionField === 'basePerStudent' && !isNaN(parsedNum)) {
+                sim.basePerStudent = parsedNum;
+                pdChanged = true;
+              } else if (meta.tuitionField === 'totalYield' && !isNaN(parsedNum)) {
+                sim.totalYield = parsedNum;
+                pdChanged = true;
+              } else if (meta.tuitionField === 'extraYield' && !isNaN(parsedNum)) {
+                sim.extraYield = parsedNum;
+                pdChanged = true;
+              }
+            }
+          }
+
+          // 5. Fallback heuristic sync if meta is not present but editing budget view
+          if (!pdChanged && visualRoute.includes('budget')) {
+            // Check if user edited a timeline row
+            if (Array.isArray(bd.financialTimeline)) {
+              for (const row of bd.financialTimeline) {
+                const prevDigits = (selectedVisualElement.text || '').replace(/[^0-9]/g, '');
+                if (prevDigits && !isNaN(parsedNum)) {
+                  if (String(row.depenses) === prevDigits) {
+                    row.depenses = parsedNum;
+                    row.solde = (Number(row.recettesTotales) || 0) - parsedNum;
+                    pdChanged = true;
+                    break;
+                  }
+                  if (String(row.recettesTotales) === prevDigits) {
+                    row.recettesTotales = parsedNum;
+                    row.solde = parsedNum - (Number(row.depenses) || 0);
+                    pdChanged = true;
+                    break;
+                  }
+                  if (String(row.capacite) === prevDigits) {
+                    row.capacite = parsedNum;
+                    row.recettesTotales = parsedNum + (Number(row.leviers) || 0);
+                    row.solde = row.recettesTotales - (Number(row.depenses) || 0);
+                    pdChanged = true;
+                    break;
+                  }
+                }
+              }
+            }
+            // Check if user edited a project
+            if (!pdChanged && Array.isArray(bd.projects)) {
+              for (const p of bd.projects) {
+                const prevDigits = (selectedVisualElement.text || '').replace(/[^0-9]/g, '');
+                if (prevDigits && String(p.budget) === prevDigits && !isNaN(parsedNum)) {
+                  p.budget = parsedNum;
+                  pdChanged = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          // Recalculate summary cards to keep total investment, gap and capacity in correlation
+          if (pdChanged) {
+            if (Array.isArray(bd.projects) && bd.summaryCards) {
+              const totalProj = bd.projects.reduce((acc: number, p: { budget?: number }) => acc + (Number(p.budget) || 0), 0);
+              bd.summaryCards.totalInvestment = totalProj;
+            }
+            if (Array.isArray(bd.financialTimeline) && bd.summaryCards) {
+              const totalRec = bd.financialTimeline.reduce((acc: number, r: { recettesTotales?: number; capacite?: number }) => acc + (Number(r.recettesTotales) || Number(r.capacite) || 0), 0);
+              bd.summaryCards.estimatedCapacity = totalRec;
+              const totalInv = Number(bd.summaryCards.totalInvestment) || 0;
+              bd.summaryCards.fundingGap = Math.max(0, totalInv - totalRec);
+            }
+            persistPageData(currentPD);
+          }
         }
+      } catch {
+        // ignore sync error
       }
     }
 

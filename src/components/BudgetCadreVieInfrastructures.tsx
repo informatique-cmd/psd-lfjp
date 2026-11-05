@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -163,9 +163,18 @@ const projectSchedule = [
   { project: 'Projet d’extension phase 1', start: 2030, end: 2030, annualSpend: { 2030: 200_000_000 } },
 ];
 
-const years = [2026, 2027, 2028, 2029, 2030];
+const parsePeriodYears = (period: string): { start: number; end: number } => {
+  if (!period) return { start: 2026, end: 2026 };
+  const matches = period.match(/\b(20\d{2})\b/g);
+  if (!matches || matches.length === 0) return { start: 2026, end: 2026 };
+  const nums = matches.map((m) => parseInt(m, 10)).sort((a, b) => a - b);
+  return {
+    start: nums[0],
+    end: nums[nums.length - 1],
+  };
+};
 
-const getPeriodStartYear = (period: string) => Number(period.match(/\d{4}/)?.[0] ?? 0);
+const getPeriodStartYear = (period: string) => parsePeriodYears(period).start;
 
 const BudgetCadreVieInfrastructures = () => {
   const [currency, setCurrency] = useState<'XOF' | 'EUR'>('XOF');
@@ -174,7 +183,7 @@ const BudgetCadreVieInfrastructures = () => {
     return (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData;
   }, []);
 
-  const liveBudget = useMemo(() => {
+  const [liveBudget, setLiveBudget] = useState<BudgetData>(() => {
     if (typeof window !== 'undefined' && isContentDraftPreview()) {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
@@ -183,11 +192,56 @@ const BudgetCadreVieInfrastructures = () => {
           if (parsed?.budgetData) return parsed.budgetData as BudgetData;
         }
       } catch {
-        return baseBudgetData;
+        // fallback
       }
     }
-    return baseBudgetData;
-  }, [baseBudgetData]);
+    return (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData;
+  });
+
+  // Listen to storage and postMessage events to immediately update React state and Recharts graphs
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.budgetData) {
+            setLiveBudget(parsed.budgetData as BudgetData);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'lfjp-page-data-update' && event.data.data?.budgetData) {
+        setLiveBudget(event.data.data.budgetData as BudgetData);
+      }
+    };
+
+    const handleCustom = (event: Event) => {
+      const customEvt = event as CustomEvent;
+      if (customEvt.detail?.budgetData) {
+        setLiveBudget(customEvt.detail.budgetData as BudgetData);
+      } else {
+        handleUpdate();
+      }
+    };
+
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('message', handleMessage);
+    window.addEventListener('lfjp_page_data_changed', handleCustom);
+    window.addEventListener('lfjp_draft_cleared', handleUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('lfjp_page_data_changed', handleCustom);
+      window.removeEventListener('lfjp_draft_cleared', handleUpdate);
+    };
+  }, []);
 
   const activeProjects = useMemo(() => {
     return (liveBudget.projects && liveBudget.projects.length > 0) ? liveBudget.projects : projects;
@@ -197,13 +251,77 @@ const BudgetCadreVieInfrastructures = () => {
     return (liveBudget.financialTimeline && liveBudget.financialTimeline.length > 0) ? liveBudget.financialTimeline : financialTimeline;
   }, [liveBudget]);
 
-  // Dynamically derive years from timeline
+  // Dynamically derive all active project schedule items directly from active projects
+  // So the calendar strictly conforms to the projects' start and end years
+  const activeProjectSchedule = useMemo(() => {
+    return activeProjects.map((p, idx) => {
+      const { start, end } = parsePeriodYears(p.period);
+      const duration = Math.max(1, end - start + 1);
+      const spendPerYear = Math.round((Number(p.budget) || 0) / duration);
+      const annualSpend: Record<string, number> = {};
+      for (let y = start; y <= end; y++) {
+        annualSpend[String(y)] = spendPerYear;
+      }
+      return {
+        id: p.id || `proj-${idx}`,
+        project: p.title,
+        period: p.period,
+        budget: Number(p.budget) || 0,
+        start,
+        end,
+        annualSpend,
+      };
+    });
+  }, [activeProjects]);
+
+  // Dynamically derive all relevant years from timeline and projects
   const years = useMemo(() => {
-    if (activeTimeline && activeTimeline.length > 0) {
-      return activeTimeline.map((r) => r.year).sort((a, b) => a - b);
-    }
-    return [2026, 2027, 2028, 2029, 2030];
-  }, [activeTimeline]);
+    const timelineYears = (activeTimeline || []).map((r) => Number(r.year)).filter((y) => !isNaN(y) && y > 2000);
+    const projectYears: number[] = [];
+    activeProjectSchedule.forEach((item) => {
+      for (let y = item.start; y <= item.end; y++) {
+        projectYears.push(y);
+      }
+    });
+    const all = Array.from(new Set([...timelineYears, ...projectYears])).sort((a, b) => a - b);
+    return all.length > 0 ? all : [2026, 2027, 2028, 2029, 2030];
+  }, [activeTimeline, activeProjectSchedule]);
+
+  // Fill timeline for every year in years so graphs and tables remain 100% complete
+  const filledTimeline = useMemo(() => {
+    return years.map((year) => {
+      const existing = activeTimeline.find((r) => r.year === year);
+      if (existing) {
+        const cap = Number(existing.capacite) || 0;
+        const lev = Number(existing.leviers) || 0;
+        const rec = existing.recettesTotales !== undefined && Number(existing.recettesTotales) > 0
+          ? Number(existing.recettesTotales)
+          : (cap + lev);
+        const dep = Number(existing.depenses) || 0;
+        return {
+          ...existing,
+          year,
+          capacite: cap,
+          leviers: lev,
+          recettesTotales: rec,
+          depenses: dep,
+        };
+      }
+      const projectedSpend = activeProjectSchedule.reduce((sum, item) => {
+        if (year >= item.start && year <= item.end) {
+          return sum + (item.annualSpend[String(year)] || 0);
+        }
+        return sum;
+      }, 0);
+      return {
+        year,
+        capacite: 50_000_000,
+        leviers: 70_000_000,
+        recettesTotales: 120_000_000,
+        depenses: projectedSpend,
+      };
+    });
+  }, [years, activeTimeline, activeProjectSchedule]);
 
   // Derived calculations for full dynamic correlation
   const computedTotalInvestment = useMemo(() => {
@@ -211,11 +329,11 @@ const BudgetCadreVieInfrastructures = () => {
   }, [activeProjects]);
 
   const computedTotalCapacity = useMemo(() => {
-    return activeTimeline.reduce(
+    return filledTimeline.reduce(
       (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
       0
     );
-  }, [activeTimeline]);
+  }, [filledTimeline]);
 
   const computedFundingGap = useMemo(() => {
     return Math.max(0, computedTotalInvestment - computedTotalCapacity);
@@ -223,6 +341,7 @@ const BudgetCadreVieInfrastructures = () => {
 
   const dynamicSummaryCards = useMemo(() => [
     {
+      key: 'totalInvestment',
       label: 'Investissement total',
       value: liveBudget.summaryCards?.totalInvestment && liveBudget.summaryCards.totalInvestment !== 775_000_000
         ? liveBudget.summaryCards.totalInvestment
@@ -231,6 +350,7 @@ const BudgetCadreVieInfrastructures = () => {
       accent: 'from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-100',
     },
     {
+      key: 'fundingGap',
       label: 'Manque à gagner / besoin de financement à l’horizon 2030',
       value: liveBudget.summaryCards?.fundingGap && liveBudget.summaryCards.fundingGap !== 89_860_582
         ? liveBudget.summaryCards.fundingGap
@@ -239,6 +359,7 @@ const BudgetCadreVieInfrastructures = () => {
       accent: 'from-rose-50 to-amber-50 text-amber-700 border-amber-100',
     },
     {
+      key: 'estimatedCapacity',
       label: 'Capacité totale estimée (budget + ANEFE + écolages)',
       value: liveBudget.summaryCards?.estimatedCapacity && liveBudget.summaryCards.estimatedCapacity !== 685_139_418
         ? liveBudget.summaryCards.estimatedCapacity
@@ -251,34 +372,10 @@ const BudgetCadreVieInfrastructures = () => {
   // Dynamic annual expenses matching timeline rows per year
   const annualTotals = useMemo(() => {
     return years.map((year) => {
-      const row = activeTimeline.find((r) => r.year === year);
+      const row = filledTimeline.find((r) => r.year === year);
       return row ? Number(row.depenses) || 0 : 0;
     });
-  }, [years, activeTimeline]);
-
-  // Dynamic project schedule based on active projects and periods
-  const activeProjectSchedule = useMemo(() => {
-    if (liveBudget.projectSchedule && liveBudget.projectSchedule.length > 0) {
-      return liveBudget.projectSchedule;
-    }
-    return activeProjects.map((p) => {
-      const match = p.period.match(/(\d{4})/g);
-      const start = match && match[0] ? parseInt(match[0], 10) : 2026;
-      const end = match && match[1] ? parseInt(match[1], 10) : start;
-      const duration = Math.max(1, end - start + 1);
-      const spendPerYear = Math.round((Number(p.budget) || 0) / duration);
-      const annualSpend: Record<string, number> = {};
-      for (let y = start; y <= end; y++) {
-        annualSpend[String(y)] = spendPerYear;
-      }
-      return {
-        project: p.title,
-        start,
-        end,
-        annualSpend,
-      };
-    });
-  }, [liveBudget, activeProjects]);
+  }, [years, filledTimeline]);
 
   // Tuition simulations and cumulative total
   const activeTuitionSimulations = useMemo(() => {
@@ -298,13 +395,11 @@ const BudgetCadreVieInfrastructures = () => {
 
   const chartData = useMemo(
     () =>
-      activeTimeline.map((row) => {
+      filledTimeline.map((row) => {
         const factor = currency === 'EUR' ? 1 / XOF_TO_EUR : 1;
         const capacite = Number(row.capacite) || 0;
         const leviers = Number(row.leviers) || 0;
-        const recettesTotales = row.recettesTotales !== undefined && Number(row.recettesTotales) > 0
-          ? Number(row.recettesTotales)
-          : (capacite + leviers);
+        const recettesTotales = Number(row.recettesTotales) || (capacite + leviers);
         const depenses = Number(row.depenses) || 0;
         const solde = recettesTotales - depenses;
         return {
@@ -316,7 +411,7 @@ const BudgetCadreVieInfrastructures = () => {
           solde: Math.round(solde * factor),
         };
       }),
-    [currency, activeTimeline],
+    [currency, filledTimeline],
   );
 
   const axisTickFormatter = (value: number) =>
@@ -329,12 +424,10 @@ const BudgetCadreVieInfrastructures = () => {
 
   const cashFlowRows = useMemo(
     () =>
-      activeTimeline.map((row) => {
+      filledTimeline.map((row) => {
         const capacite = Number(row.capacite) || 0;
         const leviers = Number(row.leviers) || 0;
-        const recettesTotales = row.recettesTotales !== undefined && Number(row.recettesTotales) > 0
-          ? Number(row.recettesTotales)
-          : (capacite + leviers);
+        const recettesTotales = Number(row.recettesTotales) || (capacite + leviers);
         const depenses = Number(row.depenses) || 0;
         return {
           ...row,
@@ -345,7 +438,7 @@ const BudgetCadreVieInfrastructures = () => {
           solde: recettesTotales - depenses,
         };
       }),
-    [activeTimeline],
+    [filledTimeline],
   );
 
   const projectsByYear = useMemo(
@@ -461,11 +554,12 @@ const BudgetCadreVieInfrastructures = () => {
             <div
               key={card.label}
               className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br ${card.accent} p-5 shadow-sm`}
+              data-summary-field={card.key}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{card.label}</p>
-                  <p className="text-2xl font-bold text-slate-900" data-currency-amount={card.value}>{formatCurrency(card.value, currency)}</p>
+                  <p className="text-2xl font-bold text-slate-900" data-currency-amount={card.value} data-summary-field={card.key}>{formatCurrency(card.value, currency)}</p>
                 </div>
                 <span className="rounded-xl bg-white/70 p-2 shadow-inner">
                   <Icon className="h-5 w-5" aria-hidden />
@@ -480,7 +574,7 @@ const BudgetCadreVieInfrastructures = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h5 className="text-lg font-semibold text-slate-900">Projets</h5>
-            <span className="text-xs font-semibold text-slate-500">7 projets clés</span>
+            <span className="text-xs font-semibold text-slate-500">{activeProjects.length} projets clés</span>
           </div>
           <div className="space-y-5">
             {projectsByYear.map(({ year, items }) => (
@@ -495,20 +589,21 @@ const BudgetCadreVieInfrastructures = () => {
                 {items.map((project) => {
                   const hasLink = Boolean(project.link);
                   const cardContent = (
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3" data-project-id={project.id || project.title}>
                       <div className="flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h6 className="text-base font-semibold text-slate-900">{project.title}</h6>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-french-blue">
+                          <h6 className="text-base font-semibold text-slate-900" data-project-id={project.id || project.title} data-project-field="title">{project.title}</h6>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-french-blue" data-project-id={project.id || project.title} data-project-field="period">
                             <CalendarClock className="h-3 w-3" aria-hidden />
                             {project.period}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-700">{project.description}</p>
+                        <p className="text-sm text-slate-700" data-project-id={project.id || project.title} data-project-field="description">{project.description}</p>
                         <p
                           className="text-sm font-semibold text-emerald-700"
                           data-currency-amount={project.budget}
-                          data-cms-key={`project-budget-${project.id || (project.title.toLowerCase().includes('clim') ? 'proj-clim' : project.title.toLowerCase().replace(/[^a-z0-9]/g, '-'))}`}
+                          data-project-id={project.id || project.title}
+                          data-project-field="budget"
                         >
                           {formatCurrency(project.budget, currency)}
                         </p>
@@ -648,13 +743,13 @@ const BudgetCadreVieInfrastructures = () => {
                     const solde = row.solde;
                     const soldePositive = solde >= 0;
                     return (
-                      <tr key={row.year} className="hover:bg-slate-50">
-                        <td className="px-4 py-2 font-semibold text-slate-900">{row.year}</td>
-                        <td className="px-4 py-2 text-right text-slate-700" data-currency-amount={row.capacite}>{formatCurrency(row.capacite, currency)}</td>
-                        <td className="px-4 py-2 text-right text-slate-700" data-currency-amount={row.leviers}>{formatCurrency(row.leviers, currency)}</td>
-                        <td className="px-4 py-2 text-right font-semibold text-slate-900" data-currency-amount={row.recettesTotales}>{formatCurrency(row.recettesTotales, currency)}</td>
-                        <td className="px-4 py-2 text-right text-rose-600" data-currency-amount={row.depenses}>{formatCurrency(row.depenses, currency)}</td>
-                        <td className={`px-4 py-2 text-right font-semibold ${soldePositive ? 'text-emerald-700' : 'text-rose-600'}`} data-currency-amount={solde}>
+                      <tr key={row.year} className="hover:bg-slate-50" data-budget-year={row.year}>
+                        <td className="px-4 py-2 font-semibold text-slate-900" data-budget-year={row.year} data-budget-field="year">{row.year}</td>
+                        <td className="px-4 py-2 text-right text-slate-700 font-medium" data-budget-year={row.year} data-budget-field="capacite" data-currency-amount={row.capacite}>{formatCurrency(row.capacite, currency)}</td>
+                        <td className="px-4 py-2 text-right text-slate-700 font-medium" data-budget-year={row.year} data-budget-field="leviers" data-currency-amount={row.leviers}>{formatCurrency(row.leviers, currency)}</td>
+                        <td className="px-4 py-2 text-right font-semibold text-slate-900" data-budget-year={row.year} data-budget-field="recettesTotales" data-currency-amount={row.recettesTotales}>{formatCurrency(row.recettesTotales, currency)}</td>
+                        <td className="px-4 py-2 text-right text-rose-600 font-medium" data-budget-year={row.year} data-budget-field="depenses" data-currency-amount={row.depenses}>{formatCurrency(row.depenses, currency)}</td>
+                        <td className={`px-4 py-2 text-right font-semibold ${soldePositive ? 'text-emerald-700' : 'text-rose-600'}`} data-budget-year={row.year} data-budget-field="solde" data-currency-amount={solde}>
                           {formatCurrency(solde, currency)}
                         </td>
                       </tr>
@@ -673,26 +768,37 @@ const BudgetCadreVieInfrastructures = () => {
             <div className="space-y-3">
               <div className="overflow-x-auto">
                 <div className="min-w-[720px] space-y-3">
-                  <div className="grid grid-cols-[140px_repeat(5,1fr)] items-center gap-2 text-xs font-semibold text-slate-500">
+                  <div
+                    className="grid items-center gap-2 text-xs font-semibold text-slate-500"
+                    style={{ gridTemplateColumns: `180px repeat(${years.length}, minmax(60px, 1fr))` }}
+                  >
                     <span>Projet</span>
                     {years.map((year) => (
-                      <span key={year} className="text-center">
+                      <span key={year} className="text-center font-bold">
                         {year}
                       </span>
                     ))}
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {activeProjectSchedule.map((item, index) => (
-                      <div key={item.project} className="grid grid-cols-[140px_repeat(5,1fr)] items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-800">{item.project}</span>
+                      <div
+                        key={item.project}
+                        className="grid items-center gap-2"
+                        style={{ gridTemplateColumns: `180px repeat(${years.length}, minmax(60px, 1fr))` }}
+                        data-project-id={item.id || item.project}
+                      >
+                        <span className="text-sm font-semibold text-slate-800 truncate" title={`${item.project} (${item.period})`}>
+                          {item.project}
+                        </span>
                         {years.map((year) => {
                           const isActive = year >= item.start && year <= item.end;
                           return (
-                            <div key={year} className="relative h-2 rounded-full bg-slate-100">
+                            <div key={year} className="relative h-2.5 rounded-full bg-slate-100 overflow-hidden">
                               {isActive && (
                                 <div
-                                  className={`absolute inset-0 rounded-full ${index % 2 === 0 ? 'bg-french-blue/70' : 'bg-emerald-400/80'}`}
+                                  className={`absolute inset-0 rounded-full transition-all duration-300 ${index % 2 === 0 ? 'bg-french-blue/80' : 'bg-emerald-500/85'}`}
                                   style={{ width: '100%' }}
+                                  title={`${item.project} (${item.start} - ${item.end})`}
                                 />
                               )}
                             </div>
@@ -705,14 +811,21 @@ const BudgetCadreVieInfrastructures = () => {
               </div>
               <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-sm">
                 <p className="mb-2 font-semibold text-slate-900">Total annuel (dépenses projets)</p>
-                <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700 sm:grid-cols-3 lg:grid-cols-5">
+                <div
+                  className="grid gap-2 text-xs font-semibold text-slate-700"
+                  style={{ gridTemplateColumns: `repeat(${Math.min(years.length, 5)}, minmax(0, 1fr))` }}
+                >
                   {years.map((year, index) => (
                     <div
                       key={year}
-                      className="flex flex-col items-center justify-center rounded-lg bg-white px-3 py-2 text-center shadow-sm"
+                      className="flex flex-col items-center justify-center rounded-lg bg-white px-3 py-2 text-center shadow-sm border border-slate-100"
+                      data-budget-year={year}
+                      data-budget-field="depenses"
                     >
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{year}</span>
-                      <span className="text-sm font-semibold text-emerald-700" data-currency-amount={annualTotals[index]}>{formatCurrency(annualTotals[index], currency)}</span>
+                      <span className="text-sm font-semibold text-emerald-700" data-currency-amount={annualTotals[index]}>
+                        {formatCurrency(annualTotals[index], currency)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -740,10 +853,10 @@ const BudgetCadreVieInfrastructures = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {activeTuitionSimulations.map((item) => (
-                      <tr key={item.year} className="hover:bg-slate-50">
-                        <td className="px-4 py-2 font-semibold text-slate-900">{item.year}</td>
-                        <td className="px-4 py-2 text-right text-slate-700">{item.increase}%</td>
-                        <td className="px-4 py-2 text-right font-semibold text-emerald-700" data-currency-amount={item.revenue}>{formatCurrency(item.revenue, currency)}</td>
+                      <tr key={item.year} className="hover:bg-slate-50" data-tuition-year={item.year}>
+                        <td className="px-4 py-2 font-semibold text-slate-900" data-tuition-year={item.year} data-tuition-field="year">{item.year}</td>
+                        <td className="px-4 py-2 text-right text-slate-700" data-tuition-year={item.year} data-tuition-field="increase">{item.increase}%</td>
+                        <td className="px-4 py-2 text-right font-semibold text-emerald-700" data-tuition-year={item.year} data-tuition-field="revenue" data-currency-amount={item.revenue}>{formatCurrency(item.revenue, currency)}</td>
                       </tr>
                     ))}
                   </tbody>

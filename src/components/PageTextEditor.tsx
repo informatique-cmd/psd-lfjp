@@ -172,7 +172,45 @@ const PageTextEditor = () => {
 
       if (isEmbeddedInAdmin) {
         let selectedPath: string | null = null;
-        let selected: PageElementOverride & { kind: 'text' | 'image' | 'link'; path: string; linkPath?: string; rect?: { left: number; top: number; width: number; height: number } } | null = null;
+        type SelectedCmsElement = PageElementOverride & {
+          kind: 'text' | 'image' | 'link';
+          path: string;
+          linkPath?: string;
+          rect?: { left: number; top: number; width: number; height: number };
+          meta?: {
+            budgetYear?: string;
+            budgetField?: string;
+            projectId?: string;
+            projectField?: string;
+            summaryField?: string;
+            tuitionYear?: string;
+            tuitionField?: string;
+            cmsKey?: string;
+          };
+        };
+        let selected: SelectedCmsElement | null = null;
+
+        // Extract semantic data attributes for automatic bidirectional chart/data synchronization
+        const targetEl = (textNode as Text | null)?.parentElement || element;
+        const budgetYear = targetEl?.closest('[data-budget-year]')?.getAttribute('data-budget-year') || undefined;
+        const budgetField = targetEl?.closest('[data-budget-field]')?.getAttribute('data-budget-field') || undefined;
+        const projectId = targetEl?.closest('[data-project-id]')?.getAttribute('data-project-id') || undefined;
+        const projectField = targetEl?.closest('[data-project-field]')?.getAttribute('data-project-field') || undefined;
+        const summaryField = targetEl?.closest('[data-summary-field]')?.getAttribute('data-summary-field') || undefined;
+        const tuitionYear = targetEl?.closest('[data-tuition-year]')?.getAttribute('data-tuition-year') || undefined;
+        const tuitionField = targetEl?.closest('[data-tuition-field]')?.getAttribute('data-tuition-field') || undefined;
+        const cmsKey = targetEl?.closest('[data-cms-key]')?.getAttribute('data-cms-key') || undefined;
+
+        const meta = {
+          budgetYear,
+          budgetField,
+          projectId,
+          projectField,
+          summaryField,
+          tuitionYear,
+          tuitionField,
+          cmsKey,
+        };
 
         if (image instanceof HTMLImageElement) {
           selectedPath = getNodePath(root, image);
@@ -183,15 +221,15 @@ const PageTextEditor = () => {
           const textAnchor = textNode.parentElement?.closest('a') || anchor;
           const linkPath = textAnchor ? getNodePath(root, textAnchor) || undefined : undefined;
           const rect = (textNode as Text).parentElement?.getBoundingClientRect() || element.getBoundingClientRect();
-          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: textNode.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath, rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined };
+          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: textNode.textContent || '', href: textAnchor?.getAttribute('href') || undefined, linkPath, rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : undefined, meta };
         } else if (anchor instanceof HTMLAnchorElement) {
           selectedPath = getNodePath(root, anchor);
           const rect = anchor.getBoundingClientRect();
-          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: anchor.textContent?.trim() || 'Lien', href: anchor.getAttribute('href') || '', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
+          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: anchor.textContent?.trim() || 'Lien', href: anchor.getAttribute('href') || '', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }, meta };
         } else if (button instanceof HTMLButtonElement) {
           selectedPath = getNodePath(root, button);
           const rect = button.getBoundingClientRect();
-          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: button.textContent?.trim() || 'Bouton', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } };
+          if (selectedPath) selected = { kind: 'text', path: selectedPath, text: button.textContent?.trim() || 'Bouton', rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }, meta };
         }
 
         if (!selected) return;
