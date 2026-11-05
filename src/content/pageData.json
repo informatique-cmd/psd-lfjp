@@ -820,7 +820,7 @@
   },
   "budgetData": {
     "summaryCards": {
-      "totalInvestment": 355002027,
+      "totalInvestment": 365002027,
       "fundingGap": 0,
       "estimatedCapacity": 595139420
     },
@@ -883,6 +883,14 @@
         "period": "2030",
         "budget": 20000000,
         "color": "from-indigo-100 to-indigo-50"
+      },
+      {
+        "id": "proj-1793884624147",
+        "title": "Nouveau projet d’infrastructure",
+        "description": "Description des travaux ou équipements prévus pour le cadre de vie.",
+        "period": "2026 – 2027",
+        "budget": 10000000,
+        "color": "from-sky-100 to-sky-50"
       }
     ],
     "financialTimeline": [
