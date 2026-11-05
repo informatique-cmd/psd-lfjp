@@ -131,7 +131,7 @@ export default defineConfig(({ mode }) => ({
                     number: 1,
                     branch: "main",
                     success: true,
-                    message: "Modifications publiées et déployées avec succès sur la branche main de GitHub ! Le site Vercel est mis à jour."
+                    message: "Modifications envoyées vers le site en ligne !"
                   }));
                 });
               } catch (err) {

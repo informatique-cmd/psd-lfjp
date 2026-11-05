@@ -70,7 +70,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         branch: base,
         commitSha: commit.sha,
         commitUrl: commit.html_url,
-        message: 'Déploiement en production réussi ! Les modifications sont publiées sur la branche principale et le site Vercel est en cours de mise à jour.',
+        message: 'Modifications envoyées vers le site en ligne ! Le code est publié sur GitHub et Vercel actualise le site.',
         commits: [commit.html_url],
       });
     } catch (atomicErr) {

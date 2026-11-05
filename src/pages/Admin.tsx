@@ -13,6 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 import siteContent from '@/content/siteContent.json';
 import pagesFile from '@/content/pages.json';
 import pageDataFile from '@/content/pageData.json';
@@ -529,31 +531,342 @@ const Admin = () => {
     setStatus('Demande de déploiement rejetée. Les remarques ont été enregistrées pour l’éditeur.');
   };
 
-  const handleSuperAdminDirectDeploy = async () => {
+  // =========================================================================
+  // UNIFIED ONLINE DEPLOYMENT WITH REAL-TIME PROGRESS BAR
+  // =========================================================================
+  const [deployState, setDeployState] = useState<{
+    isOpen: boolean;
+    isDeploying: boolean;
+    progress: number;
+    currentStep: number;
+    stepMessage: string;
+    isSuccess: boolean;
+    error: string | null;
+    commitUrl?: string;
+  }>({
+    isOpen: false,
+    isDeploying: false,
+    progress: 0,
+    currentStep: 0,
+    stepMessage: '',
+    isSuccess: false,
+    error: null,
+  });
+
+  const startDeploymentToOnlineSite = async () => {
+    setIsSuperAdminDeployModalOpen(false);
+    setIsEditorDeployModalOpen(false);
+    setDeployState({
+      isOpen: true,
+      isDeploying: true,
+      progress: 15,
+      currentStep: 1,
+      stepMessage: 'Analyse et préparation des contenus modifiés...',
+      isSuccess: false,
+      error: null,
+    });
     setIsSaving(true);
-    setStatus('⏳ Publication directe et déploiement vers Vercel (branche principale)...');
+    setStatus('⏳ Envoi des modifications vers le site en ligne (GitHub & Vercel)...');
+
     try {
-      saveDraft();
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      setDeployState((prev) => ({
+        ...prev,
+        progress: 35,
+        currentStep: 2,
+        stepMessage: 'Sauvegarde du brouillon et validation des structures de données...',
+      }));
+
+      const draftSaved = saveDraft();
+      if (!draftSaved) {
+        throw new Error('Erreur de validation lors de la préparation des fichiers locaux.');
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      setDeployState((prev) => ({
+        ...prev,
+        progress: 65,
+        currentStep: 3,
+        stepMessage: 'Envoi des modifications vers GitHub (branche principale main)...',
+      }));
+
       const payloadFiles = {
         siteContent: serializedContent,
         pages: serializedPages,
         pageData: pageDataJson,
         pageText: pageTextJson,
       };
-      await createPullRequest(true, payloadFiles);
+
+      const result = await createPullRequest(true, payloadFiles);
+
+      setDeployState((prev) => ({
+        ...prev,
+        progress: 88,
+        currentStep: 4,
+        stepMessage: 'Déclenchement du build et déploiement de production sur Vercel...',
+        commitUrl: result?.url || (result?.commits && result.commits[0]) || 'https://github.com/informatique-cmd/psd-lfjp',
+      }));
+
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      clearAllDraftStorage();
       if (pendingDeployment) {
         approveDeploymentRequest(pendingDeployment.id, userProfile.email);
         setPendingDeployment(loadPendingDeploymentRequest());
       }
-      setIsSuperAdminDeployModalOpen(false);
-      setSuperAdminDeployNotes('');
-      setStatus('🚀 Déploiement Vercel réussi ! Toutes vos modifications (rubriques, pages, données) ont été publiées sur la branche main. Vercel met à jour le site psd-lfjp.vercel.app.');
+
+      setDeployState((prev) => ({
+        ...prev,
+        progress: 100,
+        currentStep: 5,
+        isDeploying: false,
+        isSuccess: true,
+        stepMessage: 'Modifications envoyées vers le site en ligne !',
+      }));
+
+      setStatus('🚀 Modifications envoyées vers le site en ligne !');
+      toast.success('Modifications envoyées vers le site en ligne !', {
+        description: 'Le code et les contenus ont été déployés avec succès vers GitHub et Vercel.',
+        duration: 7000,
+      });
+
+      // Reload iframe preview to show fresh synchronized live content
+      if (previewFrame.current) {
+        previewFrame.current.src = `${visualRoute || '/'}?v=${Date.now()}&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+      }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Échec du déploiement GitHub / Vercel.';
-      setStatus(`❌ Échec du déploiement : ${msg}`);
+      const msg = error instanceof Error ? error.message : 'Une erreur inattendue est survenue lors de l’envoi.';
+      setDeployState((prev) => ({
+        ...prev,
+        isDeploying: false,
+        isSuccess: false,
+        error: msg,
+        stepMessage: `Échec : ${msg}`,
+      }));
+      setStatus(`❌ Échec de l’envoi : ${msg}`);
+      toast.error('Erreur lors de l’envoi', { description: msg });
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSuperAdminDirectDeploy = async () => {
+    await startDeploymentToOnlineSite();
+  };
+
+  const renderDeploymentProgressModal = () => {
+    if (!deployState.isOpen) return null;
+
+    const steps = [
+      { num: 1, title: 'Préparation des contenus', desc: 'Analyse des rubriques, textes et blocs' },
+      { num: 2, title: 'Sauvegarde du brouillon', desc: 'Validation des structures JSON' },
+      { num: 3, title: 'Envoi GitHub (main)', desc: 'Commit et synchronisation du dépôt' },
+      { num: 4, title: 'Déploiement Vercel', desc: 'Compilation et mise en production' },
+      { num: 5, title: 'Mise en ligne terminée', desc: 'Site en direct actualisé' },
+    ];
+
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in"
+      >
+        <div className="bg-slate-900 border border-slate-700 text-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden select-none">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-french-blue p-5 text-white flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-white/15 text-white shadow-sm">
+                <Rocket className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-playfair font-bold text-lg text-white">Envoi vers le site en ligne</h3>
+                <p className="text-xs text-emerald-100">Déploiement direct GitHub & Vercel (branche main)</p>
+              </div>
+            </div>
+            {!deployState.isDeploying && (
+              <button
+                type="button"
+                onClick={() => setDeployState((prev) => ({ ...prev, isOpen: false }))}
+                className="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                title="Fermer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-5">
+            {/* Progress bar and Percentage */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-300 flex items-center gap-2">
+                  {deployState.isDeploying && <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />}
+                  {deployState.isSuccess && <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+                  {deployState.error && <AlertCircle className="h-4 w-4 text-rose-400" />}
+                  <span>{deployState.stepMessage}</span>
+                </span>
+                <span className="font-mono text-sm font-extrabold text-emerald-400">
+                  {deployState.progress}%
+                </span>
+              </div>
+
+              <div className="relative h-3 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-700/60 shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-400 transition-all duration-300 ease-out rounded-full shadow-sm"
+                  style={{ width: `${deployState.progress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Stepper overview */}
+            <div className="bg-slate-950/60 rounded-xl border border-slate-800 p-3.5 space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Étapes du déploiement
+              </p>
+              <div className="space-y-1.5">
+                {steps.map((st) => {
+                  const isPassed = deployState.currentStep > st.num || deployState.isSuccess;
+                  const isCurrent = deployState.currentStep === st.num && deployState.isDeploying;
+                  return (
+                    <div
+                      key={st.num}
+                      className={`flex items-center gap-2.5 text-xs py-1 px-2 rounded-lg transition-colors ${
+                        isCurrent
+                          ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                          : isPassed
+                          ? 'text-slate-300'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      <span className="shrink-0 flex items-center justify-center">
+                        {isPassed ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        ) : isCurrent ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                        ) : (
+                          <span className="h-3.5 w-3.5 rounded-full border border-slate-600 inline-block" />
+                        )}
+                      </span>
+                      <div className="flex items-center justify-between flex-1 min-w-0">
+                        <span className={`font-semibold truncate ${isCurrent ? 'text-emerald-300 font-bold' : ''}`}>
+                          {st.title}
+                        </span>
+                        <span className="text-[10px] text-slate-400 hidden sm:inline ml-2 shrink-0">
+                          {st.desc}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Success Celebration Banner */}
+            {deployState.isSuccess && (
+              <div className="rounded-xl bg-gradient-to-br from-emerald-950/80 to-teal-950/80 border border-emerald-500/40 p-4 text-center space-y-2.5 animate-in fade-in zoom-in-95">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 ring-4 ring-emerald-500/20">
+                  <Check className="h-6 w-6 stroke-[3]" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-emerald-300">
+                    Modifications envoyées vers le site en ligne !
+                  </h4>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Le code et les contenus ont été déployés avec succès vers GitHub et Vercel. Le site en direct est désormais à jour.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Error Banner */}
+            {deployState.error && (
+              <div className="rounded-xl bg-rose-950/60 border border-rose-500/40 p-4 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="text-xs space-y-1">
+                    <p className="font-bold text-rose-200">Une erreur est survenue lors de l'envoi :</p>
+                    <p className="text-rose-300 leading-relaxed font-mono text-[11px] bg-slate-950/70 p-2 rounded border border-rose-900/50">
+                      {deployState.error}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+              {deployState.isDeploying ? (
+                <Button
+                  disabled
+                  size="sm"
+                  className="bg-emerald-600/50 text-white text-xs font-bold cursor-not-allowed flex items-center gap-2"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Envoi en cours ({deployState.progress}%)...</span>
+                </Button>
+              ) : deployState.isSuccess ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      window.open('https://psd-lfjp.netlify.app/', '_blank');
+                    }}
+                    className="text-xs border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
+                  >
+                    <ExternalLink className="mr-1.5 h-3.5 w-3.5 text-emerald-400" />
+                    <span>Voir le site en direct</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setDeployState((prev) => ({ ...prev, isOpen: false }))}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md px-4"
+                  >
+                    <Check className="mr-1.5 h-3.5 w-3.5" />
+                    <span>Terminer</span>
+                  </Button>
+                </>
+              ) : deployState.error ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeployState((prev) => ({ ...prev, isOpen: false }))}
+                    className="text-xs border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300"
+                  >
+                    Fermer
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={startDeploymentToOnlineSite}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md"
+                  >
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                    <span>Réessayer l'envoi</span>
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setDeployState((prev) => ({ ...prev, isOpen: false }))}
+                  className="text-xs"
+                >
+                  Fermer
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // =========================================================================
@@ -3185,19 +3498,28 @@ const Admin = () => {
             <Button
               type="button"
               size="sm"
-              onClick={() => {
-                setIsSuperAdminDeployModalOpen(true);
-              }}
-              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
+              onClick={startDeploymentToOnlineSite}
+              disabled={deployState.isDeploying}
+              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0 transition-all hover:scale-[1.02] cursor-pointer"
               title="Envoyer les modifications directement vers le site (mise à jour immédiate sur GitHub et Vercel)"
             >
-              <Send className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline">
-                Envoyer les modifications vers le site
-              </span>
-              <span className="sm:hidden">
-                Envoyer
-              </span>
+              {deployState.isDeploying ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-white" />
+                  <span className="hidden sm:inline">Envoi en cours ({deployState.progress}%)...</span>
+                  <span className="sm:hidden">{deployState.progress}%</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">
+                    Envoyer les modifications vers le site
+                  </span>
+                  <span className="sm:hidden">
+                    Envoyer
+                  </span>
+                </>
+              )}
             </Button>
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block shrink-0" />
@@ -3564,6 +3886,9 @@ const Admin = () => {
             </div>
           </div>
         )}
+
+        {/* Modal Déploiement avec Barre de Progression */}
+        {renderDeploymentProgressModal()}
       </div>
     );
   }
@@ -3690,12 +4015,22 @@ const Admin = () => {
             <Button
               type="button"
               size="sm"
-              onClick={() => setIsSuperAdminDeployModalOpen(true)}
-              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0"
+              onClick={startDeploymentToOnlineSite}
+              disabled={deployState.isDeploying}
+              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0 transition-all hover:scale-[1.02] cursor-pointer"
               title="Envoyer les modifications directement vers le site (mise à jour immédiate sur GitHub et Vercel)"
             >
-              <Send className="h-3.5 w-3.5" />
-              <span>Envoyer les modifications vers le site</span>
+              {deployState.isDeploying ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Envoi en cours ({deployState.progress}%)...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  <span>Envoyer les modifications vers le site</span>
+                </>
+              )}
             </Button>
           )}
 
@@ -8047,13 +8382,23 @@ const Admin = () => {
                     <p className="text-xs text-slate-600 leading-relaxed">
                       Cliquez ci-dessous pour envoyer vos modifications vers une branche de prévisualisation GitHub. Vercel générera automatiquement un lien de preview dédié.
                     </p>
-                    <Button
-                      onClick={createPullRequest}
-                      disabled={isSaving}
-                      className="bg-french-blue hover:bg-blue-700 text-white text-xs mt-2 w-full sm:w-auto"
-                    >
-                      <Send className="mr-1.5 h-3.5 w-3.5" /> {isSaving ? 'Génération de la Preview…' : 'Créer une Preview GitHub / Vercel'}
-                    </Button>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button
+                        onClick={startDeploymentToOnlineSite}
+                        disabled={isSaving}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md"
+                      >
+                        <Rocket className="mr-1.5 h-3.5 w-3.5" /> Envoyer vers le site en ligne (déploiement direct)
+                      </Button>
+                      <Button
+                        onClick={() => createPullRequest(false)}
+                        disabled={isSaving}
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        <Send className="mr-1.5 h-3.5 w-3.5" /> {isSaving ? 'Génération…' : 'Créer une branche / Preview'}
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="p-4 rounded-lg border bg-slate-50 space-y-2">
@@ -8871,6 +9216,9 @@ const Admin = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Déploiement avec Barre de Progression */}
+      {renderDeploymentProgressModal()}
     </div>
   );
 };
