@@ -41,12 +41,15 @@ const formatCurrency = (value: number, currency: 'XOF' | 'EUR') =>
   }).format(currency === 'XOF' ? value : value / XOF_TO_EUR);
 
 type Project = {
+  id?: string;
   title: string;
   description: string;
   period: string;
   budget: number;
   color: string;
   link?: string;
+  category?: 'equipment' | 'infra' | 'land';
+  isActive?: boolean;
 };
 
 type CashFlowYear = {
@@ -81,15 +84,19 @@ const summaryCards = [
 // Projets à modifier si nécessaire (montants, périodes, descriptions).
 const projects: Project[] = [
   {
+    id: 'clim-2-3',
     title: 'Climatisation (phases 2 & 3)',
+    category: 'equipment',
     description: 'Déploiement progressif sur les bâtiments restants',
     period: '2026 – 2027',
-    budget: 60_000_009,
+    budget: 60_000_000,
     color: 'from-sky-100 to-sky-50',
     link: '/climatisation-durable',
   },
   {
+    id: 'sport-cover',
     title: 'Couverture terrain de sport',
+    category: 'infra',
     description: 'Protection solaire et confort thermique',
     period: '2026',
     budget: 75_000_000,
@@ -97,21 +104,27 @@ const projects: Project[] = [
     link: '/couverture-terrain-sport',
   },
   {
+    id: 'solar-sport',
     title: 'Solaire terrain de sport',
+    category: 'equipment',
     description: 'Installation photovoltaïque complémentaire',
     period: '2028 – 2029',
     budget: 55_000_000,
     color: 'from-emerald-100 to-emerald-50',
   },
   {
+    id: 'piscine',
     title: 'Piscine',
+    category: 'infra',
     description: 'Réhabilitation et sécurisation du bassin',
     period: '2028 – 2029',
     budget: 125_000_000,
     color: 'from-sky-100 to-blue-50',
   },
   {
+    id: 'cantine',
     title: 'Restauration scolaire',
+    category: 'infra',
     description: 'Montée en charge cuisine & self-service',
     period: '2027 – 2029',
     budget: 200_000_000,
@@ -119,14 +132,18 @@ const projects: Project[] = [
     link: '/construction-cantine',
   },
   {
+    id: 'land',
     title: 'Acquisition terrain',
+    category: 'land',
     description: 'Réserve foncière pour extensions futures',
     period: '2026 – 2027',
     budget: 60_000_000,
     color: 'from-lime-100 to-emerald-50',
   },
   {
+    id: 'extension-p1',
     title: 'Projet d’extension phase 1',
+    category: 'infra',
     description: 'Création de nouvelles surfaces pédagogiques',
     period: '2030',
     budget: 200_000_000,
@@ -244,7 +261,8 @@ const BudgetCadreVieInfrastructures = () => {
   }, []);
 
   const activeProjects = useMemo(() => {
-    return (liveBudget.projects && liveBudget.projects.length > 0) ? liveBudget.projects : projects;
+    const list = (liveBudget.projects && liveBudget.projects.length > 0) ? liveBudget.projects : projects;
+    return list.filter((p) => p.isActive !== false);
   }, [liveBudget]);
 
   const activeTimeline = useMemo(() => {
@@ -343,31 +361,25 @@ const BudgetCadreVieInfrastructures = () => {
     {
       key: 'totalInvestment',
       label: 'Investissement total',
-      value: liveBudget.summaryCards?.totalInvestment && liveBudget.summaryCards.totalInvestment !== 775_000_000
-        ? liveBudget.summaryCards.totalInvestment
-        : computedTotalInvestment,
+      value: computedTotalInvestment || 775_000_000,
       icon: PiggyBank,
       accent: 'from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-100',
     },
     {
       key: 'fundingGap',
       label: 'Manque à gagner / besoin de financement à l’horizon 2030',
-      value: liveBudget.summaryCards?.fundingGap && liveBudget.summaryCards.fundingGap !== 89_860_582
-        ? liveBudget.summaryCards.fundingGap
-        : computedFundingGap,
+      value: computedFundingGap,
       icon: AlertTriangle,
       accent: 'from-rose-50 to-amber-50 text-amber-700 border-amber-100',
     },
     {
       key: 'estimatedCapacity',
       label: 'Capacité totale estimée (budget + ANEFE + écolages)',
-      value: liveBudget.summaryCards?.estimatedCapacity && liveBudget.summaryCards.estimatedCapacity !== 685_139_418
-        ? liveBudget.summaryCards.estimatedCapacity
-        : computedTotalCapacity,
+      value: computedTotalCapacity || 685_139_418,
       icon: BadgeDollarSign,
       accent: 'from-sky-50 to-indigo-50 text-sky-700 border-sky-100',
     },
-  ], [liveBudget, computedTotalInvestment, computedFundingGap, computedTotalCapacity]);
+  ], [computedTotalInvestment, computedFundingGap, computedTotalCapacity]);
 
   // Dynamic annual expenses matching timeline rows per year
   const annualTotals = useMemo(() => {
@@ -588,11 +600,32 @@ const BudgetCadreVieInfrastructures = () => {
                 </div>
                 {items.map((project) => {
                   const hasLink = Boolean(project.link);
+                  const projectGradient = (project.color && project.color.includes('from-'))
+                    ? project.color
+                    : (project.category === 'equipment'
+                        ? 'from-sky-100 to-sky-50'
+                        : project.category === 'land'
+                        ? 'from-lime-100 to-emerald-50'
+                        : 'from-blue-100 to-indigo-50');
+
                   const cardContent = (
                     <div className="flex items-start gap-3" data-project-id={project.id || project.title}>
                       <div className="flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h6 className="text-base font-semibold text-slate-900" data-project-id={project.id || project.title} data-project-field="title">{project.title}</h6>
+                          {project.category && (
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                                project.category === 'equipment'
+                                  ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                  : project.category === 'land'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}
+                            >
+                              {project.category === 'equipment' ? 'Équipement' : project.category === 'land' ? 'Foncier' : 'Infrastructure'}
+                            </span>
+                          )}
                           <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-french-blue" data-project-id={project.id || project.title} data-project-field="period">
                             <CalendarClock className="h-3 w-3" aria-hidden />
                             {project.period}
@@ -622,17 +655,17 @@ const BudgetCadreVieInfrastructures = () => {
 
                   return hasLink ? (
                     <a
-                      key={project.title}
+                      key={project.id || project.title}
                       href={project.link}
-                      className={`group block rounded-2xl border border-slate-200 bg-gradient-to-br ${project.color} p-5 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-french-blue`}
+                      className={`group block rounded-2xl border border-slate-200 bg-gradient-to-br ${projectGradient} p-5 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-french-blue`}
                       aria-label={`En savoir plus sur ${project.title}`}
                     >
                       {cardContent}
                     </a>
                   ) : (
                     <div
-                      key={project.title}
-                      className={`group rounded-2xl border border-slate-200 bg-gradient-to-br ${project.color} p-5 shadow-sm`}
+                      key={project.id || project.title}
+                      className={`group rounded-2xl border border-slate-200 bg-gradient-to-br ${projectGradient} p-5 shadow-sm`}
                       aria-label={project.title}
                     >
                       {cardContent}

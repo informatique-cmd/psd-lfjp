@@ -3,19 +3,26 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
+  Building2,
   CalendarClock,
+  Check,
   CheckCircle2,
   Coins,
   Euro,
   FolderKanban,
   Info,
+  Layers,
   MousePointerClick,
+  Pencil,
   PiggyBank,
   Plus,
   RefreshCw,
   Trash2,
+  Trees,
   TrendingUp,
   Wallet,
+  Wrench,
+  X,
 } from 'lucide-react';
 import {
   Bar,
@@ -52,6 +59,8 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 }) => {
   const [currency, setCurrency] = useState<'XOF' | 'EUR'>('XOF');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'synced'>('synced');
+  const [editingProject, setEditingProject] = useState<BudgetProject | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
 
   // Load initial budget data from pageData or draft
   const initialData = useMemo<BudgetData>(() => {
@@ -228,8 +237,32 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
   const updateProjectCost = useCallback((id: string, newCost: number) => {
     setProjectsList((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const val = Math.max(0, newCost);
+        const vMin = p.variableMin && p.variableMin > val ? Math.round(val * 0.5) : (p.variableMin ?? Math.round(val * 0.5));
+        const vMax = p.variableMax && p.variableMax < val ? Math.round(val * 1.5) : (p.variableMax ?? Math.round(val * 1.5));
+        return {
+          ...p,
+          totalCost: val,
+          budget: val,
+          variableMin: vMin,
+          variableMax: vMax,
+        };
+      })
+    );
+    setSaveStatus('saved');
+  }, []);
+
+  const updateProjectCategory = useCallback((id: string, newCategory: 'equipment' | 'infra' | 'land') => {
+    const colorMap: Record<'equipment' | 'infra' | 'land', string> = {
+      equipment: 'from-sky-100 to-sky-50',
+      infra: 'from-blue-100 to-indigo-50',
+      land: 'from-lime-100 to-emerald-50',
+    };
+    setProjectsList((prev) =>
       prev.map((p) =>
-        p.id === id ? { ...p, totalCost: newCost, budget: newCost } : p
+        p.id === id ? { ...p, category: newCategory, color: colorMap[newCategory] || p.color } : p
       )
     );
     setSaveStatus('saved');
@@ -246,7 +279,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               ...p,
               startYear: s,
               durationYears: duration,
-              period: `${s} – ${e}`,
+              period: `${s}${duration > 1 ? ` – ${e}` : ''}`,
             }
           : p
       )
@@ -285,26 +318,79 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     setSaveStatus('saved');
   }, []);
 
-  const handleAddProject = useCallback(() => {
+  const openAddProjectModal = useCallback(() => {
     const newId = `proj-${Date.now()}`;
     const newProject: BudgetProject = {
       id: newId,
-      title: 'Nouveau projet d’investissement',
-      name: 'Nouveau projet d’investissement',
+      title: '',
+      name: '',
       category: 'infra',
-      description: 'Aménagement ou acquisition prévus dans le cadre de vie.',
+      description: '',
       period: '2026 – 2027',
-      budget: 25_000_000,
-      totalCost: 25_000_000,
+      budget: 50_000_000,
+      totalCost: 50_000_000,
       startYear: 2026,
       durationYears: 2,
       isActive: true,
       isVariable: true,
-      variableMin: 15_000_000,
-      variableMax: 40_000_000,
+      variableMin: 25_000_000,
+      variableMax: 80_000_000,
       color: 'from-blue-100 to-indigo-50',
+      link: '',
     };
-    setProjectsList((prev) => [...prev, newProject]);
+    setEditingProject(newProject);
+    setIsAddingNew(true);
+  }, []);
+
+  const openEditProjectModal = useCallback((project: BudgetProject) => {
+    setEditingProject({ ...project });
+    setIsAddingNew(false);
+  }, []);
+
+  const saveModalProject = useCallback((projectToSave: BudgetProject) => {
+    const s = Math.max(2026, Math.min(2030, projectToSave.startYear || 2026));
+    const duration = Math.max(1, projectToSave.durationYears || 1);
+    const e = Math.min(2030, s + duration - 1);
+    const finalDuration = e - s + 1;
+    const periodStr = `${s}${finalDuration > 1 ? ` – ${e}` : ''}`;
+    const budgetVal = Math.max(0, Number(projectToSave.totalCost) || Number(projectToSave.budget) || 0);
+
+    const colorMap: Record<'equipment' | 'infra' | 'land', string> = {
+      equipment: 'from-sky-100 to-sky-50',
+      infra: 'from-blue-100 to-indigo-50',
+      land: 'from-lime-100 to-emerald-50',
+    };
+    const cat = projectToSave.category || 'infra';
+    const finalTitle = (projectToSave.title || projectToSave.name || '').trim() || 'Nouveau projet';
+
+    const normalized: BudgetProject = {
+      ...projectToSave,
+      id: projectToSave.id || `proj-${Date.now()}`,
+      title: finalTitle,
+      name: finalTitle,
+      category: cat,
+      color: colorMap[cat] || 'from-blue-100 to-indigo-50',
+      startYear: s,
+      durationYears: finalDuration,
+      period: periodStr,
+      budget: budgetVal,
+      totalCost: budgetVal,
+      isVariable: true,
+      variableMin: Math.round(budgetVal * 0.5),
+      variableMax: Math.max(budgetVal + 20_000_000, Math.round(budgetVal * 1.5)),
+      isActive: projectToSave.isActive ?? true,
+    };
+
+    setProjectsList((prev) => {
+      const exists = prev.some((p) => p.id === normalized.id);
+      if (exists) {
+        return prev.map((p) => (p.id === normalized.id ? normalized : p));
+      }
+      return [...prev, normalized];
+    });
+
+    setEditingProject(null);
+    setIsAddingNew(false);
     setSaveStatus('saved');
   }, []);
 
@@ -314,8 +400,11 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       if (!ok) return;
     }
     setProjectsList((prev) => prev.filter((p) => p.id !== id));
+    if (editingProject?.id === id) {
+      setEditingProject(null);
+    }
     setSaveStatus('saved');
-  }, []);
+  }, [editingProject]);
 
   const resetAllToDefaults = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -678,12 +767,12 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleAddProject}
-                className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs transition cursor-pointer"
-                title="Ajouter un nouveau projet"
+                onClick={openAddProjectModal}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs transition cursor-pointer"
+                title="Ajouter un nouveau projet d’investissement"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Ajouter</span>
+                <span>+ Ajouter</span>
               </button>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                 {projectsList.filter((p) => p.isActive).length} actifs
@@ -699,13 +788,10 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               const currentCost = Number(project.totalCost) || Number(project.budget) || 0;
               const hasLink = Boolean(project.link);
 
-              let categoryBadge = 'Infrastructure';
               let categoryClasses = 'bg-blue-50 text-blue-700 border-blue-200';
               if (project.category === 'equipment') {
-                categoryBadge = 'Équipement';
                 categoryClasses = 'bg-orange-50 text-orange-700 border-orange-200';
               } else if (project.category === 'land') {
-                categoryBadge = 'Foncier';
                 categoryClasses = 'bg-emerald-50 text-emerald-700 border-emerald-200';
               }
 
@@ -719,18 +805,37 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                       : 'border-slate-200/60 opacity-60 bg-slate-50/50'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${categoryClasses}`}
+                  {/* Card Top: Category Selector + Actions (Edit, Delete, Toggle) */}
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <select
+                      value={project.category || 'infra'}
+                      disabled={!project.isActive}
+                      onChange={(e) => updateProjectCategory(project.id, e.target.value as 'infra' | 'equipment' | 'land')}
+                      className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border cursor-pointer focus:outline-hidden focus:ring-1 focus:ring-blue-500 disabled:opacity-60 transition ${categoryClasses}`}
+                      title="Changer la catégorie du projet"
                     >
-                      {categoryBadge}
-                    </span>
+                      <option value="infra">🏢 Infrastructure</option>
+                      <option value="equipment">⚡ Équipement</option>
+                      <option value="land">🌳 Foncier</option>
+                    </select>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {/* Edit Button */}
+                      <button
+                        type="button"
+                        onClick={() => openEditProjectModal(project)}
+                        className="text-slate-500 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-md transition cursor-pointer flex items-center gap-1"
+                        title="Modifier ce projet (titre, dates, budget exact, description)"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span className="text-[11px] font-semibold hidden sm:inline">Modifier</span>
+                      </button>
+
+                      {/* Delete Button */}
                       <button
                         type="button"
                         onClick={() => handleDeleteProject(project.id)}
-                        className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition cursor-pointer"
+                        className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition cursor-pointer"
                         title="Supprimer ce projet"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -740,7 +845,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleProject(project.id)}
-                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ml-1 ${
                           project.isActive ? 'bg-emerald-500' : 'bg-slate-300'
                         }`}
                         aria-label={`Activer ou désactiver ${project.name || project.title}`}
@@ -755,6 +860,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                     </div>
                   </div>
 
+                  {/* Title & Description */}
                   <h3
                     className="font-bold text-sm text-slate-800 leading-snug"
                     data-project-field="title"
@@ -768,6 +874,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                     {project.description}
                   </p>
 
+                  {/* Period Start & End */}
                   <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100">
                     <div className="relative">
                       <label className="absolute -top-2 left-2 bg-white px-1 text-[10px] font-medium text-slate-500">
@@ -812,45 +919,39 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                     </div>
                   </div>
 
-                  {project.isVariable && project.variableMin && project.variableMax ? (
-                    <div className="mt-3 pt-2.5 border-t border-slate-100">
-                      <div className="flex justify-between items-center text-xs mb-1.5">
-                        <span className="text-slate-500 font-medium">Budget alloué</span>
-                        <span
-                          className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs"
-                          data-project-field="budget"
-                          data-currency-amount={currentCost}
-                        >
-                          {formatCurrency(currentCost)}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={project.variableMin}
-                        max={project.variableMax}
-                        step={1_000_000}
-                        value={currentCost}
-                        disabled={!project.isActive}
-                        onChange={(e) => updateProjectCost(project.id, Number(e.target.value))}
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:opacity-50"
-                      />
-                      <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
-                        <span>{formatCurrency(project.variableMin)}</span>
-                        <span>{formatCurrency(project.variableMax)}</span>
+                  {/* Budget Allocation: Numerical exact input + Slider */}
+                  <div className="mt-3 pt-2.5 border-t border-slate-100">
+                    <div className="flex justify-between items-center text-xs mb-1.5 gap-2">
+                      <span className="text-slate-500 font-medium">Budget alloué :</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          step={1_000_000}
+                          value={currentCost}
+                          disabled={!project.isActive}
+                          onChange={(e) => updateProjectCost(project.id, Number(e.target.value) || 0)}
+                          className="w-28 px-2 py-0.5 text-xs font-mono font-bold text-blue-700 bg-blue-50/50 border border-blue-200 rounded text-right focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                          title="Saisir le montant exact en FCFA"
+                        />
+                        <span className="text-[10px] text-slate-500 font-bold">{currency === 'XOF' ? 'FCFA' : 'EUR'}</span>
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex justify-between items-center text-xs mt-3 pt-2 border-t border-slate-100">
-                      <span className="text-slate-500 font-medium">Coût Total:</span>
-                      <span
-                        className="font-bold text-slate-900 font-mono"
-                        data-project-field="budget"
-                        data-currency-amount={currentCost}
-                      >
-                        {formatCurrency(currentCost)}
-                      </span>
+                    <input
+                      type="range"
+                      min={project.variableMin || Math.round(currentCost * 0.5)}
+                      max={project.variableMax || Math.max(currentCost + 20_000_000, Math.round(currentCost * 1.5))}
+                      step={1_000_000}
+                      value={currentCost}
+                      disabled={!project.isActive}
+                      onChange={(e) => updateProjectCost(project.id, Number(e.target.value))}
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 disabled:opacity-50"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
+                      <span>{formatCurrency(project.variableMin || Math.round(currentCost * 0.5))}</span>
+                      <span>{formatCurrency(project.variableMax || Math.max(currentCost + 20_000_000, Math.round(currentCost * 1.5)))}</span>
                     </div>
-                  )}
+                  </div>
 
                   {hasLink && (
                     <div className="mt-2.5 pt-2 border-t border-slate-100/70 flex justify-end">
@@ -1197,6 +1298,265 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Edit / Add Project Modal Dialog */}
+      {editingProject && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto"
+        >
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                  <FolderKanban className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">
+                    {isAddingNew ? 'Ajouter un nouveau projet' : 'Modifier le projet d’investissement'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Planification budgétaire et programmation pluriannuelle 2026–2030
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingProject(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                title="Fermer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 text-xs overflow-y-auto flex-1">
+              {/* Titre */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Titre du projet <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingProject.title || editingProject.name || ''}
+                  onChange={(e) => setEditingProject({ ...editingProject, title: e.target.value, name: e.target.value })}
+                  placeholder="ex: Restauration scolaire, Climatisation phases 2 & 3..."
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                />
+              </div>
+
+              {/* Catégorie */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">
+                  Catégorie de l'investissement
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'infra', label: 'Infrastructure', desc: 'Bâtiments, préaux, sport', icon: Building2, color: 'border-blue-300 bg-blue-50/50 text-blue-800' },
+                    { id: 'equipment', label: 'Équipement', desc: 'Climatisation, solaire, tech', icon: Wrench, color: 'border-orange-300 bg-orange-50/50 text-orange-800' },
+                    { id: 'land', label: 'Foncier', desc: 'Terrains, réserves foncières', icon: Trees, color: 'border-emerald-300 bg-emerald-50/50 text-emerald-800' },
+                  ].map((c) => {
+                    const Icon = c.icon;
+                    const isSelected = (editingProject.category || 'infra') === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setEditingProject({ ...editingProject, category: c.id as 'infra' | 'equipment' | 'land' })}
+                        className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                          isSelected ? `${c.color} ring-2 ring-blue-500 font-bold shadow-xs` : 'border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <Icon className="w-4 h-4" />
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-xs">{c.label}</p>
+                          <p className="text-[10px] text-slate-500 font-normal">{c.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Budget Total */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-slate-700">
+                    Budget prévisionnel total (FCFA) <span className="text-red-500">*</span>
+                  </label>
+                  <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                    {formatCurrency(Number(editingProject.totalCost) || Number(editingProject.budget) || 0)}
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min={0}
+                  step={1_000_000}
+                  value={Number(editingProject.totalCost) || Number(editingProject.budget) || 0}
+                  onChange={(e) => {
+                    const val = Math.max(0, Number(e.target.value) || 0);
+                    setEditingProject({ ...editingProject, budget: val, totalCost: val });
+                  }}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-mono font-semibold"
+                />
+                {/* Quick amount shortcuts */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <span className="text-[10px] text-slate-400 self-center mr-1">Raccourcis :</span>
+                  {[25_000_000, 50_000_000, 60_000_000, 75_000_000, 100_000_000, 125_000_000, 200_000_000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setEditingProject({ ...editingProject, budget: amt, totalCost: amt })}
+                      className="px-2 py-0.5 text-[10px] rounded-md bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-800 transition font-mono cursor-pointer"
+                    >
+                      {(amt / 1_000_000).toFixed(0)} M
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Période Début - Fin */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Année de début
+                  </label>
+                  <select
+                    value={editingProject.startYear || 2026}
+                    onChange={(e) => {
+                      const s = Number(e.target.value);
+                      const curEnd = (editingProject.startYear || 2026) + (editingProject.durationYears || 1) - 1;
+                      const newEnd = Math.max(s, curEnd);
+                      setEditingProject({
+                        ...editingProject,
+                        startYear: s,
+                        durationYears: newEnd - s + 1,
+                      });
+                    }}
+                    className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-lg font-semibold bg-white cursor-pointer"
+                  >
+                    {YEARS.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Année de fin
+                  </label>
+                  <select
+                    value={(editingProject.startYear || 2026) + (editingProject.durationYears || 1) - 1}
+                    onChange={(e) => {
+                      const end = Number(e.target.value);
+                      const s = editingProject.startYear || 2026;
+                      setEditingProject({
+                        ...editingProject,
+                        durationYears: Math.max(1, end - s + 1),
+                      });
+                    }}
+                    className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-lg font-semibold bg-white cursor-pointer"
+                  >
+                    {YEARS.filter((y) => y >= (editingProject.startYear || 2026)).map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Description de l'action ou des travaux
+                </label>
+                <textarea
+                  rows={2}
+                  value={editingProject.description || ''}
+                  onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                  placeholder="Précisez le périmètre des investissements..."
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Lien fiche détaillée */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Lien vers la fiche détaillée (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={editingProject.link || ''}
+                  onChange={(e) => setEditingProject({ ...editingProject, link: e.target.value })}
+                  placeholder="ex: /climatisation-durable, /couverture-terrain-sport, /construction-cantine"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg font-mono"
+                />
+              </div>
+
+              {/* Statut actif */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <p className="font-bold text-slate-800">Projet actif dans le budget</p>
+                  <p className="text-[10px] text-slate-500">
+                    Si désactivé, le projet est exclu des totaux, graphiques et simulations.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingProject({ ...editingProject, isActive: !editingProject.isActive })}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                    editingProject.isActive ? 'bg-emerald-500' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      editingProject.isActive ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
+              {!isAddingNew ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteProject(editingProject.id);
+                  }}
+                  className="px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Supprimer</span>
+                </button>
+              ) : <div />}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProject(null)}
+                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 text-xs font-semibold transition cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveModalProject(editingProject)}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isAddingNew ? 'Ajouter le projet' : 'Enregistrer les modifications'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

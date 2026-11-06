@@ -2545,7 +2545,8 @@ const Admin = () => {
         description: 'Description des travaux ou équipements prévus pour le cadre de vie.',
         period: '2026 – 2027',
         budget: 10000000,
-        color: 'from-sky-100 to-sky-50',
+        category: 'infra',
+        color: 'from-blue-100 to-indigo-50',
       };
       const updatedProjects = [...budget.projects, newProject];
       const totalInvestment = updatedProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
