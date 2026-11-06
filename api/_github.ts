@@ -39,13 +39,25 @@ export const getFallbackRepoToken = () => {
 };
 
 export const getSessionToken = (
-  req: { headers: { cookie?: string; 'x-github-token'?: string; authorization?: string }; body?: unknown },
+  req: { headers: Record<string, string | string[] | undefined>; body?: unknown },
   allowFallback = true
 ) => {
-  if (req.headers && req.headers['x-github-token']) return req.headers['x-github-token'];
-  if (req.headers && req.headers.authorization?.startsWith('Bearer ')) {
-    return req.headers.authorization.slice(7).trim();
+  const getHeader = (name: string): string | undefined => {
+    if (!req.headers) return undefined;
+    const key = Object.keys(req.headers).find((k) => k.toLowerCase() === name.toLowerCase());
+    const val = key ? req.headers[key] : undefined;
+    return Array.isArray(val) ? val[0] : val;
+  };
+
+  const xToken = getHeader('x-github-token');
+  if (xToken && typeof xToken === 'string' && xToken.trim()) return xToken.trim();
+
+  const authHeader = getHeader('authorization');
+  if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    const bearer = authHeader.slice(7).trim();
+    if (bearer) return bearer;
   }
+
   if (
     req.body &&
     typeof req.body === 'object' &&
@@ -55,7 +67,9 @@ export const getSessionToken = (
     const bToken = (req.body as { githubToken: string }).githubToken.trim();
     if (bToken) return bToken;
   }
-  const cookie = getCookies(req.headers?.cookie).lfjp_admin_session;
+
+  const cookieHeader = (getHeader('cookie') || '') as string;
+  const cookie = getCookies(cookieHeader).lfjp_admin_session;
   const cookieToken = cookie ? decryptToken(cookie) : null;
   if (cookieToken) return cookieToken;
 

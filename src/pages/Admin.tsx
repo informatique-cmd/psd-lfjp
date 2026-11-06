@@ -25,7 +25,7 @@ import { restaurantPageData } from '@/data/restaurantPageData';
 import { psdTimelineData } from '@/data/psdTimelineData';
 import { elcsData } from '@/components/diagnostic/ElcsDataContext';
 import { defaultBudgetData, defaultTransportData, type BudgetData, type TransportData, type BudgetProject, type TransportCommune, type TransportCircuit, type CashFlowYear, type TuitionSimulation } from '@/data/budgetTransportData';
-import BudgetCadreVieInfrastructures from '@/components/BudgetCadreVieInfrastructures';
+import { AdminBudgetDashboard } from '@/components/admin/AdminBudgetDashboard';
 import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
@@ -1755,6 +1755,7 @@ const Admin = () => {
         headers: {
           'Content-Type': 'application/json',
           'x-github-token': activeGithubToken,
+          Authorization: `Bearer ${activeGithubToken}`,
         },
         body: JSON.stringify({
           directDeploy,
@@ -6001,8 +6002,7 @@ const Admin = () => {
 
                   {/* Interactive Budget Dashboard identical to lfjp-investissements.netlify.app */}
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
-                    <BudgetCadreVieInfrastructures
-                      adminMode={true}
+                    <AdminBudgetDashboard
                       onDataChange={(updated) => {
                         updateEditablePageData((data) => ({
                           ...data,

@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée.' });
-  const token = getSessionToken(req, true);
+  const token = getSessionToken(req, true) || getFallbackRepoToken();
   if (!token) return res.status(401).json({ error: 'Connecte-toi avec GitHub avant de créer une Preview.' });
   const body = req.body && typeof req.body === 'object' ? req.body as { content?: unknown; files?: Record<string, unknown>; directDeploy?: boolean } : {};
   const files = body.files

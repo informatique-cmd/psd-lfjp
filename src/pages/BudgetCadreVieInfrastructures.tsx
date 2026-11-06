@@ -60,8 +60,8 @@ const BudgetCadreVieInfrastructuresPage = () => {
       </header>
 
       <main id="budget-cadre-vie" className="flex-1">
-        <div className="container mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-8 md:py-10">
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm px-4 pb-8 pt-4 sm:px-6 md:px-8 md:pb-10">
+        <div className="container mx-auto max-w-7xl px-6 lg:px-12 py-10 md:py-14">
+          <div className="rounded-[28px] border border-slate-200/70 bg-white shadow-lg shadow-slate-200/40 px-4 pb-8 pt-4 md:px-8 md:pb-10 md:pt-6">
             <BudgetCadreVieInfrastructures />
           </div>
         </div>
