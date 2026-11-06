@@ -260,13 +260,28 @@ const BudgetCadreVieInfrastructures = () => {
     };
   }, []);
 
+  const isStaleProjectList = (projs?: Project[]): boolean => {
+    if (!projs || projs.length < 7) return true;
+    const hasCouverture3Years = projs.some(
+      (p) => (p.id?.includes('sport') || p.title.toLowerCase().includes('couverture')) && p.period?.includes('2028')
+    );
+    const hasExtension = projs.some(
+      (p) => p.id?.includes('extension') || p.title.toLowerCase().includes('extension')
+    );
+    return hasCouverture3Years || !hasExtension;
+  };
+
   const activeProjects = useMemo(() => {
-    const list = (liveBudget.projects && liveBudget.projects.length > 0) ? liveBudget.projects : projects;
+    const list = (liveBudget.projects && liveBudget.projects.length >= 7 && !isStaleProjectList(liveBudget.projects))
+      ? liveBudget.projects
+      : projects;
     return list.filter((p) => p.isActive !== false);
   }, [liveBudget]);
 
   const activeTimeline = useMemo(() => {
-    return (liveBudget.financialTimeline && liveBudget.financialTimeline.length > 0) ? liveBudget.financialTimeline : financialTimeline;
+    return (liveBudget.financialTimeline && liveBudget.financialTimeline.length >= 5)
+      ? liveBudget.financialTimeline
+      : financialTimeline;
   }, [liveBudget]);
 
   // Dynamically derive all active project schedule items directly from active projects

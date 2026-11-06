@@ -63,25 +63,49 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
   const [editingProject, setEditingProject] = useState<BudgetProject | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
 
-  // Load initial budget data from pageData or draft
+  // Helper to detect outdated / desynchronized 6-project drafts
+  const isStaleProjectList = useCallback((projects?: BudgetProject[]): boolean => {
+    if (!projects || projects.length < 7) return true;
+    const hasCouverture3Years = projects.some(
+      (p) =>
+        (p.id.includes('sport') || p.title.toLowerCase().includes('couverture')) &&
+        (p.durationYears === 3 || p.period?.includes('2028'))
+    );
+    const hasExtension = projects.some(
+      (p) => p.id.includes('extension') || p.title.toLowerCase().includes('extension')
+    );
+    const total = projects.reduce((s, p) => s + (Number(p.totalCost) || Number(p.budget) || 0), 0);
+    return hasCouverture3Years || !hasExtension || total === 675_000_000;
+  }, []);
+
+  // Load initial budget data from pageData or draft, prioritizing official 775M dataset
   const initialData = useMemo<BudgetData>(() => {
     if (typeof window !== 'undefined' && isContentDraftPreview()) {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed?.budgetData) return parsed.budgetData as BudgetData;
+          if (parsed?.budgetData?.projects && !isStaleProjectList(parsed.budgetData.projects)) {
+            return parsed.budgetData as BudgetData;
+          }
         }
       } catch {
         // fallback
       }
     }
-    return (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData;
-  }, []);
+    const pageDataBudget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
+    if (pageDataBudget?.projects && !isStaleProjectList(pageDataBudget.projects)) {
+      return pageDataBudget;
+    }
+    return defaultBudgetData;
+  }, [isStaleProjectList]);
 
-  // Normalization: Ensure all projects have the required interactive fields matching psd-lfjp.netlify.app
+  // Normalization: Ensure all projects have the required interactive fields matching psd-lfjp.netlify.app & psd-lfjp.vercel.app
   const normalizeProjects = useCallback((rawProjects?: BudgetProject[]): BudgetProject[] => {
-    const list = rawProjects && rawProjects.length > 0 ? rawProjects : defaultBudgetData.projects;
+    const list = rawProjects && rawProjects.length >= 7 && !isStaleProjectList(rawProjects)
+      ? rawProjects
+      : defaultBudgetData.projects;
+
     return list.map((p, idx) => {
       const defaultMatch = defaultBudgetData.projects.find((dp) => dp.id === p.id || dp.title === p.title);
       const isClim = p.id.includes('clim') || p.title.toLowerCase().includes('climatisation');
@@ -120,29 +144,48 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
       return {
         ...p,
-        id: p.id || `proj-${idx}`,
-        title: p.title || p.name || 'Projet',
-        name: p.name || p.title || 'Projet',
+        id: p.id || defaultMatch?.id || `proj-${idx}`,
+        title: p.title || p.name || defaultMatch?.title || 'Projet',
+        name: p.name || p.title || defaultMatch?.name || 'Projet',
         category,
         isActive: p.isActive ?? true,
         isVariable: isVar,
         variableMin: varMin,
         variableMax: varMax,
-        startYear: Math.max(2026, Math.min(2030, startYear)),
-        durationYears: Math.max(1, Math.min(5, durationYears)),
+        startYear: Math.max(2026, Math.min(2035, startYear)),
+        durationYears: Math.max(1, Math.min(10, durationYears)),
         totalCost: budgetVal,
         budget: budgetVal,
         description: p.description || defaultMatch?.description || '',
-        period: p.period || `${startYear} – ${startYear + durationYears - 1}`,
+        period: p.period || `${startYear}${durationYears > 1 ? ` – ${startYear + durationYears - 1}` : ''}`,
         color: p.color || defaultMatch?.color || 'from-sky-100 to-sky-50',
         link: p.link || defaultMatch?.link,
       };
     });
-  }, []);
+  }, [isStaleProjectList]);
 
   const [projectsList, setProjectsList] = useState<BudgetProject[]>(() =>
     normalizeProjects(initialData.projects)
   );
+
+  // Self-heal stale localStorage draft on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.budgetData?.projects && isStaleProjectList(parsed.budgetData.projects)) {
+            parsed.budgetData = defaultBudgetData;
+            window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(parsed));
+            setProjectsList(normalizeProjects(defaultBudgetData.projects));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [isStaleProjectList, normalizeProjects]);
 
   // Fee rates for each year (default: 2026 => 5.4%, 2027 => 0.4%, others => 0%)
   const [feeRates, setFeeRates] = useState<Record<number, number>>(() => {
@@ -539,6 +582,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               leviers: t.feeRevenue,
               recettesTotales: t.investmentCapacity,
               depenses: t.projectCosts,
+              solde: t.balance,
             })),
             tuitionSimulations: tuitionSimulationRows.map((t) => ({
               year: t.year,
