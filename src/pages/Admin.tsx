@@ -822,7 +822,7 @@ const Admin = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      window.open('https://psd-lfjp.netlify.app/', '_blank');
+                      window.open('https://psd-lfjp.vercel.app/', '_blank');
                     }}
                     className="text-xs border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
                   >
@@ -3933,16 +3933,17 @@ const Admin = () => {
 
           <span className="text-slate-600 hidden sm:inline">|</span>
 
-          <Link
-            to="/?draft=1"
+          <a
+            href="https://psd-lfjp.vercel.app/"
             target="_blank"
+            rel="noreferrer"
             className="flex items-center gap-1 text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
-            title="Ouvrir le site avec le brouillon actuel"
+            title="Ouvrir le site en direct sur Vercel"
           >
             <Eye className="h-3.5 w-3.5 text-french-blue" />
             <span className="hidden md:inline">Voir le site en direct</span>
             <ExternalLink className="h-3 w-3 text-slate-400" />
-          </Link>
+          </a>
 
           <span className="text-slate-600 hidden md:inline">|</span>
 
