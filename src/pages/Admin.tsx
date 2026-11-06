@@ -25,6 +25,7 @@ import { restaurantPageData } from '@/data/restaurantPageData';
 import { psdTimelineData } from '@/data/psdTimelineData';
 import { elcsData } from '@/components/diagnostic/ElcsDataContext';
 import { defaultBudgetData, defaultTransportData, type BudgetData, type TransportData, type BudgetProject, type TransportCommune, type TransportCircuit, type CashFlowYear, type TuitionSimulation } from '@/data/budgetTransportData';
+import BudgetCadreVieInfrastructures from '@/components/BudgetCadreVieInfrastructures';
 import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
@@ -5971,295 +5972,45 @@ const Admin = () => {
               {/* Sub-tab: Budgets & Investissements Cadre de Vie */}
               {planStrategiqueSubTab === 'budgets' && (
                 <div className="space-y-6">
-                  {(() => {
-                    const budget = getBudgetData();
-                    const XOF_TO_EUR = 655.957;
+                  {/* Header Banner */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5">
+                          Axe 1 · Infrastructures & Cadre de Vie
+                        </span>
+                        <span className="text-xs text-slate-500 font-mono">
+                          Planification Pluriannuelle 2026–2030
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900 mt-1">
+                        Budget d’investissement du Cadre de Vie & Infrastructures
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Tableau de bord financier interactif (design identique à lfjp-investissements.netlify.app) : modulation des projets, curseurs de budget, flux de trésorerie et simulation d’écolages.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button asChild size="sm" variant="outline" className="text-xs text-french-blue hover:bg-blue-50">
+                        <a href="/budget-cadre-vie-infrastructures?draft=1" target="_blank" rel="noreferrer">
+                          <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page publique Budget
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
 
-                    return (
-                      <>
-                        {/* Header Banner */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="rounded bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5">
-                                Axe 1 · Infrastructures & Cadre de Vie
-                              </span>
-                              <span className="text-xs text-slate-500 font-mono">
-                                775 000 000 FCFA (1 181 480 €)
-                              </span>
-                            </div>
-                            <h3 className="text-base font-bold text-slate-900 mt-1">
-                              Budget d’investissement du Cadre de Vie & Infrastructures
-                            </h3>
-                            <p className="text-xs text-slate-500">
-                              Programmation 2026-2030 : climatisation, couverture sportive, cantine, flux de trésorerie et simulations d’écolages.
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button asChild size="sm" variant="outline" className="text-xs text-french-blue hover:bg-blue-50">
-                              <a href="/budget-cadre-vie-infrastructures?draft=1" target="_blank" rel="noreferrer">
-                                <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page publique Budget
-                              </a>
-                            </Button>
-                            <Button type="button" size="sm" onClick={addBudgetProject} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
-                              <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter un projet d’investissement
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Summary Cards */}
-                        <div className="grid gap-4 sm:grid-cols-3">
-                          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Investissement Total</span>
-                              <Coins className="h-5 w-5 text-emerald-600" />
-                            </div>
-                            <div className="mt-2">
-                              <Input
-                                type="number"
-                                value={budget.summaryCards.totalInvestment}
-                                onChange={(e) => updateBudgetSummary('totalInvestment', Number(e.target.value) || 0)}
-                                className="bg-white font-bold text-emerald-900 text-lg h-9"
-                              />
-                              <p className="text-[11px] text-emerald-700 mt-1 font-semibold">
-                                Soit environ {Math.round(budget.summaryCards.totalInvestment / XOF_TO_EUR).toLocaleString('fr-FR')} €
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-amber-800 uppercase tracking-wide">Besoin de financement / Gap</span>
-                              <AlertCircle className="h-5 w-5 text-amber-600" />
-                            </div>
-                            <div className="mt-2">
-                              <Input
-                                type="number"
-                                value={budget.summaryCards.fundingGap}
-                                onChange={(e) => updateBudgetSummary('fundingGap', Number(e.target.value) || 0)}
-                                className="bg-white font-bold text-amber-900 text-lg h-9"
-                              />
-                              <p className="text-[11px] text-amber-700 mt-1 font-semibold">
-                                Soit environ {Math.round(budget.summaryCards.fundingGap / XOF_TO_EUR).toLocaleString('fr-FR')} €
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 shadow-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-sky-800 uppercase tracking-wide">Capacité totale estimée</span>
-                              <Wallet className="h-5 w-5 text-sky-600" />
-                            </div>
-                            <div className="mt-2">
-                              <Input
-                                type="number"
-                                value={budget.summaryCards.estimatedCapacity}
-                                onChange={(e) => updateBudgetSummary('estimatedCapacity', Number(e.target.value) || 0)}
-                                className="bg-white font-bold text-sky-900 text-lg h-9"
-                              />
-                              <p className="text-[11px] text-sky-700 mt-1 font-semibold">
-                                Soit environ {Math.round(budget.summaryCards.estimatedCapacity / XOF_TO_EUR).toLocaleString('fr-FR')} € (Écolages + ANEFE)
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Projects List */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                              Les Grands Projets d’Infrastructures & Montants Dédiés ({budget.projects.length})
-                            </h4>
-                            <span className="text-xs text-slate-500">
-                              Tous les montants sont en FCFA (avec conversion en € en direct)
-                            </span>
-                          </div>
-
-                          <div className="grid gap-3.5 sm:grid-cols-2">
-                            {budget.projects.map((project, idx) => (
-                              <div key={project.id || `proj-${idx}`} className="rounded-xl border bg-white p-4 shadow-sm space-y-3">
-                                <div className="flex items-center justify-between border-b pb-2">
-                                  <span className="font-bold text-sm text-french-blue">
-                                    Projet {idx + 1} : {project.title || 'Sans titre'}
-                                  </span>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => removeBudgetProject(idx)}
-                                    className="h-7 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    title="Supprimer ce projet"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-
-                                <div className="grid gap-2.5">
-                                  <div className="grid gap-1">
-                                    <Label className="text-[11px] font-semibold text-slate-600">Intitulé du projet</Label>
-                                    <Input
-                                      value={project.title}
-                                      onChange={(e) => updateBudgetProject(idx, 'title', e.target.value)}
-                                      className="text-xs h-8 font-medium"
-                                    />
-                                  </div>
-
-                                  <div className="grid gap-1">
-                                    <Label className="text-[11px] font-semibold text-slate-600">Description des travaux</Label>
-                                    <Textarea
-                                      value={project.description}
-                                      onChange={(e) => updateBudgetProject(idx, 'description', e.target.value)}
-                                      className="text-xs min-h-[50px]"
-                                    />
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="grid gap-1">
-                                      <Label className="text-[11px] font-semibold text-slate-600">Période prévisionnelle</Label>
-                                      <Input
-                                        value={project.period}
-                                        onChange={(e) => updateBudgetProject(idx, 'period', e.target.value)}
-                                        className="text-xs h-8"
-                                        placeholder="ex: 2026 – 2027"
-                                      />
-                                    </div>
-                                    <div className="grid gap-1">
-                                      <Label className="text-[11px] font-semibold text-slate-600">Budget alloué (FCFA)</Label>
-                                      <Input
-                                        type="number"
-                                        value={project.budget}
-                                        onChange={(e) => updateBudgetProject(idx, 'budget', e.target.value)}
-                                        className="text-xs h-8 font-bold text-emerald-800"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2 rounded">
-                                    <span className="text-slate-500">Contre-valeur :</span>
-                                    <span className="font-bold text-slate-700">
-                                      {Math.round(project.budget / XOF_TO_EUR).toLocaleString('fr-FR')} €
-                                    </span>
-                                    {project.link && (
-                                      <Link to={project.link} className="text-french-blue hover:underline font-semibold ml-2">
-                                        Fiche dédiée ↗
-                                      </Link>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Financial Timeline Table */}
-                        <div className="space-y-3 rounded-xl border bg-slate-50 p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                                Flux de trésorerie prévisionnels (2026 – 2030)
-                              </h4>
-                              <p className="text-[11px] text-slate-500">
-                                Capacité d’autofinancement, leviers financiers ANEFE, dépenses programmées et solde net
-                              </p>
-                            </div>
-                            <span className="text-[11px] font-semibold text-french-blue">5 années d’exercice</span>
-                          </div>
-
-                          <div className="overflow-x-auto rounded-lg border bg-white">
-                            <table className="w-full text-left text-xs divide-y">
-                              <thead className="bg-slate-100 font-semibold text-slate-700">
-                                <tr>
-                                  <th className="p-2.5">Année</th>
-                                  <th className="p-2.5">Capacité annuelle (FCFA)</th>
-                                  <th className="p-2.5">Leviers / Emprunt (FCFA)</th>
-                                  <th className="p-2.5">Recettes totales (FCFA)</th>
-                                  <th className="p-2.5">Dépenses (FCFA)</th>
-                                  <th className="p-2.5 text-right">Solde net annuel</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y text-slate-700">
-                                {budget.financialTimeline.map((flow, yearIdx) => {
-                                  const solde = flow.recettesTotales - flow.depenses;
-                                  return (
-                                    <tr key={flow.year} className="hover:bg-slate-50">
-                                      <td className="p-2.5 font-bold text-slate-900">{flow.year}</td>
-                                      <td className="p-2.5">
-                                        <Input
-                                          type="number"
-                                          value={flow.capacite}
-                                          onChange={(e) => updateCashFlow(yearIdx, 'capacite', Number(e.target.value) || 0)}
-                                          className="h-7 text-xs w-32"
-                                        />
-                                      </td>
-                                      <td className="p-2.5">
-                                        <Input
-                                          type="number"
-                                          value={flow.leviers}
-                                          onChange={(e) => updateCashFlow(yearIdx, 'leviers', Number(e.target.value) || 0)}
-                                          className="h-7 text-xs w-32"
-                                        />
-                                      </td>
-                                      <td className="p-2.5 font-semibold text-slate-900">
-                                        {flow.recettesTotales.toLocaleString('fr-FR')} FCFA
-                                      </td>
-                                      <td className="p-2.5">
-                                        <Input
-                                          type="number"
-                                          value={flow.depenses}
-                                          onChange={(e) => updateCashFlow(yearIdx, 'depenses', Number(e.target.value) || 0)}
-                                          className="h-7 text-xs w-32 font-bold text-red-600"
-                                        />
-                                      </td>
-                                      <td className="p-2.5 text-right font-bold">
-                                        <span className={`px-2 py-0.5 rounded text-[11px] ${
-                                          solde >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                                          {solde.toLocaleString('fr-FR')} FCFA
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
-                        {/* Tuition Simulations */}
-                        <div className="space-y-3 rounded-xl border bg-white p-4">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                            Simulations d’ajustement des frais d’écolage & Recettes générées
-                          </h4>
-                          <div className="grid gap-3 sm:grid-cols-5">
-                            {budget.tuitionSimulations.map((sim, simIdx) => (
-                              <div key={sim.year} className="rounded-lg border bg-slate-50 p-3 space-y-1.5 text-xs">
-                                <span className="font-bold text-slate-900">{sim.year}</span>
-                                <div>
-                                  <Label className="text-[10px] text-slate-500">Hausse (%)</Label>
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    value={sim.increase}
-                                    onChange={(e) => updateTuitionSimulation(simIdx, 'increase', Number(e.target.value) || 0)}
-                                    className="h-7 text-xs font-semibold bg-white"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-[10px] text-slate-500">Recette additionnelle</Label>
-                                  <Input
-                                    type="number"
-                                    value={sim.revenue}
-                                    onChange={(e) => updateTuitionSimulation(simIdx, 'revenue', Number(e.target.value) || 0)}
-                                    className="h-7 text-xs bg-white text-emerald-800 font-bold"
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  {/* Interactive Budget Dashboard identical to lfjp-investissements.netlify.app */}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+                    <BudgetCadreVieInfrastructures
+                      adminMode={true}
+                      onDataChange={(updated) => {
+                        updateEditablePageData((data) => ({
+                          ...data,
+                          budgetData: updated,
+                        }));
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 
