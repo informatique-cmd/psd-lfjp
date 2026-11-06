@@ -820,8 +820,8 @@
   },
   "budgetData": {
     "summaryCards": {
-      "totalInvestment": 550000000,
-      "fundingGap": 0,
+      "totalInvestment": 675000000,
+      "fundingGap": 79860580,
       "estimatedCapacity": 595139420
     },
     "projects": [
@@ -889,7 +889,7 @@
         "totalCost": 125000000,
         "startYear": 2027,
         "durationYears": 2,
-        "isActive": false,
+        "isActive": true,
         "isVariable": true,
         "variableMin": 100000000,
         "variableMax": 150000000,
@@ -944,14 +944,14 @@
         "capacite": 37000000,
         "leviers": 70042377,
         "recettesTotales": 107042377,
-        "depenses": 155000000
+        "depenses": 217500000
       },
       {
         "year": 2028,
         "capacite": 62000000,
         "leviers": 70042377,
         "recettesTotales": 132042377,
-        "depenses": 185000000
+        "depenses": 247500000
       },
       {
         "year": 2029,
