@@ -1174,5 +1174,57 @@
       "Levier d’attractivité ciblé pour les communes de Ngaparou, Somone et la périphérie de Mbour.",
       "Scénario préconisé : service mutualisé avec bus scolaires sécurisés et accompagnateurs formés."
     ]
-  }
+  },
+  "rubriques": [
+    {
+      "id": "accueil",
+      "name": "Accueil",
+      "path": "/",
+      "badge": "Racine",
+      "description": "Portail d’accueil, hero, chiffres clés, actualités, mots officiels et rubriques phares",
+      "iconName": "Home",
+      "isOfficial": true,
+      "order": 1
+    },
+    {
+      "id": "methode",
+      "name": "Méthode",
+      "path": "/methode",
+      "badge": "Pilier 1",
+      "description": "Démarche participative, calendrier de concertation, comités et méthodologie du PSD",
+      "iconName": "Sliders",
+      "isOfficial": true,
+      "order": 2
+    },
+    {
+      "id": "vision",
+      "name": "Vision, Missions & Valeurs",
+      "path": "/vision-missions-valeurs",
+      "badge": "Pilier 2",
+      "description": "Piliers éducatifs, missions prioritaires et valeurs fondamentales partagées du LFJP",
+      "iconName": "Heart",
+      "isOfficial": true,
+      "order": 3
+    },
+    {
+      "id": "diagnostic",
+      "name": "Diagnostic",
+      "path": "/diagnostic",
+      "badge": "Pilier 3",
+      "description": "Enquête Climat Scolaire (ELCS), restauration scolaire, constats de l’établissement et indicateurs clés",
+      "iconName": "ChartNoAxesCombined",
+      "isOfficial": true,
+      "order": 4
+    },
+    {
+      "id": "plan-strategique",
+      "name": "Plan Stratégique",
+      "path": "/plan-strategique",
+      "badge": "Pilier 4",
+      "description": "Les 4 grands axes prioritaires, jalons temporels, budgets d’investissement et 40+ fiches projets",
+      "iconName": "Target",
+      "isOfficial": true,
+      "order": 5
+    }
+  ]
 }

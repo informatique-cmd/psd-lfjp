@@ -49,6 +49,8 @@ export const RUBRIQUE_ICONS: Record<string, LucideIcon> = {
   School,
 };
 
+import pageDataFile from '@/content/pageData.json';
+
 export const defaultRubriques: AdminRubrique[] = [
   {
     id: 'accueil',
@@ -100,39 +102,55 @@ export const defaultRubriques: AdminRubrique[] = [
     isOfficial: true,
     order: 5,
   },
-  {
-    id: 'contact',
-    name: 'Contact & Accès',
-    path: '/contact',
-    badge: 'Contact',
-    description: 'Coordonnées, secrétariat, intendance et localisation du LFJP',
-    iconName: 'Mail',
-    isOfficial: false,
-    order: 6,
-  },
 ];
 
 const RUBRIQUES_STORAGE_KEY = 'lfjp-admin-rubriques-v3';
 
 export function loadRubriquesDraft(): AdminRubrique[] {
-  if (typeof window === 'undefined') return defaultRubriques;
-  try {
-    const raw = window.localStorage.getItem(RUBRIQUES_STORAGE_KEY);
-    if (!raw) return defaultRubriques;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.sort((a, b) => a.order - b.order);
+  // 1. Check if draft exists in browser localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(RUBRIQUES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+            .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+            .sort((a, b) => a.order - b.order);
+        }
+      }
+    } catch {
+      // fallback
     }
-  } catch {
-    // fallback
   }
+
+  // 2. Check if pageData.json has persisted rubriques from publication
+  const pageDataRubriques = (pageDataFile as { rubriques?: AdminRubrique[] }).rubriques;
+  if (Array.isArray(pageDataRubriques) && pageDataRubriques.length > 0) {
+    return pageDataRubriques
+      .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+      .sort((a, b) => a.order - b.order);
+  }
+
+  // 3. Fallback to official 5 rubriques
   return defaultRubriques;
 }
 
 export function saveRubriquesDraft(rubriques: AdminRubrique[]): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(RUBRIQUES_STORAGE_KEY, JSON.stringify(rubriques));
+    const sanitized = rubriques
+      .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+      .map((r, i) => ({ ...r, order: i + 1 }));
+    window.localStorage.setItem(RUBRIQUES_STORAGE_KEY, JSON.stringify(sanitized));
+
+    // Synchronize into lfjp-admin-page-data-draft so pageData payload includes rubriques on deploy
+    const existingPageDataRaw = window.localStorage.getItem('lfjp-admin-page-data-draft');
+    const existingPageData = existingPageDataRaw
+      ? JSON.parse(existingPageDataRaw)
+      : { ...(pageDataFile as Record<string, unknown>) };
+    existingPageData.rubriques = sanitized;
+    window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(existingPageData));
   } catch (err) {
     console.error('Failed to save rubriques to localStorage', err);
   }

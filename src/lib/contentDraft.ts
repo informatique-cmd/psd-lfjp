@@ -16,6 +16,7 @@ export const clearAllDraftStorage = () => {
     window.localStorage.removeItem('lfjp-admin-pages-draft');
     window.localStorage.removeItem('lfjp-admin-page-data-draft');
     window.localStorage.removeItem('lfjp-admin-page-text-draft');
+    window.localStorage.removeItem('lfjp-admin-rubriques-v3');
     window.localStorage.removeItem('lfjp_preview_active');
     window.sessionStorage.removeItem('lfjp-preview-mode');
     window.sessionStorage.removeItem('lfjp_preview_active');

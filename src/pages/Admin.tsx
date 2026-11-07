@@ -612,10 +612,23 @@ const Admin = () => {
         stepMessage: 'Envoi des modifications vers GitHub (branche principale main)...',
       }));
 
+      const sanitizedRubriquesList = rubriques
+        .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+        .map((r, i) => ({ ...r, order: i + 1 }));
+
+      let finalPageDataStr = pageDataJson;
+      try {
+        const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+        parsed.rubriques = sanitizedRubriquesList;
+        finalPageDataStr = JSON.stringify(parsed, null, 2);
+      } catch {
+        // keep current pageDataJson if parse fails
+      }
+
       const payloadFiles = {
         siteContent: serializedContent,
         pages: serializedPages,
-        pageData: pageDataJson,
+        pageData: finalPageDataStr,
         pageText: pageTextJson,
       };
 
@@ -915,8 +928,19 @@ const Admin = () => {
 
   const saveAndSetRubriques = (updater: (prev: AdminRubrique[]) => AdminRubrique[]) => {
     setRubriques((prev) => {
-      const updated = updater(prev).map((r, i) => ({ ...r, order: i + 1 }));
+      const updated = updater(prev)
+        .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+        .map((r, i) => ({ ...r, order: i + 1 }));
       saveRubriquesDraft(updated);
+      try {
+        const parsed = JSON.parse(pageDataJson);
+        parsed.rubriques = updated;
+        const serialized = JSON.stringify(parsed, null, 2);
+        setPageDataJson(serialized);
+        window.localStorage.setItem(pageDataDraftStorageKey, serialized);
+      } catch {
+        // ignore
+      }
       return updated;
     });
   };
@@ -1753,10 +1777,14 @@ const Admin = () => {
       if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
 
       const pageDataStr = customFiles?.pageData || pageDataJson || window.localStorage.getItem(pageDataDraftStorageKey) || '{}';
-      const parsedPageData: unknown = JSON.parse(pageDataStr);
+      const parsedPageData = JSON.parse(pageDataStr) as Record<string, unknown>;
       if (!isValidPageData(parsedPageData)) {
         throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de déployer.');
       }
+      const sanitizedRubriquesList = rubriques
+        .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+        .map((r, i) => ({ ...r, order: i + 1 }));
+      parsedPageData.rubriques = sanitizedRubriquesList;
 
       const pageTextStr = customFiles?.pageText || pageTextJson || window.localStorage.getItem(pageTextDraftStorageKey) || '{}';
       const parsedPageText: unknown = JSON.parse(pageTextStr);
@@ -1839,7 +1867,7 @@ const Admin = () => {
 
   const saveDraft = () => {
     try {
-      const parsed: unknown = JSON.parse(pageDataJson);
+      const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
       if (!isValidPageData(parsed)) {
         throw new Error('Les données de planning ou de film annuel sont invalides.');
       }
@@ -1847,13 +1875,20 @@ const Admin = () => {
       if (!isValidPageTextOverrides(visualOverrides)) {
         throw new Error('Les modifications visuelles des pages sont invalides.');
       }
+      const sanitizedRubriques = rubriques
+        .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+        .map((r, i) => ({ ...r, order: i + 1 }));
+      parsed.rubriques = sanitizedRubriques;
+      const updatedPageDataStr = JSON.stringify(parsed, null, 2);
+      setPageDataJson(updatedPageDataStr);
+      window.localStorage.setItem(pageDataDraftStorageKey, updatedPageDataStr);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.');
       return false;
     }
+    saveRubriquesDraft(rubriques);
     window.localStorage.setItem(draftStorageKey, serializedContent);
     window.localStorage.setItem(pagesDraftStorageKey, serializedPages);
-    window.localStorage.setItem(pageDataDraftStorageKey, pageDataJson);
     window.localStorage.setItem(pageTextDraftStorageKey, pageTextJson);
     setStatus('Brouillon enregistré dans ce navigateur. Il n’est pas encore public.');
     return true;
