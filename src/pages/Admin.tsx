@@ -3916,44 +3916,46 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 font-raleway flex flex-col">
-      {/* WordPress-style Top Admin Bar */}
-      <header className="sticky top-0 z-50 h-12 bg-slate-950 text-slate-200 border-b border-slate-800 flex items-center justify-between px-3 sm:px-4 shadow-sm select-none">
-        <div className="flex items-center gap-2 sm:gap-3">
+    <div className="min-h-screen bg-slate-100 font-raleway flex flex-col w-full max-w-full overflow-x-hidden">
+      {/* WordPress-style Top Admin Bar (Entièrement responsive sans débordement) */}
+      <header className="sticky top-0 z-50 min-h-12 py-1 bg-slate-950 text-slate-200 border-b border-slate-800 flex items-center justify-between px-2 sm:px-4 shadow-sm select-none gap-2 w-full max-w-full overflow-x-hidden">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 shrink">
           <button
             type="button"
             onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 lg:hidden"
-            title="Menu"
+            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 lg:hidden shrink-0"
+            title="Menu de navigation"
+            aria-label="Menu de navigation"
           >
             {isMobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="flex h-7 w-7 items-center justify-center rounded bg-french-blue text-xs font-bold text-white shadow-sm font-playfair">
               L
             </span>
-            <span className="font-playfair font-bold text-sm text-white hidden sm:inline">LFJP CMS</span>
+            <span className="font-playfair font-bold text-sm text-white hidden sm:inline truncate">LFJP CMS</span>
           </div>
 
-          <span className="text-slate-600 hidden sm:inline">|</span>
+          <span className="text-slate-700 hidden sm:inline">|</span>
 
           <a
             href="https://psd-lfjp.vercel.app/"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
-            title="Ouvrir le site en direct sur Vercel"
+            className="flex items-center gap-1 text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors shrink-0"
+            title="Ouvrir le site en direct sur Vercel (psd-lfjp.vercel.app)"
           >
-            <Eye className="h-3.5 w-3.5 text-french-blue" />
+            <Eye className="h-3.5 w-3.5 text-french-blue shrink-0" />
             <span className="hidden md:inline">Voir le site en direct</span>
-            <ExternalLink className="h-3 w-3 text-slate-400" />
+            <span className="hidden sm:inline md:hidden">En direct</span>
+            <ExternalLink className="h-3 w-3 text-slate-400 shrink-0" />
           </a>
 
-          <span className="text-slate-600 hidden md:inline">|</span>
+          <span className="text-slate-700 hidden md:inline">|</span>
 
           {/* Quick Create Dropdown / Buttons */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -3993,7 +3995,7 @@ const Admin = () => {
         </div>
 
         {/* Right side of Topbar: Status, Draft indicator, Save button, User */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Button
             type="button"
             size="sm"
@@ -4001,14 +4003,14 @@ const Admin = () => {
             onClick={() => {
               switchUserProfile(defaultAccounts[1]);
             }}
-            className="h-8 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/40 px-2.5 flex items-center gap-1.5"
+            className="h-8 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/40 px-2 sm:px-2.5 flex items-center gap-1 shrink-0"
             title="Passer en vue Éditeur du site (édition directe in-situ)"
           >
             <Pencil className="h-3.5 w-3.5 text-amber-400 shrink-0" />
             <span className="hidden sm:inline">Vue Éditeur</span>
           </Button>
 
-          <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
+          <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Brouillon actif</span>
           </div>
@@ -4018,20 +4020,22 @@ const Admin = () => {
             size="sm"
             variant="ghost"
             onClick={previewDraft}
-            className="h-8 text-xs text-slate-200 hover:text-white hover:bg-slate-800 px-2"
+            className="h-8 text-xs text-slate-200 hover:text-white hover:bg-slate-800 px-2 hidden md:flex shrink-0"
+            title="Prévisualiser le site"
           >
             <Eye className="mr-1 h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Prévisualiser</span>
+            <span>Aperçu</span>
           </Button>
 
           <Button
             type="button"
             size="sm"
             onClick={saveDraft}
-            className="h-8 bg-french-blue hover:bg-blue-700 text-white text-xs px-3 shadow-sm font-semibold"
+            className="h-8 bg-french-blue hover:bg-blue-700 text-white text-xs px-2.5 sm:px-3 shadow-sm font-semibold shrink-0"
+            title="Enregistrer le brouillon local"
           >
-            <Save className="mr-1 h-3.5 w-3.5" />
-            <span>Enregistrer</span>
+            <Save className="h-3.5 w-3.5 sm:mr-1 shrink-0" />
+            <span className="hidden sm:inline">Enregistrer</span>
           </Button>
 
           {canPublish && (
@@ -4040,31 +4044,33 @@ const Admin = () => {
               size="sm"
               onClick={startDeploymentToOnlineSite}
               disabled={deployState.isDeploying}
-              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-3 shadow-md font-bold flex items-center gap-1.5 shrink-0 transition-all hover:scale-[1.02] cursor-pointer"
+              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2 sm:px-3 shadow-md font-bold flex items-center gap-1 shrink-0 transition-all hover:scale-[1.01] cursor-pointer"
               title="Envoyer les modifications directement vers le site (mise à jour immédiate sur GitHub et Vercel)"
             >
               {deployState.isDeploying ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Envoi en cours ({deployState.progress}%)...</span>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                  <span className="hidden sm:inline">Envoi ({deployState.progress}%)...</span>
                 </>
               ) : (
                 <>
-                  <Send className="h-3.5 w-3.5" />
-                  <span>Envoyer les modifications vers le site</span>
+                  <Send className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden lg:inline">Envoyer vers le site en direct</span>
+                  <span className="hidden sm:inline lg:hidden">Envoyer au site</span>
+                  <span className="sm:hidden">Déployer</span>
                 </>
               )}
             </Button>
           )}
 
-          <div className="h-4 w-px bg-slate-800 hidden sm:block" />
+          <div className="h-4 w-px bg-slate-800 hidden md:block" />
 
           {/* User Profile / Role Indicator & Switcher */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 transition-all text-left"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 transition-all text-left shrink-0"
               title="Cliquez pour changer de profil ou vous connecter"
             >
               {canDelete ? (
@@ -4072,14 +4078,14 @@ const Admin = () => {
               ) : (
                 <User className="h-4 w-4 text-amber-400 shrink-0" />
               )}
-              <div className="hidden md:block">
-                <p className="text-[11px] font-bold text-white leading-tight truncate max-w-[150px]">
+              <div className="hidden xl:block">
+                <p className="text-[11px] font-bold text-white leading-tight truncate max-w-[120px]">
                   {userProfile.email}
                 </p>
                 <div className="flex items-center gap-1">
                   <span className={`inline-block h-1.5 w-1.5 rounded-full ${canDelete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                   <span className={`text-[10px] font-semibold leading-none ${canDelete ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {canDelete ? 'Admin (Tous droits)' : 'Éditeur (Modifs sans suppression)'}
+                    {canDelete ? 'Admin' : 'Éditeur'}
                   </span>
                 </div>
               </div>
@@ -4095,11 +4101,11 @@ const Admin = () => {
                   const el = document.getElementById('pending-deploy-banner');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="h-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-2.5 flex items-center gap-1.5 shadow-md animate-pulse ring-2 ring-amber-300"
+                className="h-8 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-2 flex items-center gap-1 shadow-md animate-pulse ring-2 ring-amber-300 shrink-0"
                 title="1 demande de déploiement Vercel en attente par l'éditeur"
               >
-                <Bell className="h-3.5 w-3.5 fill-current" />
-                <span className="hidden md:inline">1 Déploiement en attente</span>
+                <Bell className="h-3.5 w-3.5 fill-current shrink-0" />
+                <span className="hidden md:inline">1 en attente</span>
                 <span className="md:hidden">1</span>
               </Button>
             )}
@@ -4110,7 +4116,7 @@ const Admin = () => {
               variant="ghost"
               onClick={() => setIsProfileModalOpen(true)}
               title="Connexion / Changer de profil"
-              className="h-8 text-xs text-slate-400 hover:text-white hover:bg-slate-800 px-2"
+              className="h-8 text-xs text-slate-400 hover:text-white hover:bg-slate-800 px-2 hidden sm:flex shrink-0"
             >
               <Key className="h-3.5 w-3.5" />
             </Button>
@@ -4121,20 +4127,20 @@ const Admin = () => {
               variant="outline"
               onClick={logout}
               title="Se déconnecter de la session d’administration"
-              className="h-8 text-xs text-red-400 hover:text-red-200 hover:bg-red-950/60 border-red-900/60 px-2.5 flex items-center gap-1.5 transition-colors"
+              className="h-8 text-xs text-red-400 hover:text-red-200 hover:bg-red-950/60 border-red-900/60 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 transition-colors"
             >
-              <LogOut className="h-3.5 w-3.5 text-red-400" />
-              <span className="hidden sm:inline">Se déconnecter</span>
+              <LogOut className="h-3.5 w-3.5 text-red-400 shrink-0" />
+              <span className="hidden sm:inline">Quitter</span>
             </Button>
 
             <Button
               asChild
               size="sm"
               variant="ghost"
-              className="h-8 text-xs text-slate-300 hover:text-white hover:bg-slate-800 px-2.5 flex items-center gap-1.5"
+              className="h-8 text-xs text-slate-300 hover:text-white hover:bg-slate-800 px-2 flex items-center gap-1 shrink-0"
             >
               <Link to="/" title="Quitter et revenir au site public">
-                <ArrowLeft className="h-3.5 w-3.5 text-french-blue" />
+                <ArrowLeft className="h-3.5 w-3.5 text-french-blue shrink-0" />
                 <span className="hidden lg:inline">Site public</span>
               </Link>
             </Button>
@@ -4201,7 +4207,7 @@ const Admin = () => {
       )}
 
       {/* Main Admin Flex Wrapper: Left Sidebar + Central Workspace */}
-      <div className="flex-1 flex min-h-[calc(100vh-48px)]">
+      <div className="flex-1 flex min-h-[calc(100vh-48px)] w-full max-w-full overflow-x-hidden">
         {/* Left Sidebar (WordPress-style) */}
         <aside
           className={`bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 transition-all duration-200 z-40 ${
@@ -4380,7 +4386,7 @@ const Admin = () => {
         )}
 
         {/* Central Content Workspace */}
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
+        <main className="flex-1 min-w-0 p-3 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full overflow-x-hidden">
           {/* Breadcrumb & Section Header */}
           {(() => {
             const currentTab = dynamicNavigationGroups.flatMap((g) => g.items).find((t) => t.id === activeSection) || {
@@ -4778,7 +4784,8 @@ const Admin = () => {
                     type="button"
                     onClick={() => {
                       setActiveSection('rubrique-plan-strategique');
-                      setPlanStrategiqueSubTab('bac-blanc');
+                      setPlanStrategiqueSubTab('axe4');
+                      setAxe4SubTab('bac-blanc');
                     }}
                     className="flex items-start gap-3 p-3 rounded-lg border bg-white text-left hover:border-french-blue hover:shadow-sm transition-all"
                   >

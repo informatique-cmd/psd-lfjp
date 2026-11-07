@@ -677,7 +677,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     <div
       id="admin-budget-dashboard"
       data-currency={currency}
-      className="w-full font-raleway text-slate-800 space-y-6"
+      className="w-full max-w-full overflow-x-hidden min-w-0 font-raleway text-slate-800 space-y-6"
     >
       {/* Top Action Bar without 'LFJP Invest' and without '630 élèves' */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-3 flex-wrap">
@@ -820,9 +820,9 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       </div>
 
       {/* 3 Columns Layout: Projects (col-3), Financial Analysis (col-6), Funding / Tuition (col-3) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start w-full min-w-0">
         {/* ===================== COLUMN 1 : PROJETS (XL:COL-SPAN-3) ===================== */}
-        <div className="xl:col-span-3 space-y-4">
+        <div className="xl:col-span-3 space-y-4 min-w-0 w-full">
           <div className="flex items-center justify-between pb-1">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <FolderKanban className="w-4 h-4 text-slate-400" />
@@ -1039,7 +1039,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
         </div>
 
         {/* ===================== COLUMN 2 : ANALYSE FINANCIÈRE (XL:COL-SPAN-6) ===================== */}
-        <div className="xl:col-span-6 space-y-6">
+        <div className="xl:col-span-6 space-y-6 min-w-0 w-full overflow-hidden">
           <div className="flex items-center justify-between pb-1">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-slate-400" />
@@ -1061,7 +1061,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               </span>
             </div>
 
-            <div className="h-72 w-full" role="img" aria-label="Graphique des flux de trésorerie">
+            <div className="h-72 w-full min-w-0 overflow-hidden" role="img" aria-label="Graphique des flux de trésorerie">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={financialData.timeline}
@@ -1237,98 +1237,102 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               </div>
             </div>
 
-            <div
-              className="grid gap-1.5 mb-2 text-center"
-              style={{ gridTemplateColumns: `repeat(${calendarYears.length}, minmax(0, 1fr))` }}
-            >
-              {calendarYears.map((y) => (
-                <div key={y} className="text-xs font-bold text-slate-600 bg-slate-100/70 py-1 rounded">
-                  {y}
+            <div className="overflow-x-auto w-full -mx-1 px-1">
+              <div className="min-w-[320px]">
+                <div
+                  className="grid gap-1.5 mb-2 text-center"
+                  style={{ gridTemplateColumns: `repeat(${calendarYears.length}, minmax(0, 1fr))` }}
+                >
+                  {calendarYears.map((y) => (
+                    <div key={y} className="text-xs font-bold text-slate-600 bg-slate-100/70 py-1 rounded">
+                      {y}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <div className="space-y-3 mb-4">
-              {projectsList.map((project) => {
-                const start = project.startYear || 2026;
-                const duration = project.durationYears || 1;
-                const end = start + duration - 1;
-                const cost = Number(project.totalCost) || Number(project.budget) || 0;
-                const annualSpend = duration > 0 ? Math.round(cost / duration) : cost;
+                <div className="space-y-3 mb-4">
+                  {projectsList.map((project) => {
+                    const start = project.startYear || 2026;
+                    const duration = project.durationYears || 1;
+                    const end = start + duration - 1;
+                    const cost = Number(project.totalCost) || Number(project.budget) || 0;
+                    const annualSpend = duration > 0 ? Math.round(cost / duration) : cost;
 
-                return (
-                  <div
-                    key={project.id}
-                    className={`transition-opacity ${project.isActive ? 'opacity-100' : 'opacity-50 hover:opacity-75'}`}
-                  >
-                    <div className="flex items-center gap-2 mb-1 px-1">
+                    return (
                       <div
-                        className={`w-2 h-2 rounded-full ${project.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                      />
-                      <span className="text-xs font-semibold text-slate-800 truncate flex-1">
-                        {project.name || project.title}
-                      </span>
-                      {!project.isActive && (
-                        <span className="text-[10px] text-slate-400 italic">Inactif</span>
-                      )}
-                    </div>
-
-                    <div
-                      className="grid gap-1.5 h-8 bg-slate-50 rounded-md p-1 border border-slate-100"
-                      style={{ gridTemplateColumns: `repeat(${calendarYears.length}, minmax(0, 1fr))` }}
-                    >
-                      {calendarYears.map((y) => {
-                        const isActiveYear = project.isActive && y >= start && y <= end;
-                        let cellBg = 'bg-blue-500';
-                        if (project.category === 'equipment') cellBg = 'bg-orange-500';
-                        if (project.category === 'land') cellBg = 'bg-emerald-600';
-
-                        return (
+                        key={project.id}
+                        className={`transition-opacity ${project.isActive ? 'opacity-100' : 'opacity-50 hover:opacity-75'}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1 px-1">
                           <div
-                            key={y}
-                            onClick={() => handleCalendarCellClick(project, y)}
-                            className={`relative flex items-center justify-center text-[10px] font-bold font-mono rounded cursor-pointer transition-all ${
-                              isActiveYear
-                                ? `${cellBg} text-white shadow-xs hover:brightness-110`
-                                : 'hover:bg-slate-200/70 text-slate-300'
-                            }`}
-                            title={`${project.name || project.title} (${y}) : ${
-                              isActiveYear ? formatCurrency(annualSpend) : 'Cliquer pour activer'
-                            }`}
-                          >
-                            {isActiveYear ? compactTickFormatter(annualSpend) : '·'}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                            className={`w-2 h-2 rounded-full ${project.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                          />
+                          <span className="text-xs font-semibold text-slate-800 truncate flex-1">
+                            {project.name || project.title}
+                          </span>
+                          {!project.isActive && (
+                            <span className="text-[10px] text-slate-400 italic">Inactif</span>
+                          )}
+                        </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100">
-              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Total annuel dépenses projets
-              </p>
-              <div
-                className="grid gap-1.5 text-center"
-                style={{ gridTemplateColumns: `repeat(${financialData.timeline.length}, minmax(0, 1fr))` }}
-              >
-                {financialData.timeline.map((row) => (
+                        <div
+                          className="grid gap-1.5 h-8 bg-slate-50 rounded-md p-1 border border-slate-100"
+                          style={{ gridTemplateColumns: `repeat(${calendarYears.length}, minmax(0, 1fr))` }}
+                        >
+                          {calendarYears.map((y) => {
+                            const isActiveYear = project.isActive && y >= start && y <= end;
+                            let cellBg = 'bg-blue-500';
+                            if (project.category === 'equipment') cellBg = 'bg-orange-500';
+                            if (project.category === 'land') cellBg = 'bg-emerald-600';
+
+                            return (
+                              <div
+                                key={y}
+                                onClick={() => handleCalendarCellClick(project, y)}
+                                className={`relative flex items-center justify-center text-[10px] font-bold font-mono rounded cursor-pointer transition-all ${
+                                  isActiveYear
+                                    ? `${cellBg} text-white shadow-xs hover:brightness-110`
+                                    : 'hover:bg-slate-200/70 text-slate-300'
+                                }`}
+                                title={`${project.name || project.title} (${y}) : ${
+                                  isActiveYear ? formatCurrency(annualSpend) : 'Cliquer pour activer'
+                                }`}
+                              >
+                                {isActiveYear ? compactTickFormatter(annualSpend) : '·'}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Total annuel dépenses projets
+                  </p>
                   <div
-                    key={row.year}
-                    className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/80 font-mono text-xs font-bold text-blue-700"
+                    className="grid gap-1.5 text-center"
+                    style={{ gridTemplateColumns: `repeat(${financialData.timeline.length}, minmax(0, 1fr))` }}
                   >
-                    {compactTickFormatter(row.projectCosts)}
+                    {financialData.timeline.map((row) => (
+                      <div
+                        key={row.year}
+                        className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/80 font-mono text-xs font-bold text-blue-700"
+                      >
+                        {compactTickFormatter(row.projectCosts)}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* ===================== COLUMN 3 : FINANCEMENT & ÉCOLAGES (XL:COL-SPAN-3) ===================== */}
-        <div className="xl:col-span-3">
+        <div className="xl:col-span-3 min-w-0 w-full">
           <div className="space-y-4">
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <PiggyBank className="w-4 h-4 text-slate-400" />
