@@ -73,6 +73,7 @@ export const adminNavigationGroups = [
       { id: 'rubrique-vision', label: '3. Vision, Missions & Valeurs', description: 'Vision directrice, missions prioritaires & valeurs', Icon: Heart, badge: '/vision' },
       { id: 'rubrique-diagnostic', label: '4. Rubrique Diagnostic', description: 'Rapports ELCS, cantine, données & graphiques', Icon: ChartNoAxesCombined, badge: '/diagnostic' },
       { id: 'rubrique-plan-strategique', label: '5. Plan Stratégique (4 Axes)', description: 'Axes 1 à 4, jalons, Bac Blanc, Film Annuel & fiches', Icon: Target, badge: '/plan' },
+      { id: 'budget-axe1', label: '💰 Budget & Cadre de Vie (Axe 1)', description: 'Tableau financier, 775M, 7 projets & graphiques', Icon: Coins, badge: '775 M' },
     ],
   },
   {
@@ -4228,18 +4229,25 @@ const Admin = () => {
                   </div>
                 )}
                 {group.items.map(({ id, label, Icon }) => {
-                  const isActive = activeSection === id;
+                  const isBudgetAxe1 = id === 'budget-axe1';
+                  const isActive = activeSection === id || (isBudgetAxe1 && (activeSection === 'rubrique-plan-strategique' || activeSection === 'plan-strategique') && planStrategiqueSubTab === 'budgets');
                   let badge: string | number | null = null;
                   if (id === 'pages') badge = pages.length;
                   if (id === 'rubriques') badge = rubriques.length;
                   if (id === 'messages') badge = content.home.messages.length;
+                  if (isBudgetAxe1) badge = '775 M';
 
                   return (
                     <button
                       key={id}
                       type="button"
                       onClick={() => {
-                        setActiveSection(id);
+                        if (isBudgetAxe1) {
+                          setActiveSection('rubrique-plan-strategique');
+                          setPlanStrategiqueSubTab('budgets');
+                        } else {
+                          setActiveSection(id);
+                        }
                         setIsMobileSidebarOpen(false);
                       }}
                       title={label}
@@ -4625,7 +4633,7 @@ const Admin = () => {
               </div>
 
               {/* KPIs & Stats Grid */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="p-4 rounded-xl border bg-white shadow-sm hover:border-french-blue/50 transition-colors">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Pages & Sous-pages</span>
@@ -4682,6 +4690,29 @@ const Admin = () => {
                   </Button>
                 </div>
 
+                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 shadow-sm hover:border-emerald-400 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">Budget Axe 1</span>
+                    <Coins className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <p className="text-2xl font-bold text-emerald-950 mt-2 font-mono">775 M FCFA</p>
+                  <p className="text-xs text-emerald-700 mt-1 font-mono">
+                    Capacité : 685,1 M · Gap : 89,9 M
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="link"
+                    onClick={() => {
+                      setActiveSection('rubrique-plan-strategique');
+                      setPlanStrategiqueSubTab('budgets');
+                    }}
+                    className="p-0 h-auto text-xs text-emerald-700 font-semibold mt-3"
+                  >
+                    Ouvrir Budget & Graphes →
+                  </Button>
+                </div>
+
                 <div className="p-4 rounded-xl border bg-white shadow-sm hover:border-french-blue/50 transition-colors">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Diagnostic & Données</span>
@@ -4706,7 +4737,22 @@ const Admin = () => {
                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-french-blue" /> Actions rapides en 1 clic
                 </h3>
-                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSection('rubrique-plan-strategique');
+                      setPlanStrategiqueSubTab('budgets');
+                    }}
+                    className="flex items-start gap-3 p-3 rounded-lg border bg-white text-left hover:border-emerald-500 hover:shadow-sm transition-all"
+                  >
+                    <Coins className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-xs text-slate-900">Tableau de bord financier (775 M)</p>
+                      <p className="text-[11px] text-slate-500">Moduler les 7 projets, trésorerie et graphes prévisionnels</p>
+                    </div>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -5996,7 +6042,12 @@ const Admin = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <Button asChild size="sm" variant="outline" className="text-xs text-french-blue hover:bg-blue-50">
                         <a href="/budget-cadre-vie-infrastructures?draft=1" target="_blank" rel="noreferrer">
-                          <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page publique Budget
+                          <Eye className="mr-1.5 h-3.5 w-3.5" /> Prévisualiser la page Budget
+                        </a>
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="text-xs text-emerald-700 hover:bg-emerald-50 border-emerald-300">
+                        <a href="https://psd-lfjp.vercel.app/budget-cadre-vie-infrastructures" target="_blank" rel="noreferrer">
+                          <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Voir le site en direct
                         </a>
                       </Button>
                     </div>
