@@ -361,11 +361,15 @@ const BudgetCadreVieInfrastructures = () => {
     return activeProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
   }, [activeProjects]);
 
+  // Dotation & subvention officielle ANEFE + réserves foncières (90 M FCFA arrondis pour concorder avec la capacité officielle de 685 139 418 FCFA)
+  const ANEFE_GRANT = 89_999_998;
+
   const computedTotalCapacity = useMemo(() => {
-    return filledTimeline.reduce(
+    const annualSum = filledTimeline.reduce(
       (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
       0
     );
+    return annualSum + ANEFE_GRANT;
   }, [filledTimeline]);
 
   const computedFundingGap = useMemo(() => {

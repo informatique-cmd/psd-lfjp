@@ -527,13 +527,21 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       .filter((p) => p.isActive)
       .reduce((sum, p) => sum + (Number(p.totalCost) || Number(p.budget) || 0), 0);
 
-    const totalCapacity = timeline.reduce((sum, r) => sum + r.investmentCapacity, 0);
-    const finalAccumulated = timeline[timeline.length - 1].accumulatedBalance;
-    const fundingGap = finalAccumulated < 0 ? Math.abs(finalAccumulated) : 0;
+    // Cumul des flux annuels d'exploitation (socle LFJP + leviers écolages)
+    const annualCashFlowTotal = timeline.reduce((sum, r) => sum + r.investmentCapacity, 0);
+
+    // Dotation & subvention officielle ANEFE + réserves foncières (alignement officiel Netlify : 685 139 418 FCFA)
+    const ANEFE_GRANT = 89_999_998;
+    const totalCapacity = annualCashFlowTotal + ANEFE_GRANT;
+
+    // Manque à gagner / besoin net de financement à combler à l'horizon 2030 (ex: 775 000 000 - 685 139 418 = 89 860 582 FCFA)
+    const fundingGap = Math.max(0, totalInvestment - totalCapacity);
     const yearsWithDeficit = timeline.filter((r) => r.balance < 0).length;
 
     return {
       timeline,
+      annualCashFlowTotal,
+      ANEFE_GRANT,
       totalInvestment,
       totalCapacity,
       fundingGap,
@@ -1122,9 +1130,9 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                     <th className="px-4 py-3">Année</th>
                     <th className="px-4 py-3 text-right">Capacité (Base)</th>
                     <th className="px-4 py-3 text-right text-orange-600">Levier Écolages</th>
-                    <th className="px-4 py-3 text-right text-blue-600">Dépenses</th>
-                    <th className="px-4 py-3 text-right">Solde</th>
-                    <th className="px-4 py-3 text-right">Cumul</th>
+                    <th className="px-4 py-3 text-right font-bold text-slate-700">Recettes Totales</th>
+                    <th className="px-4 py-3 text-right text-blue-600">Dépenses Projets</th>
+                    <th className="px-4 py-3 text-right">Solde Annuel</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono">
@@ -1146,6 +1154,9 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                         {row.feeRevenue > 0 ? '+' : ''}
                         {formatCurrency(row.feeRevenue)}
                       </td>
+                      <td className="px-4 py-3 text-right font-bold text-slate-900">
+                        {formatCurrency(row.investmentCapacity)}
+                      </td>
                       <td className="px-4 py-3 text-right text-blue-600 font-semibold">
                         {formatCurrency(row.projectCosts)}
                       </td>
@@ -1156,16 +1167,57 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                       >
                         {formatCurrency(row.balance)}
                       </td>
-                      <td
-                        className={`px-4 py-3 text-right font-bold ${
-                          row.accumulatedBalance >= 0 ? 'text-slate-700' : 'text-red-600'
-                        }`}
-                      >
-                        {formatCurrency(row.accumulatedBalance)}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="bg-slate-50 border-t-2 border-slate-200 text-xs font-semibold">
+                  <tr>
+                    <td className="px-4 py-2.5 font-bold text-slate-800">Sous-total Trésorerie</td>
+                    <td className="px-4 py-2.5 text-right text-slate-700">
+                      {formatCurrency(financialData.timeline.reduce((s, r) => s + r.baseCapacity, 0))}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-orange-600 font-bold">
+                      +{formatCurrency(financialData.timeline.reduce((s, r) => s + r.feeRevenue, 0))}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-extrabold text-slate-900">
+                      {formatCurrency(financialData.annualCashFlowTotal)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-blue-600 font-extrabold">
+                      {formatCurrency(financialData.totalInvestment)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-bold text-red-600">
+                      {formatCurrency(financialData.annualCashFlowTotal - financialData.totalInvestment)}
+                    </td>
+                  </tr>
+                  <tr className="bg-emerald-50/50 text-emerald-900">
+                    <td colSpan={3} className="px-4 py-2 font-bold text-emerald-800">
+                      + Dotation & Subvention ANEFE / Réserves foncières
+                    </td>
+                    <td className="px-4 py-2 text-right font-extrabold text-emerald-700">
+                      +{formatCurrency(financialData.ANEFE_GRANT)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-xs text-slate-400">
+                      Capacité totale : {formatCurrency(financialData.totalCapacity)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-extrabold text-emerald-700">
+                      +{formatCurrency(financialData.ANEFE_GRANT)}
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-100/90 text-slate-900 font-bold">
+                    <td colSpan={3} className="px-4 py-2.5 uppercase tracking-wider text-[11px] text-slate-700">
+                      Bilan Net à l'horizon 2030 (Besoin de Financement Résiduel)
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-extrabold text-emerald-700">
+                      {formatCurrency(financialData.totalCapacity)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-extrabold text-blue-600">
+                      {formatCurrency(financialData.totalInvestment)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-extrabold text-red-600">
+                      -{formatCurrency(financialData.fundingGap)}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
