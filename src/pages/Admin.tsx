@@ -823,16 +823,15 @@ const Admin = () => {
               ) : deployState.isSuccess ? (
                 <>
                   <Button
-                    type="button"
+                    asChild
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      window.open('https://psd-lfjp.vercel.app/', '_blank');
-                    }}
                     className="text-xs border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
                   >
-                    <ExternalLink className="mr-1.5 h-3.5 w-3.5 text-emerald-400" />
-                    <span>Voir le site en direct</span>
+                    <a href="https://psd-lfjp.vercel.app/" target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5 text-emerald-400" />
+                      <span>Voir le site en direct</span>
+                    </a>
                   </Button>
                   <Button
                     type="button"
@@ -5563,56 +5562,58 @@ const Admin = () => {
 
                           {(category[group] as Record<string, unknown>[]).map((metric, rowIndex) => (
                             <div key={`${group}-${rowIndex}`} className="space-y-2 rounded-lg border bg-slate-50 p-3">
-                              <div className="grid gap-2 sm:grid-cols-[1.5fr_110px_1fr_100px_110px_auto]">
-                                <Input
-                                  aria-label="Nom de l’indicateur"
-                                  value={String(metric.name || '')}
-                                  onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'name', event.target.value)}
-                                  placeholder="Indicateur"
-                                  className="bg-white text-xs h-8"
-                                />
-                                <Input
-                                  aria-label="Valeur de l’indicateur"
-                                  value={String(metric.value ?? '')}
-                                  onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'value', event.target.value)}
-                                  placeholder="Valeur %"
-                                  className="bg-white text-xs h-8"
-                                />
-                                <Input
-                                  aria-label="Précision de l’indicateur"
-                                  value={String(metric.label || '')}
-                                  onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'label', event.target.value)}
-                                  placeholder="Précision"
-                                  className="bg-white text-xs h-8"
-                                />
-                                <Input
-                                  aria-label="Moyenne comparée"
-                                  type="number"
-                                  step="any"
-                                  value={metric.average === undefined ? '' : Number(metric.average)}
-                                  onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'average', event.target.value)}
-                                  placeholder="Moyenne"
-                                  className="bg-white text-xs h-8"
-                                />
-                                <select
-                                  className="h-8 rounded-md border bg-white px-2 text-xs"
-                                  aria-label="Tendance"
-                                  value={String(metric.trend || 'up')}
-                                  onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'trend', event.target.value)}
-                                >
-                                  <option value="up">Progression ↑</option>
-                                  <option value="down">Baisse ↓</option>
-                                </select>
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => removeElcsMetric(categoryKey, group, rowIndex)}
-                                  aria-label="Supprimer l’indicateur"
-                                  className="h-8 w-8 text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
+                              <div className="overflow-x-auto pb-1">
+                                <div className="min-w-[540px] grid gap-2 grid-cols-[1.5fr_95px_1fr_85px_105px_auto] items-center">
+                                  <Input
+                                    aria-label="Nom de l’indicateur"
+                                    value={String(metric.name || '')}
+                                    onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'name', event.target.value)}
+                                    placeholder="Indicateur"
+                                    className="bg-white text-xs h-8"
+                                  />
+                                  <Input
+                                    aria-label="Valeur de l’indicateur"
+                                    value={String(metric.value ?? '')}
+                                    onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'value', event.target.value)}
+                                    placeholder="Valeur %"
+                                    className="bg-white text-xs h-8"
+                                  />
+                                  <Input
+                                    aria-label="Précision de l’indicateur"
+                                    value={String(metric.label || '')}
+                                    onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'label', event.target.value)}
+                                    placeholder="Précision"
+                                    className="bg-white text-xs h-8"
+                                  />
+                                  <Input
+                                    aria-label="Moyenne comparée"
+                                    type="number"
+                                    step="any"
+                                    value={metric.average === undefined ? '' : Number(metric.average)}
+                                    onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'average', event.target.value)}
+                                    placeholder="Moyenne"
+                                    className="bg-white text-xs h-8"
+                                  />
+                                  <select
+                                    className="h-8 rounded-md border bg-white px-2 text-xs"
+                                    aria-label="Tendance"
+                                    value={String(metric.trend || 'up')}
+                                    onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'trend', event.target.value)}
+                                  >
+                                    <option value="up">Progression ↑</option>
+                                    <option value="down">Baisse ↓</option>
+                                  </select>
+                                  <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => removeElcsMetric(categoryKey, group, rowIndex)}
+                                    aria-label="Supprimer l’indicateur"
+                                    className="h-8 w-8 text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
                               </div>
 
                               {/* Live Graphical Preview Bar */}
@@ -5883,7 +5884,7 @@ const Admin = () => {
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0" />
                       <span>{tab.label}</span>
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-normal ${
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-normal hidden md:inline-block ${
                         isActive ? 'bg-emerald-700/60 text-emerald-100' : 'bg-slate-100 text-slate-500'
                       }`}>
                         {tab.badge}
@@ -6477,7 +6478,7 @@ const Admin = () => {
                               }`}
                             >
                               <span>{sub.label}</span>
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full hidden sm:inline-block ${
                                 axe1SubTab === sub.id ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-100 text-slate-500'
                               }`}>
                                 {sub.badge}
@@ -6790,7 +6791,7 @@ const Admin = () => {
                               }`}
                             >
                               <span>{sub.label}</span>
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full hidden sm:inline-block ${
                                 axe2SubTab === sub.id ? 'bg-blue-700 text-blue-100' : 'bg-slate-100 text-slate-500'
                               }`}>
                                 {sub.badge}
@@ -6853,7 +6854,7 @@ const Admin = () => {
                               }`}
                             >
                               <span>{sub.label}</span>
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full hidden sm:inline-block ${
                                 axe3SubTab === sub.id ? 'bg-amber-700 text-amber-100' : 'bg-slate-100 text-slate-500'
                               }`}>
                                 {sub.badge}
@@ -6918,7 +6919,7 @@ const Admin = () => {
                               }`}
                             >
                               <span>{sub.label}</span>
-                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full hidden sm:inline-block ${
                                 axe4SubTab === sub.id ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-100 text-slate-500'
                               }`}>
                                 {sub.badge}

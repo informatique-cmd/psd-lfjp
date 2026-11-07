@@ -681,17 +681,17 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     >
       {/* Top Action Bar without 'LFJP Invest' and without '630 élèves' */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
             Modulation des investissements 2026–2030
           </span>
-          <span className="text-xs text-slate-400">•</span>
+          <span className="text-xs text-slate-400 hidden sm:inline">•</span>
           <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
             Données officielles LFJP (775 M FCFA)
           </span>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           {/* Currency Toggle */}
           <button
             type="button"
@@ -724,16 +724,16 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Investment */}
         <div
-          className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs transition hover:shadow-md"
+          className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs transition hover:shadow-md min-w-0"
           data-summary-field="totalInvestment"
         >
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-start gap-2">
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">
                 Investissement Total
               </p>
               <p
-                className="text-2xl sm:text-3xl font-bold font-playfair text-slate-900 tracking-tight"
+                className="text-xl sm:text-2xl lg:text-3xl font-bold font-playfair text-slate-900 tracking-tight truncate"
                 data-currency-amount={financialData.totalInvestment}
               >
                 {formatCurrency(financialData.totalInvestment)}
@@ -750,20 +750,20 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
         {/* Funding Gap */}
         <div
-          className={`p-5 rounded-xl border shadow-xs transition hover:shadow-md ${
+          className={`p-4 sm:p-5 rounded-xl border shadow-xs transition hover:shadow-md min-w-0 ${
             financialData.fundingGap > 0
               ? 'bg-white border-red-200 ring-1 ring-red-50'
               : 'bg-white border-emerald-200 ring-1 ring-emerald-50'
           }`}
           data-summary-field="fundingGap"
         >
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-start gap-2">
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">
                 Manque à gagner (Fin 2030)
               </p>
               <p
-                className={`text-2xl sm:text-3xl font-bold font-playfair tracking-tight ${
+                className={`text-xl sm:text-2xl lg:text-3xl font-bold font-playfair tracking-tight truncate ${
                   financialData.fundingGap > 0 ? 'text-red-600' : 'text-emerald-600'
                 }`}
                 data-currency-amount={financialData.fundingGap}
@@ -777,7 +777,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               </p>
             </div>
             <div
-              className={`p-2.5 rounded-xl border ${
+              className={`p-2.5 rounded-xl border shrink-0 ${
                 financialData.fundingGap > 0
                   ? 'bg-red-50 text-red-600 border-red-100'
                   : 'bg-emerald-50 text-emerald-600 border-emerald-100'
@@ -794,16 +794,16 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
         {/* Total Capacity */}
         <div
-          className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs transition hover:shadow-md"
+          className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs transition hover:shadow-md min-w-0"
           data-summary-field="estimatedCapacity"
         >
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-start gap-2">
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">
                 Capacité Totale
               </p>
               <p
-                className="text-2xl sm:text-3xl font-bold font-playfair text-emerald-600 tracking-tight"
+                className="text-xl sm:text-2xl lg:text-3xl font-bold font-playfair text-emerald-600 tracking-tight truncate"
                 data-currency-amount={financialData.totalCapacity}
               >
                 {formatCurrency(financialData.totalCapacity)}
@@ -812,7 +812,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                 Inclut budget base + ANEFE + % Écolages
               </p>
             </div>
-            <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 border border-emerald-100">
+            <div className="p-2.5 bg-emerald-50 rounded-xl text-emerald-600 border border-emerald-100 shrink-0">
               <Wallet className="w-5 h-5 sm:w-6 sm:h-6" aria-hidden="true" />
             </div>
           </div>
@@ -870,7 +870,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                   }`}
                 >
                   {/* Card Top Row 1: Category Selector + Sleek Active Toggle Pill */}
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                     <select
                       value={project.category || 'infra'}
                       disabled={!project.isActive}
@@ -989,7 +989,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
                   {/* Budget Allocation: Numerical exact input + Slider */}
                   <div className="mt-3 pt-2.5 border-t border-slate-100">
-                    <div className="flex justify-between items-center text-xs mb-1.5 gap-2">
+                    <div className="flex justify-between items-center text-xs mb-1.5 gap-2 flex-wrap">
                       <span className="text-slate-500 font-medium">Budget alloué :</span>
                       <div className="flex items-center gap-1">
                         <input
@@ -999,7 +999,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                           value={currentCost}
                           disabled={!project.isActive}
                           onChange={(e) => updateProjectCost(project.id, Number(e.target.value) || 0)}
-                          className="w-28 px-2 py-0.5 text-xs font-mono font-bold text-blue-700 bg-blue-50/50 border border-blue-200 rounded text-right focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                          className="w-24 sm:w-28 px-2 py-0.5 text-xs font-mono font-bold text-blue-700 bg-blue-50/50 border border-blue-200 rounded text-right focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                           title="Saisir le montant exact en FCFA"
                         />
                         <span className="text-[10px] text-slate-500 font-bold">{currency === 'XOF' ? 'FCFA' : 'EUR'}</span>
@@ -1380,7 +1380,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                       <span className="text-slate-400 font-semibold">%</span>
                     </div>
                     <div
-                      className={`w-28 text-right font-mono font-bold text-xs ${
+                      className={`text-right font-mono font-bold text-xs shrink-0 ${
                         item.extraRevenue >= 0 ? 'text-orange-600' : 'text-red-500'
                       }`}
                     >
