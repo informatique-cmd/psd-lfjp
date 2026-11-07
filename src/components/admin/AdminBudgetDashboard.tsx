@@ -62,7 +62,6 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'synced'>('synced');
   const [editingProject, setEditingProject] = useState<BudgetProject | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
-  const [chartFilter, setChartFilter] = useState<'all' | 'capacity_vs_spend' | 'recettes_detail' | 'solde'>('all');
 
   // Helper to detect outdated / desynchronized 6-project drafts
   const isStaleProjectList = useCallback((projects?: BudgetProject[]): boolean => {
@@ -649,57 +648,25 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
   const CustomChartTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
     if (active && payload && payload.length) {
-      const yearNum = typeof label === 'number' ? label : parseInt(String(label), 10);
-      const rowData = financialData.timeline.find((r) => r.year === yearNum || r.label === String(label));
-
       return (
-        <div className="rounded-xl border border-slate-200 bg-white/95 p-3.5 shadow-xl backdrop-blur-md min-w-[260px]">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-800 font-sans">
-              Exercice {label}
-            </span>
-            {rowData && (
-              <span
-                className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                  rowData.balance >= 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                }`}
-              >
-                Solde : {formatCurrency(rowData.balance)}
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-1.5 text-xs font-mono">
+        <div className="rounded-xl border border-slate-200 bg-white/95 p-3.5 shadow-xl backdrop-blur-md">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Exercice {label}</p>
+          <div className="space-y-1.5 text-xs">
             {payload.map((entry) => (
               <div key={`${entry.name}-${entry.dataKey}`} className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 text-slate-600 font-sans">
+                <span className="flex items-center gap-1.5 text-slate-600">
                   <span
-                    className="h-2 w-2 rounded-full shrink-0"
+                    className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: entry.color }}
                   />
                   {entry.name} :
                 </span>
-                <span className="font-bold text-slate-900">
+                <span className="font-mono font-bold text-slate-900">
                   {formatCurrency(Number(entry.value ?? 0))}
                 </span>
               </div>
             ))}
           </div>
-
-          {rowData && rowData.activeProjects && rowData.activeProjects.length > 0 && (
-            <div className="mt-2.5 pt-2 border-t border-slate-100 font-sans">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                Projets programmés ({rowData.activeProjects.length})
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {rowData.activeProjects.map((pName, pIdx) => (
-                  <span key={pIdx} className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
-                    {pName}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       );
     }
@@ -1083,47 +1050,18 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
             </span>
           </div>
 
-          {/* 1. ComposedChart : Flux de Trésorerie Prévisionnel Multi-Séries */}
+          {/* 1. ComposedChart : Flux de Trésorerie Prévisionnel */}
           <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <span>Flux de Trésorerie Prévisionnel ({currency === 'XOF' ? 'FCFA' : 'EUR'})</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    Synchronisé en temps réel
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Comparatif dynamique des recettes, investissements et soldes nets annuels
-                </p>
-              </div>
-
-              {/* Chart Series Toggle Filters */}
-              <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-lg">
-                {[
-                  { id: 'all', label: 'Tous (5 séries)' },
-                  { id: 'capacity_vs_spend', label: 'Capacité vs Dépenses' },
-                  { id: 'recettes_detail', label: 'Détail Recettes' },
-                  { id: 'solde', label: 'Solde Annuel' },
-                ].map((btn) => (
-                  <button
-                    key={btn.id}
-                    type="button"
-                    onClick={() => setChartFilter(btn.id as typeof chartFilter)}
-                    className={`text-xs px-2.5 py-1 rounded-md font-semibold transition cursor-pointer ${
-                      chartFilter === btn.id
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {btn.label}
-                  </button>
-                ))}
-              </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-sm">
+                Flux de Trésorerie Prévisionnel ({currency === 'XOF' ? 'FCFA' : 'EUR'})
+              </h3>
+              <span className="text-xs text-slate-400">
+                Capacité vs Dépenses
+              </span>
             </div>
 
-            <div className="h-80 w-full" role="img" aria-label="Graphique des flux de trésorerie">
+            <div className="h-72 w-full" role="img" aria-label="Graphique des flux de trésorerie">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={financialData.timeline}
@@ -1148,76 +1086,31 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                   <Legend
                     verticalAlign="top"
                     align="right"
-                    wrapperStyle={{ paddingBottom: '16px', fontSize: '11px', fontWeight: 600 }}
+                    wrapperStyle={{ paddingBottom: '16px', fontSize: '12px' }}
                   />
 
-                  {/* 1. Bar : Dépenses Projets */}
-                  {(chartFilter === 'all' || chartFilter === 'capacity_vs_spend' || chartFilter === 'solde') && (
-                    <Bar
-                      dataKey="projectCosts"
-                      name="Dépenses Projets"
-                      radius={[4, 4, 0, 0]}
-                      barSize={38}
-                    >
-                      {financialData.timeline.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.projectCosts > entry.investmentCapacity ? '#ef4444' : '#3b82f6'}
-                        />
-                      ))}
-                    </Bar>
-                  )}
+                  <Line
+                    type="stepAfter"
+                    dataKey="investmentCapacity"
+                    name="Capacité d'Investissement"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+                  />
 
-                  {/* 2. Line : Capacité Totale (Recettes) */}
-                  {(chartFilter === 'all' || chartFilter === 'capacity_vs_spend' || chartFilter === 'recettes_detail') && (
-                    <Line
-                      type="monotone"
-                      dataKey="investmentCapacity"
-                      name="Capacité Totale (Recettes)"
-                      stroke="#0f172a"
-                      strokeWidth={3}
-                      dot={{ r: 4, fill: '#0f172a', strokeWidth: 2, stroke: '#fff' }}
-                    />
-                  )}
-
-                  {/* 3. Line : Capacité Socle de Base */}
-                  {(chartFilter === 'all' || chartFilter === 'recettes_detail') && (
-                    <Line
-                      type="monotone"
-                      dataKey="baseCapacity"
-                      name="Capacité Socle (Base)"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={{ r: 3, fill: '#10b981' }}
-                    />
-                  )}
-
-                  {/* 4. Line : Leviers Écolages */}
-                  {(chartFilter === 'all' || chartFilter === 'recettes_detail') && (
-                    <Line
-                      type="monotone"
-                      dataKey="feeRevenue"
-                      name="Levier Écolages"
-                      stroke="#0284c7"
-                      strokeWidth={2}
-                      strokeDasharray="4 3"
-                      dot={{ r: 3, fill: '#0284c7' }}
-                    />
-                  )}
-
-                  {/* 5. Line : Solde Annuel Net */}
-                  {(chartFilter === 'all' || chartFilter === 'solde') && (
-                    <Line
-                      type="monotone"
-                      dataKey="balance"
-                      name="Solde Annuel Net"
-                      stroke="#f97316"
-                      strokeWidth={2.5}
-                      strokeDasharray="5 4"
-                      dot={{ r: 4, fill: '#f97316' }}
-                    />
-                  )}
+                  <Bar
+                    dataKey="projectCosts"
+                    name="Dépenses Projets"
+                    radius={[4, 4, 0, 0]}
+                    barSize={38}
+                  >
+                    {financialData.timeline.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.projectCosts > entry.investmentCapacity ? '#ef4444' : '#3b82f6'}
+                      />
+                    ))}
+                  </Bar>
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
