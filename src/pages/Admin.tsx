@@ -3917,8 +3917,9 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-slate-100 font-raleway flex flex-col w-full max-w-full overflow-x-hidden">
       {/* WordPress-style Top Admin Bar (Entièrement responsive sans débordement) */}
-      <header className="sticky top-0 z-50 min-h-12 py-1 bg-slate-950 text-slate-200 border-b border-slate-800 flex items-center justify-between px-2 sm:px-4 shadow-sm select-none gap-2 w-full max-w-full overflow-x-hidden">
-        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 shrink">
+      <header className="sticky top-0 z-50 h-14 bg-slate-950 text-slate-200 border-b border-slate-800 flex items-center justify-between px-2 sm:px-4 shadow-sm select-none gap-2 w-full max-w-full overflow-hidden shrink-0">
+        {/* Left Side: Brand & Direct link */}
+        <div className="flex items-center gap-2 min-w-0 shrink">
           <button
             type="button"
             onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
@@ -3929,14 +3930,16 @@ const Admin = () => {
             {isMobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="flex h-7 w-7 items-center justify-center rounded bg-french-blue text-xs font-bold text-white shadow-sm font-playfair">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-french-blue text-xs font-bold text-white shadow-sm font-playfair shrink-0">
               L
             </span>
-            <span className="font-playfair font-bold text-sm text-white hidden sm:inline truncate">LFJP CMS</span>
+            <span className="font-playfair font-bold text-sm text-white tracking-tight hidden sm:inline truncate">
+              LFJP SuperAdmin
+            </span>
           </div>
 
-          <span className="text-slate-700 hidden sm:inline">|</span>
+          <span className="text-slate-700 hidden sm:inline shrink-0">|</span>
 
           <a
             href="https://psd-lfjp.vercel.app/"
@@ -3946,54 +3949,12 @@ const Admin = () => {
             title="Ouvrir le site en direct sur Vercel (psd-lfjp.vercel.app)"
           >
             <Eye className="h-3.5 w-3.5 text-french-blue shrink-0" />
-            <span className="hidden md:inline">Voir le site en direct</span>
-            <span className="hidden sm:inline md:hidden">En direct</span>
+            <span className="hidden md:inline">Site en direct</span>
             <ExternalLink className="h-3 w-3 text-slate-400 shrink-0" />
           </a>
-
-          <span className="text-slate-700 hidden md:inline">|</span>
-
-          {/* Quick Create Dropdown / Buttons */}
-          <div className="hidden lg:flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveSection('pages');
-                setPageSubTab('editor');
-                addPage('default');
-              }}
-              className="flex items-center gap-1 text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Page</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveSection('pages');
-                setPageSubTab('editor');
-                addSubPage();
-              }}
-              className="flex items-center gap-1 text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
-            >
-              <CornerDownRight className="h-3.5 w-3.5 text-amber-400" />
-              <span>Sous-page</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveSection('rubriques');
-                addCard();
-              }}
-              className="flex items-center gap-1 text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5 text-sky-400" />
-              <span>Rubrique</span>
-            </button>
-          </div>
         </div>
 
-        {/* Right side of Topbar: Status, Draft indicator, Save button, User */}
+        {/* Right side of Topbar: Compact, responsive action buttons */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Button
             type="button"
@@ -4006,23 +3967,18 @@ const Admin = () => {
             title="Passer en vue Éditeur du site (édition directe in-situ)"
           >
             <Pencil className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-            <span className="hidden sm:inline">Vue Éditeur</span>
+            <span className="hidden xl:inline">Vue Éditeur</span>
           </Button>
-
-          <div className="hidden xl:flex items-center gap-1.5 px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Brouillon actif</span>
-          </div>
 
           <Button
             type="button"
             size="sm"
             variant="ghost"
             onClick={previewDraft}
-            className="h-8 text-xs text-slate-200 hover:text-white hover:bg-slate-800 px-2 hidden md:flex shrink-0"
+            className="h-8 text-xs text-slate-300 hover:text-white hover:bg-slate-800 px-2 hidden 2xl:flex items-center gap-1 shrink-0"
             title="Prévisualiser le site"
           >
-            <Eye className="mr-1 h-3.5 w-3.5" />
+            <Eye className="h-3.5 w-3.5" />
             <span>Aperçu</span>
           </Button>
 
@@ -4030,10 +3986,10 @@ const Admin = () => {
             type="button"
             size="sm"
             onClick={saveDraft}
-            className="h-8 bg-french-blue hover:bg-blue-700 text-white text-xs px-2.5 sm:px-3 shadow-sm font-semibold shrink-0"
+            className="h-8 bg-french-blue hover:bg-blue-700 text-white text-xs px-2.5 sm:px-3 shadow-xs font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
             title="Enregistrer le brouillon local"
           >
-            <Save className="h-3.5 w-3.5 sm:mr-1 shrink-0" />
+            <Save className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden sm:inline">Enregistrer</span>
           </Button>
 
@@ -4043,7 +3999,7 @@ const Admin = () => {
               size="sm"
               onClick={startDeploymentToOnlineSite}
               disabled={deployState.isDeploying}
-              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2 sm:px-3 shadow-md font-bold flex items-center gap-1 shrink-0 transition-all hover:scale-[1.01] cursor-pointer"
+              className="h-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs px-2.5 sm:px-3 shadow-sm font-bold flex items-center gap-1 shrink-0 transition-all hover:scale-[1.01] cursor-pointer"
               title="Envoyer les modifications directement vers le site (mise à jour immédiate sur GitHub et Vercel)"
             >
               {deployState.isDeploying ? (
@@ -4054,22 +4010,21 @@ const Admin = () => {
               ) : (
                 <>
                   <Send className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden lg:inline">Envoyer vers le site en direct</span>
-                  <span className="hidden sm:inline lg:hidden">Envoyer au site</span>
-                  <span className="sm:hidden">Déployer</span>
+                  <span className="hidden sm:inline">Publier</span>
+                  <span className="sm:hidden">Envoi</span>
                 </>
               )}
             </Button>
           )}
 
-          <div className="h-4 w-px bg-slate-800 hidden md:block" />
+          <div className="h-4 w-px bg-slate-800 hidden md:block shrink-0" />
 
           {/* User Profile / Role Indicator & Switcher */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 transition-all text-left shrink-0"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 transition-all text-left shrink-0 cursor-pointer"
               title="Cliquez pour changer de profil ou vous connecter"
             >
               {canDelete ? (
@@ -4078,7 +4033,7 @@ const Admin = () => {
                 <User className="h-4 w-4 text-amber-400 shrink-0" />
               )}
               <div className="hidden xl:block">
-                <p className="text-[11px] font-bold text-white leading-tight truncate max-w-[120px]">
+                <p className="text-[11px] font-bold text-white leading-tight truncate max-w-[100px]">
                   {userProfile.email}
                 </p>
                 <div className="flex items-center gap-1">
@@ -4088,7 +4043,7 @@ const Admin = () => {
                   </span>
                 </div>
               </div>
-              <ChevronDown className="h-3 w-3 text-slate-400 hidden sm:block" />
+              <ChevronDown className="h-3 w-3 text-slate-400 hidden sm:block shrink-0" />
             </button>
 
             {/* Notification Badge for Pending Editor Deployments */}
@@ -4104,7 +4059,7 @@ const Admin = () => {
                 title="1 demande de déploiement Vercel en attente par l'éditeur"
               >
                 <Bell className="h-3.5 w-3.5 fill-current shrink-0" />
-                <span className="hidden md:inline">1 en attente</span>
+                <span className="hidden md:inline">1 attente</span>
                 <span className="md:hidden">1</span>
               </Button>
             )}
@@ -4112,24 +4067,12 @@ const Admin = () => {
             <Button
               type="button"
               size="sm"
-              variant="ghost"
-              onClick={() => setIsProfileModalOpen(true)}
-              title="Connexion / Changer de profil"
-              className="h-8 text-xs text-slate-400 hover:text-white hover:bg-slate-800 px-2 hidden sm:flex shrink-0"
-            >
-              <Key className="h-3.5 w-3.5" />
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
               variant="outline"
               onClick={logout}
-              title="Se déconnecter de la session d’administration"
-              className="h-8 text-xs text-red-400 hover:text-red-200 hover:bg-red-950/60 border-red-900/60 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 transition-colors"
+              title="Se déconnecter"
+              className="h-8 w-8 p-0 text-red-400 hover:text-red-200 hover:bg-red-950/60 border-red-900/60 flex items-center justify-center shrink-0 transition-colors"
             >
               <LogOut className="h-3.5 w-3.5 text-red-400 shrink-0" />
-              <span className="hidden sm:inline">Quitter</span>
             </Button>
 
             <Button
