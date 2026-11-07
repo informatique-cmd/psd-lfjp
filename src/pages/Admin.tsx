@@ -525,7 +525,14 @@ const Admin = () => {
       approveDeploymentRequest(pendingDeployment.id, userProfile.email);
       setPendingDeployment(loadPendingDeploymentRequest());
       clearAllDraftStorage();
-      setStatus('🚀 Modifications publiées et déploiement Vercel lancé avec succès ! Un commit unique a été envoyé sur main. Le site en direct est actualisé pour tous les navigateurs.');
+      setStatus('🚀 Modifications publiées et déploiement Vercel lancé avec succès !');
+      setTimeout(() => {
+        setStatus((prev) => (prev.includes('Modifications publiées') ? '' : prev));
+      }, 2500);
+      toast.success('Modifications publiées en ligne !', {
+        description: 'Le site en direct a été actualisé.',
+        duration: 2000,
+      });
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Échec du déploiement GitHub / Vercel.';
       setStatus(`❌ Échec du déploiement : ${msg}`);
@@ -639,10 +646,19 @@ const Admin = () => {
         stepMessage: 'Modifications envoyées vers le site en ligne !',
       }));
 
+      // Fermeture automatique de la fenêtre modale après succès (2.5s)
+      setTimeout(() => {
+        setDeployState((prev) => (prev.isSuccess ? { ...prev, isOpen: false } : prev));
+      }, 2500);
+
       setStatus('🚀 Modifications envoyées vers le site en ligne !');
-      toast.success('Modifications envoyées vers le site en ligne !', {
-        description: 'Le code et les contenus ont été déployés avec succès vers GitHub et Vercel.',
-        duration: 7000,
+      setTimeout(() => {
+        setStatus((prev) => (prev.includes('Modifications envoyées') ? '' : prev));
+      }, 2500);
+
+      toast.success('Modifications publiées en ligne !', {
+        description: 'Le site en direct a été actualisé.',
+        duration: 2000,
       });
 
       // Reload iframe preview to show fresh synchronized live content
