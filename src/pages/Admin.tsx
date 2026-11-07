@@ -263,7 +263,12 @@ const Admin = () => {
   const [methodeSubTab, setMethodeSubTab] = useState<'content' | 'calendrier' | 'subpages'>('content');
   const [visionSubTab, setVisionSubTab] = useState<'vision' | 'missions' | 'valeurs' | 'subpages'>('vision');
   const [diagnosticSubTab, setDiagnosticSubTab] = useState<'elcs' | 'restaurant' | 'rapports' | 'subpages'>('elcs');
-  const [planStrategiqueSubTab, setPlanStrategiqueSubTab] = useState<'axes' | 'budgets' | 'transports' | 'bac-blanc' | 'film-annuel' | 'subpages'>('axes');
+  const [planStrategiqueSubTab, setPlanStrategiqueSubTab] = useState<'axe1' | 'axe2' | 'axe3' | 'axe4' | 'overview'>('axe1');
+  const [axe1SubTab, setAxe1SubTab] = useState<'budget' | 'transport' | 'fiches' | 'jalons'>('budget');
+  const [axe2SubTab, setAxe2SubTab] = useState<'fiches' | 'jalons'>('fiches');
+  const [axe3SubTab, setAxe3SubTab] = useState<'fiches' | 'jalons'>('fiches');
+  const [axe4SubTab, setAxe4SubTab] = useState<'bac-blanc' | 'film-annuel' | 'fiches' | 'jalons'>('bac-blanc');
+  const [planOverviewSearch, setPlanOverviewSearch] = useState<string>('');
   const [customRubriqueSubTab, setCustomRubriqueSubTab] = useState<'content' | 'subpages'>('content');
   const [selectedVisualElement, setSelectedVisualElement] = useState<{
     path: string;
@@ -5820,672 +5825,1544 @@ const Admin = () => {
                 </div>
               </div>
 
-              {/* Sub-tab navigation for Rubrique Plan Stratégique */}
+              {/* Sub-tab navigation for Rubrique Plan Stratégique (Harmonisée selon la structure officielle Netlify psd-lfjp.netlify.app/plan-strategique) */}
               <div className="flex flex-wrap gap-2 pt-4 mt-2 border-t">
                 {[
-                  { id: 'axes', label: '🎯 Les 4 Axes Stratégiques & Jalons (2026-2030)' },
-                  { id: 'budgets', label: '💰 Budgets & Investissements Cadre de Vie' },
-                  { id: 'transports', label: '🚌 Transport Scolaire & Données Familles' },
-                  { id: 'bac-blanc', label: '🎓 Organisation du Bac Blanc' },
-                  { id: 'film-annuel', label: '📅 Films Annuels par Cycle' },
-                  { id: 'subpages', label: '📄 Fiches Projets & Sous-pages des 4 Axes' },
-                ].map((tab) => (
-                  <Button
-                    key={tab.id}
-                    type="button"
-                    size="sm"
-                    variant={planStrategiqueSubTab === tab.id ? 'default' : 'outline'}
-                    onClick={() => setPlanStrategiqueSubTab(tab.id as typeof planStrategiqueSubTab)}
-                    className={planStrategiqueSubTab === tab.id ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-50'}
-                  >
-                    {tab.label}
-                  </Button>
-                ))}
+                  {
+                    id: 'axe1' as const,
+                    label: 'Axe 1 · Bien-être & Cadre de Vie',
+                    badge: '15 fiches · Budget 775M · Transport',
+                    icon: Target,
+                  },
+                  {
+                    id: 'axe2' as const,
+                    label: 'Axe 2 · Langues & Ouverture',
+                    badge: '8 fiches · SI / DNBi / BFI',
+                    icon: Globe2,
+                  },
+                  {
+                    id: 'axe3' as const,
+                    label: 'Axe 3 · Numérique & Innovation',
+                    badge: '10 fiches · 1 PC/Lycéen · IA',
+                    icon: Sparkles,
+                  },
+                  {
+                    id: 'axe4' as const,
+                    label: 'Axe 4 · Réussites & Citoyenneté',
+                    badge: '12 fiches · Bac Blanc · Orientation',
+                    icon: GraduationCap,
+                  },
+                  {
+                    id: 'overview' as const,
+                    label: 'Vue d’ensemble & Arborescence',
+                    badge: '4 Axes · 45 fiches',
+                    icon: FolderTree,
+                  },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = planStrategiqueSubTab === tab.id;
+                  return (
+                    <Button
+                      key={tab.id}
+                      type="button"
+                      size="sm"
+                      variant={isActive ? 'default' : 'outline'}
+                      onClick={() => setPlanStrategiqueSubTab(tab.id)}
+                      className={`flex items-center gap-1.5 transition-all text-xs font-semibold py-1.5 px-3 ${
+                        isActive
+                          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm ring-1 ring-emerald-500'
+                          : 'text-slate-700 hover:bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span>{tab.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-normal ${
+                        isActive ? 'bg-emerald-700/60 text-emerald-100' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {tab.badge}
+                      </span>
+                    </Button>
+                  );
+                })}
               </div>
             </CardHeader>
 
             <CardContent className="space-y-6 pt-5">
-              {/* Sub-tab 1: 4 Axes & Jalons */}
-              {planStrategiqueSubTab === 'axes' && (
-                <div className="space-y-6">
-                  <div className="flex flex-wrap gap-2 border-b pb-3">
-                    {[
-                      { id: 'axe1', label: 'Axe 1 : Cadre de vie, bien-être et santé' },
-                      { id: 'axe2', label: 'Axe 2 : Langues, interculturalité & international' },
-                      { id: 'axe3', label: 'Axe 3 : Numérique, innovation & parcours' },
-                      { id: 'axe4', label: 'Axe 4 : Réussites, citoyenneté & avenir' },
-                    ].map(({ id, label }) => (
-                      <Button
-                        key={id}
-                        type="button"
-                        size="sm"
-                        variant={selectedPsdAxis === id ? 'default' : 'outline'}
-                        onClick={() => setSelectedPsdAxis(id as 'axe1' | 'axe2' | 'axe3' | 'axe4')}
-                        className={selectedPsdAxis === id ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:bg-slate-50'}
-                      >
-                        {label}
-                      </Button>
-                    ))}
-                  </div>
+              {(() => {
+                // Official Category Definitions matching Netlify https://psd-lfjp.netlify.app/plan-strategique
+                const AXE1_CATEGORIES = [
+                  {
+                    title: 'Cadre de vie & infrastructures',
+                    description: 'Investissements matériels, confort thermique, cantine, maintenance, écologie et mobilités',
+                    slugs: [
+                      '/budget-cadre-vie-infrastructures',
+                      '/climatisation-durable',
+                      '/construction-cantine',
+                      '/couverture-terrain-sport',
+                      '/plan-maintenance-strategique',
+                      '/politique-e3d',
+                      '/transport-scolaire',
+                    ],
+                  },
+                  {
+                    title: 'Cadre scolaire & santé',
+                    description: 'Prévention, santé des élèves, climat scolaire bienveillant et pratique sportive',
+                    slugs: [
+                      '/parcours-sante',
+                      '/protocole-phare',
+                      '/mediation-entre-pairs',
+                      '/projet-eps',
+                      '/savoir-rouler',
+                      '/savoir-nager',
+                    ],
+                  },
+                  {
+                    title: 'Dialogue, implication & co-éducation',
+                    description: 'Participation citoyenne des élèves, instances représentatives et lien avec les familles',
+                    slugs: [
+                      '/parentalite-coeducation',
+                      '/expression-participation',
+                    ],
+                  },
+                ];
 
-                  {(() => {
-                    const currentData = getEditablePageData();
-                    const timelines = currentData.psdTimelines as Record<string, { title?: string; startYear: number; endYear: number; actions: { title: string; description: string; start: number; end: number; color?: string }[] }>;
-                    const axisData = timelines[selectedPsdAxis] || { title: 'Axe', startYear: 2026, endYear: 2030, actions: [] };
+                const AXE2_CATEGORIES = [
+                  {
+                    title: 'Pédagogie des langues & Cursus internationaux',
+                    description: 'Section Internationale primaire, filière DNBi collège et BFI cycle terminal',
+                    slugs: [
+                      '/section-internationale-bfi',
+                      '/dnbi',
+                      '/bfi',
+                    ],
+                  },
+                  {
+                    title: 'Éducation interculturelle, Arts & Mobilité internationale',
+                    description: 'Parcours artistique PEAC, temps forts culturels, programme ADN-AEFE, partenariats et voyages',
+                    slugs: [
+                      '/parcours-education-artistique-culturelle',
+                      '/semaine-des-cultures',
+                      '/echanges-scolaires-adn-aefe',
+                      '/jumelages-partages-projets-collaboratifs',
+                      '/voyages-scolaires-internationaux-sejours-locaux',
+                    ],
+                  },
+                ];
 
-                    return (
-                      <div className="space-y-5">
-                        <div className="grid gap-4 rounded-lg border bg-slate-50 p-4 sm:grid-cols-2">
-                          <div className="grid gap-2">
-                            <Label>Année de début du plan</Label>
-                            <Input
-                              type="number"
-                              value={axisData.startYear}
-                              onChange={(e) => updateTimelineRange(selectedPsdAxis, 'startYear', Number(e.target.value) || 2026)}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label>Année de fin du plan</Label>
-                            <Input
-                              type="number"
-                              value={axisData.endYear}
-                              onChange={(e) => updateTimelineRange(selectedPsdAxis, 'endYear', Number(e.target.value) || 2030)}
-                            />
-                          </div>
-                        </div>
+                const AXE3_CATEGORIES = [
+                  {
+                    title: 'Infrastructures, Matériel & Équipements numériques',
+                    description: 'Équipement 1 PC par lycéen, tablettes mobiles, connectivité très haut débit et fablab',
+                    slugs: [
+                      '/pc-par-lyceen',
+                      '/classe-numerique',
+                      '/connectivite-2-0',
+                      '/laboratoire-numerique',
+                    ],
+                  },
+                  {
+                    title: 'Pédagogie, IA, Citoyenneté & Partenariats',
+                    description: 'Curriculum spiralaire, initiation algorithmique, module IA, certification Pix et mécénat tech',
+                    slugs: [
+                      '/curriculum-numerique-spiralaire',
+                      '/introduction-au-code',
+                      '/module-ia',
+                      '/education-numerique-citoyen',
+                      '/profil-digital-lfjp',
+                      '/mecenat-numerique',
+                    ],
+                  },
+                ];
 
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-semibold text-slate-900 text-sm">Actions et sous-sections ({axisData.actions.length})</h4>
-                            <Button type="button" size="sm" onClick={() => addTimelineAction(selectedPsdAxis)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
-                              <Plus className="mr-1 h-3.5 w-3.5" /> Nouvelle action pour cet axe
-                            </Button>
-                          </div>
+                const AXE4_CATEGORIES = [
+                  {
+                    title: 'Examens, Orientation & Parcours Avenir',
+                    description: 'Bac Blanc, orientation choisie, films annuels par cycle et excellence académique',
+                    slugs: [
+                      '/planification-bac-blanc',
+                      '/parcours-avenir',
+                      '/niveau-excellence-reussite-examens',
+                      '/autonomie-perseverance',
+                    ],
+                  },
+                  {
+                    title: 'Citoyenneté, Épanouissement & Réussites Multiples',
+                    description: 'Toutes les réussites, pédagogie du rebond, engagement solidaire, éducation financière et alumni',
+                    slugs: [
+                      '/toutes-les-reussites',
+                      '/celebration-reussites-diplomes',
+                      '/valorisation-erreur-perseverance',
+                      '/plan-strategique/reussite-citoyenne',
+                      '/education-financiere-vie-autonome',
+                      '/reseau-alumni-mentorat',
+                      '/implication-des-familles',
+                    ],
+                  },
+                ];
 
-                          {axisData.actions.length === 0 ? (
-                            <p className="text-sm text-slate-500 py-4 text-center">Aucune action enregistrée pour cet axe. Cliquez sur « Ajouter une action ».</p>
-                          ) : (
-                            axisData.actions.map((action, actionIndex) => (
-                              <div key={`action-${actionIndex}`} className="space-y-3 rounded-lg border bg-white p-4 shadow-sm">
-                                <div className="flex items-center justify-between gap-2 border-b pb-2">
-                                  <span className="font-semibold text-sm text-french-blue">Action {actionIndex + 1} : {action.title || 'Nouvelle action'}</span>
-                                  <div className="flex items-center gap-1">
-                                    <Button type="button" size="sm" variant="ghost" title="Monter" onClick={() => moveTimelineAction(selectedPsdAxis, actionIndex, -1)} disabled={actionIndex === 0}>
-                                      <ArrowUp className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button type="button" size="sm" variant="ghost" title="Descendre" onClick={() => moveTimelineAction(selectedPsdAxis, actionIndex, 1)} disabled={actionIndex === axisData.actions.length - 1}>
-                                      <ArrowDown className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button type="button" size="sm" variant="outline" title="Dupliquer" onClick={() => duplicateTimelineAction(selectedPsdAxis, actionIndex)}>
-                                      <Copy className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button type="button" size="sm" variant="destructive" title="Supprimer" onClick={() => removeTimelineAction(selectedPsdAxis, actionIndex)}>
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                </div>
+                // Helper to render categorized subpage cards for an axis
+                const renderAxisCategorizedFiches = (
+                  axisId: 'axe-1' | 'axe-2' | 'axe-3' | 'axe-4',
+                  axisBadge: string,
+                  categories: { title: string; description: string; slugs: string[] }[]
+                ) => {
+                  const pillar = SITE_PILLARS.find((p) => p.id === 'plan-strategique');
+                  const axis = pillar?.axes?.find((a) => a.id === axisId);
+                  const axisOfficialSubpages = axis?.subpages || [];
+                  const axisCustomPages = pages.filter(
+                    (p) => p.parent === `/plan-strategique/${axisId}` || p.parent === axisId
+                  );
 
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                  <div className="grid gap-1.5 sm:col-span-2">
-                                    <Label className="text-xs">Intitulé de l’action ou projet</Label>
-                                    <Input
-                                      value={action.title}
-                                      onChange={(e) => updateTimelineAction(selectedPsdAxis, actionIndex, 'title', e.target.value)}
-                                    />
-                                  </div>
-                                  <div className="grid gap-1.5 sm:col-span-2">
-                                    <Label className="text-xs">Description et objectifs</Label>
-                                    <Textarea
-                                      value={action.description}
-                                      onChange={(e) => updateTimelineAction(selectedPsdAxis, actionIndex, 'description', e.target.value)}
-                                      className="min-h-16"
-                                    />
-                                  </div>
-                                  <div className="grid gap-1.5">
-                                    <Label className="text-xs">Année de démarrage</Label>
-                                    <Input
-                                      type="number"
-                                      value={action.start}
-                                      min={axisData.startYear}
-                                      max={axisData.endYear}
-                                      onChange={(e) => updateTimelineAction(selectedPsdAxis, actionIndex, 'start', Number(e.target.value) || axisData.startYear)}
-                                    />
-                                  </div>
-                                  <div className="grid gap-1.5">
-                                    <Label className="text-xs">Année d’achèvement</Label>
-                                    <Input
-                                      type="number"
-                                      value={action.end}
-                                      min={axisData.startYear}
-                                      max={axisData.endYear}
-                                      onChange={(e) => updateTimelineAction(selectedPsdAxis, actionIndex, 'end', Number(e.target.value) || axisData.endYear)}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* Sub-tab: Budgets & Investissements Cadre de Vie */}
-              {planStrategiqueSubTab === 'budgets' && (
-                <div className="space-y-6">
-                  {/* Header Banner */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5">
-                          Axe 1 · Infrastructures & Cadre de Vie
-                        </span>
-                        <span className="text-xs text-slate-500 font-mono">
-                          Planification Pluriannuelle 2026–2030
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-slate-900 mt-1">
-                        Budget d’investissement du Cadre de Vie & Infrastructures
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        Tableau de bord financier interactif (design identique à lfjp-investissements.netlify.app) : modulation des projets, curseurs de budget, flux de trésorerie et simulation d’écolages.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button asChild size="sm" variant="outline" className="text-xs text-french-blue hover:bg-blue-50">
-                        <a href="/budget-cadre-vie-infrastructures?draft=1" target="_blank" rel="noreferrer">
-                          <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page publique Budget
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Interactive Budget Dashboard identical to lfjp-investissements.netlify.app */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
-                    <AdminBudgetDashboard
-                      onDataChange={(updated) => {
-                        updateEditablePageData((data) => ({
-                          ...data,
-                          budgetData: updated,
-                        }));
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Sub-tab: Transport Scolaire & Données Familles */}
-              {planStrategiqueSubTab === 'transports' && (
-                <div className="space-y-6">
-                  {(() => {
-                    const transport = getTransportData();
-
-                    return (
-                      <>
-                        {/* Header Banner */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="rounded bg-sky-100 text-sky-800 text-[11px] font-bold px-2 py-0.5">
-                                Axe 1 · Cadre de Vie & Mobilités
-                              </span>
-                              <span className="text-xs text-slate-500 font-mono">
-                                {transport.stats.totalEleves} élèves analysés (R1 + R2)
-                              </span>
-                            </div>
-                            <h3 className="text-base font-bold text-slate-900 mt-1">
-                              Transport Scolaire & Distribution Géographique des Familles
-                            </h3>
-                            <p className="text-xs text-slate-500">
-                              Données de domiciliation des élèves, analyse de la demande, circuits de ramassage et grille tarifaire.
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button asChild size="sm" variant="outline" className="text-xs text-french-blue hover:bg-blue-50">
-                              <a href="/transport-scolaire?draft=1" target="_blank" rel="noreferrer">
-                                <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page publique Transport
-                              </a>
-                            </Button>
-                            <Button type="button" size="sm" onClick={addTransportCommune} className="bg-sky-600 hover:bg-sky-700 text-white text-xs">
-                              <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une commune
-                            </Button>
-                            <Button type="button" size="sm" onClick={addTransportCircuit} className="bg-french-blue hover:bg-blue-700 text-white text-xs">
-                              <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une ligne / circuit
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Territorial Context KPI Cards */}
-                        <div className="grid gap-3 sm:grid-cols-4">
-                          <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3.5">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">Total Élèves (R1+R2)</span>
-                            <Input
-                              type="number"
-                              value={transport.stats.totalEleves}
-                              onChange={(e) => updateTransportStat('totalEleves', Number(e.target.value) || 0)}
-                              className="mt-1 font-bold text-lg text-sky-900 bg-white h-9"
-                            />
-                          </div>
-
-                          <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Part résidant à Saly</span>
-                            <Input
-                              value={transport.stats.partSaly}
-                              onChange={(e) => updateTransportStat('partSaly', e.target.value)}
-                              className="mt-1 font-bold text-lg text-blue-900 bg-white h-9"
-                              placeholder="49 %"
-                            />
-                          </div>
-
-                          <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3.5">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Périphérie immédiate</span>
-                            <Input
-                              value={transport.stats.partPeripherie}
-                              onChange={(e) => updateTransportStat('partPeripherie', e.target.value)}
-                              className="mt-1 font-bold text-lg text-indigo-900 bg-white h-9"
-                              placeholder="42 %"
-                            />
-                          </div>
-
-                          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Éloignés (&gt; 30 km)</span>
-                            <Input
-                              value={transport.stats.partEloignee}
-                              onChange={(e) => updateTransportStat('partEloignee', e.target.value)}
-                              className="mt-1 font-bold text-lg text-amber-900 bg-white h-9"
-                              placeholder="9 %"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Communes Distribution Table */}
-                        <div className="rounded-xl border bg-white p-4 space-y-3">
-                          <div className="flex items-center justify-between border-b pb-2">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                              Répartition des Familles par Commune ({transport.communes.length})
-                            </h4>
-                            <span className="text-xs text-slate-500">
-                              Effectifs constatés d’après les adresses de rentrée
+                  return (
+                    <div className="space-y-6">
+                      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded bg-emerald-600 text-white text-xs font-bold px-2 py-0.5">
+                              {axisBadge}
                             </span>
+                            <h4 className="font-bold text-sm text-slate-900">
+                              Fiches Projets & Sous-pages officielles ({axisOfficialSubpages.length + axisCustomPages.length} fiches)
+                            </h4>
                           </div>
+                          <p className="text-xs text-slate-600 mt-1">
+                            Arborescence harmonisée avec le site Netlify (psd-lfjp.netlify.app/plan-strategique). Cliquez sur « Blocs » pour éditer ou sur « Voir » pour consulter en direct.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => addSubPage(`/plan-strategique/${axisId}`, 'rubrique-plan-strategique')}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                        >
+                          <CornerDownRight className="mr-1.5 h-3.5 w-3.5" /> + Sous-page pour {axisBadge}
+                        </Button>
+                      </div>
 
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs divide-y">
-                              <thead className="bg-slate-50 font-semibold text-slate-700">
-                                <tr>
-                                  <th className="p-2.5">Ville / Commune</th>
-                                  <th className="p-2.5">Total Élèves</th>
-                                  <th className="p-2.5">Part estimée</th>
-                                  <th className="p-2.5">Jauge de représentation</th>
-                                  <th className="p-2.5 text-right">Action</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y text-slate-700">
-                                {transport.communes.map((c, cIdx) => {
-                                  const numPart = parseInt(c.part, 10) || 0;
-                                  return (
-                                    <tr key={`commune-${cIdx}`} className="hover:bg-slate-50">
-                                      <td className="p-2.5">
-                                        <Input
-                                          value={c.ville}
-                                          onChange={(e) => updateTransportCommune(cIdx, 'ville', e.target.value)}
-                                          className="h-7 text-xs font-semibold w-40"
-                                        />
-                                      </td>
-                                      <td className="p-2.5">
-                                        <Input
-                                          type="number"
-                                          value={c.total}
-                                          onChange={(e) => updateTransportCommune(cIdx, 'total', e.target.value)}
-                                          className="h-7 text-xs font-bold w-24 text-sky-900"
-                                        />
-                                      </td>
-                                      <td className="p-2.5">
-                                        <Input
-                                          value={c.part}
-                                          onChange={(e) => updateTransportCommune(cIdx, 'part', e.target.value)}
-                                          className="h-7 text-xs w-20"
-                                        />
-                                      </td>
-                                      <td className="p-2.5 w-48">
-                                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                                          <div
-                                            className="h-full bg-sky-600 rounded-full transition-all"
-                                            style={{ width: `${Math.min(100, Math.max(0, numPart))}%` }}
-                                          />
-                                        </div>
-                                      </td>
-                                      <td className="p-2.5 text-right">
+                      {categories.map((cat, catIdx) => {
+                        const catSubpages = axisOfficialSubpages.filter((sub) =>
+                          cat.slugs.includes(normalizePageSlug(sub.path))
+                        );
+                        if (catSubpages.length === 0) return null;
+
+                        return (
+                          <div key={`cat-${catIdx}`} className="space-y-3">
+                            <div className="flex items-center justify-between border-b pb-2">
+                              <div>
+                                <h5 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                                  {cat.title} ({catSubpages.length})
+                                </h5>
+                                <p className="text-[11px] text-slate-500 mt-0.5">{cat.description}</p>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                              {catSubpages.map((sub) => {
+                                const isCustomized = pages.some(
+                                  (p) => normalizePageSlug(p.slug) === normalizePageSlug(sub.path)
+                                );
+                                const isBudget = sub.path === '/budget-cadre-vie-infrastructures';
+                                const isTransport = sub.path === '/transport-scolaire';
+                                const isBacBlanc = sub.path === '/planification-bac-blanc';
+
+                                return (
+                                  <div
+                                    key={sub.path}
+                                    className={`p-3.5 rounded-xl border text-xs flex flex-col justify-between gap-3 transition-all shadow-xs ${
+                                      isCustomized
+                                        ? 'border-emerald-300 bg-emerald-50/30'
+                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                    }`}
+                                  >
+                                    <div>
+                                      <div className="flex items-start justify-between gap-1.5 mb-1">
+                                        <span className="font-bold text-slate-900 line-clamp-1">{sub.name}</span>
+                                        {isCustomized ? (
+                                          <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 shrink-0">
+                                            Personnalisé
+                                          </span>
+                                        ) : (
+                                          <span className="rounded bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 shrink-0">
+                                            Officiel
+                                          </span>
+                                        )}
+                                      </div>
+                                      <code className="text-[11px] text-slate-500 font-mono block truncate">
+                                        {sub.path}
+                                      </code>
+                                      {sub.description && (
+                                        <p className="text-slate-600 mt-1.5 line-clamp-2 text-[11px] leading-relaxed">
+                                          {sub.description}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 pt-2.5 border-t border-slate-100 justify-end flex-wrap">
+                                      {isBudget && (
                                         <Button
                                           type="button"
                                           size="sm"
-                                          variant="ghost"
-                                          onClick={() => removeTransportCommune(cIdx)}
-                                          className="h-6 px-1.5 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                          title="Supprimer la commune"
+                                          onClick={() => setAxe1SubTab('budget')}
+                                          className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                                         >
-                                          <Trash2 className="h-3.5 w-3.5" />
+                                          <Coins className="mr-1 h-3 w-3" /> Gérer le Budget (775M)
                                         </Button>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
-                        {/* Bus Circuits and Lines */}
-                        <div className="space-y-3">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                            Circuits et Lignes de Ramassage Préconisés ({transport.circuits.length})
-                          </h4>
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            {transport.circuits.map((circuit, cirIdx) => (
-                              <div key={`circuit-${cirIdx}`} className="rounded-xl border bg-white p-4 shadow-sm space-y-2.5">
-                                <div className="flex items-center justify-between border-b pb-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <BusFront className="h-4 w-4 text-sky-600" />
-                                    <span className="font-bold text-xs text-french-blue">Ligne {cirIdx + 1}</span>
+                                      )}
+                                      {isTransport && (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          onClick={() => setAxe1SubTab('transport')}
+                                          className="h-7 text-xs bg-sky-600 hover:bg-sky-700 text-white font-semibold"
+                                        >
+                                          <BusFront className="mr-1 h-3 w-3" /> Gérer le Transport
+                                        </Button>
+                                      )}
+                                      {isBacBlanc && (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          onClick={() => setAxe4SubTab('bac-blanc')}
+                                          className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                                        >
+                                          <GraduationCap className="mr-1 h-3 w-3" /> Gérer le Bac Blanc
+                                        </Button>
+                                      )}
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          openRubriqueEditor(
+                                            sub.path,
+                                            sub.name,
+                                            `/plan-strategique/${axisId}`,
+                                            'rubrique-plan-strategique'
+                                          )
+                                        }
+                                        className="h-7 text-xs text-emerald-700 hover:bg-emerald-50 border-emerald-300"
+                                      >
+                                        <Pencil className="mr-1 h-3 w-3" /> Blocs
+                                      </Button>
+                                      <Button asChild size="sm" variant="ghost" className="h-7 text-xs text-slate-600 hover:text-slate-900">
+                                        <a href={`${sub.path}?draft=1`} target="_blank" rel="noreferrer">
+                                          <Eye className="h-3 w-3" />
+                                        </a>
+                                      </Button>
+                                    </div>
                                   </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Custom subpages added by user */}
+                      {axisCustomPages.length > 0 && (
+                        <div className="space-y-3 pt-3 border-t">
+                          <h5 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+                            Sous-pages personnalisées créées pour cet axe ({axisCustomPages.length})
+                          </h5>
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {axisCustomPages.map((page) => (
+                              <div
+                                key={page.slug}
+                                className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/40 text-xs flex flex-col justify-between gap-3 shadow-xs"
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="font-bold text-slate-900 line-clamp-1">{page.title}</span>
+                                    <span className="rounded bg-blue-100 text-french-blue text-[10px] font-bold px-1.5 py-0.5">
+                                      Personnalisée
+                                    </span>
+                                  </div>
+                                  <code className="text-[11px] text-slate-500 font-mono mt-0.5 block truncate">
+                                    {page.slug}
+                                  </code>
+                                </div>
+                                <div className="flex items-center gap-1.5 pt-2 border-t border-blue-100 justify-end">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      openRubriqueEditor(
+                                        page.slug,
+                                        page.title,
+                                        `/plan-strategique/${axisId}`,
+                                        'rubrique-plan-strategique'
+                                      )
+                                    }
+                                    className="h-7 text-xs text-french-blue hover:bg-blue-50 border-blue-300"
+                                  >
+                                    <Pencil className="mr-1 h-3 w-3" /> Modifier les blocs
+                                  </Button>
+                                  <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+                                    <a href={`${page.slug}?draft=1`} target="_blank" rel="noreferrer">
+                                      <Eye className="h-3 w-3" />
+                                    </a>
+                                  </Button>
                                   <Button
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => removeTransportCircuit(cirIdx)}
-                                    className="h-6 px-1.5 text-red-500 hover:text-red-700"
+                                    disabled={!canDelete}
+                                    onClick={() => deletePage(page.slug)}
+                                    className="h-7 text-xs text-red-500 hover:text-red-700"
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
                                 </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                };
 
-                                <div className="space-y-2 text-xs">
-                                  <div>
-                                    <Label className="text-[10px] text-slate-500 font-semibold">Nom de la ligne</Label>
-                                    <Input
-                                      value={circuit.name}
-                                      onChange={(e) => updateTransportCircuit(cirIdx, 'name', e.target.value)}
-                                      className="text-xs h-7 font-medium"
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
+                // Helper to render timeline actions editor for an axis
+                const renderAxisTimelineEditor = (
+                  axisKey: 'axe1' | 'axe2' | 'axe3' | 'axe4',
+                  axisTitle: string
+                ) => {
+                  const currentData = getEditablePageData();
+                  const timelines = currentData.psdTimelines as Record<
+                    string,
+                    {
+                      title?: string;
+                      startYear: number;
+                      endYear: number;
+                      actions: { title: string; description: string; start: number; end: number; color?: string }[];
+                    }
+                  >;
+                  const axisData = timelines[axisKey] || {
+                    title: axisTitle,
+                    startYear: 2026,
+                    endYear: 2030,
+                    actions: [],
+                  };
+
+                  return (
+                    <div className="space-y-5">
+                      <div className="grid gap-4 rounded-xl border bg-slate-50 p-4 sm:grid-cols-2">
+                        <div className="grid gap-2">
+                          <Label className="text-xs font-semibold">Année de début du plan ({axisTitle})</Label>
+                          <Input
+                            type="number"
+                            value={axisData.startYear}
+                            onChange={(e) =>
+                              updateTimelineRange(axisKey, 'startYear', Number(e.target.value) || 2026)
+                            }
+                            className="text-xs font-semibold bg-white"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label className="text-xs font-semibold">Année de fin du plan ({axisTitle})</Label>
+                          <Input
+                            type="number"
+                            value={axisData.endYear}
+                            onChange={(e) =>
+                              updateTimelineRange(axisKey, 'endYear', Number(e.target.value) || 2030)
+                            }
+                            className="text-xs font-semibold bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-slate-900 text-sm">
+                            Actions et jalons temporels programmés ({axisData.actions.length})
+                          </h4>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => addTimelineAction(axisKey)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" /> + Nouvelle action pour cet axe
+                          </Button>
+                        </div>
+
+                        {axisData.actions.length === 0 ? (
+                          <p className="text-sm text-slate-500 py-6 text-center bg-slate-50 rounded-xl border">
+                            Aucune action enregistrée pour cet axe. Cliquez sur « + Nouvelle action pour cet axe ».
+                          </p>
+                        ) : (
+                          axisData.actions.map((action, actionIndex) => (
+                            <div
+                              key={`action-${axisKey}-${actionIndex}`}
+                              className="space-y-3 rounded-xl border bg-white p-4 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between gap-2 border-b pb-2">
+                                <span className="font-semibold text-sm text-french-blue">
+                                  Action {actionIndex + 1} : {action.title || 'Nouvelle action'}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    title="Monter"
+                                    onClick={() => moveTimelineAction(axisKey, actionIndex, -1)}
+                                    disabled={actionIndex === 0}
+                                    className="h-7 w-7 p-0"
+                                  >
+                                    <ArrowUp className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    title="Descendre"
+                                    onClick={() => moveTimelineAction(axisKey, actionIndex, 1)}
+                                    disabled={actionIndex === axisData.actions.length - 1}
+                                    className="h-7 w-7 p-0"
+                                  >
+                                    <ArrowDown className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    title="Dupliquer"
+                                    onClick={() => duplicateTimelineAction(axisKey, actionIndex)}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <Copy className="h-3.5 w-3.5 mr-1" /> Dupliquer
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="destructive"
+                                    title="Supprimer"
+                                    onClick={() => removeTimelineAction(axisKey, actionIndex)}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Supprimer
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="grid gap-1.5 sm:col-span-2">
+                                  <Label className="text-xs">Intitulé de l’action ou projet</Label>
+                                  <Input
+                                    value={action.title}
+                                    onChange={(e) =>
+                                      updateTimelineAction(axisKey, actionIndex, 'title', e.target.value)
+                                    }
+                                    className="text-xs"
+                                  />
+                                </div>
+                                <div className="grid gap-1.5 sm:col-span-2">
+                                  <Label className="text-xs">Description et objectifs</Label>
+                                  <Textarea
+                                    value={action.description}
+                                    onChange={(e) =>
+                                      updateTimelineAction(axisKey, actionIndex, 'description', e.target.value)
+                                    }
+                                    className="min-h-16 text-xs"
+                                  />
+                                </div>
+                                <div className="grid gap-1.5">
+                                  <Label className="text-xs">Année de démarrage</Label>
+                                  <Input
+                                    type="number"
+                                    value={action.start}
+                                    min={axisData.startYear}
+                                    max={axisData.endYear}
+                                    onChange={(e) =>
+                                      updateTimelineAction(
+                                        axisKey,
+                                        actionIndex,
+                                        'start',
+                                        Number(e.target.value) || axisData.startYear
+                                      )
+                                    }
+                                    className="text-xs"
+                                  />
+                                </div>
+                                <div className="grid gap-1.5">
+                                  <Label className="text-xs">Année d’achèvement</Label>
+                                  <Input
+                                    type="number"
+                                    value={action.end}
+                                    min={axisData.startYear}
+                                    max={axisData.endYear}
+                                    onChange={(e) =>
+                                      updateTimelineAction(
+                                        axisKey,
+                                        actionIndex,
+                                        'end',
+                                        Number(e.target.value) || axisData.endYear
+                                      )
+                                    }
+                                    className="text-xs"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                };
+
+                return (
+                  <>
+                    {/* ==================== ONGLET AXE 1 ==================== */}
+                    {planStrategiqueSubTab === 'axe1' && (
+                      <div className="space-y-6">
+                        {/* Axe 1 Header Banner */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-emerald-200 bg-emerald-50/60">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded bg-emerald-700 text-white text-xs font-bold px-2 py-0.5">
+                                AXE 1
+                              </span>
+                              <h3 className="text-base font-bold text-slate-900">
+                                Bien-être, Cadre de vie & Infrastructures
+                              </h3>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Budget d’amélioration (775 M FCFA), mobilités & transport scolaire, confort thermique, cantine, santé et épanouissement des élèves.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button asChild size="sm" variant="outline" className="text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                              <a href="/budget-cadre-vie-infrastructures?draft=1" target="_blank" rel="noreferrer">
+                                <Eye className="mr-1.5 h-3.5 w-3.5 text-emerald-600" /> Voir page Budget
+                              </a>
+                            </Button>
+                            <Button asChild size="sm" variant="outline" className="text-xs text-sky-700 border-sky-300 hover:bg-sky-50">
+                              <a href="/transport-scolaire?draft=1" target="_blank" rel="noreferrer">
+                                <Eye className="mr-1.5 h-3.5 w-3.5 text-sky-600" /> Voir page Transport
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Axe 1 Internal Sub-view selector */}
+                        <div className="flex flex-wrap gap-2 border-b pb-3">
+                          {[
+                            { id: 'budget' as const, label: '💰 Budget & Investissements (775 M FCFA)', badge: 'Interactif' },
+                            { id: 'transport' as const, label: '🚌 Transport Scolaire & Familles', badge: 'Circuits' },
+                            { id: 'fiches' as const, label: '📁 Fiches Projets & Sous-pages', badge: '15 fiches' },
+                            { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
+                          ].map((sub) => (
+                            <Button
+                              key={sub.id}
+                              type="button"
+                              size="sm"
+                              variant={axe1SubTab === sub.id ? 'default' : 'outline'}
+                              onClick={() => setAxe1SubTab(sub.id)}
+                              className={`text-xs ${
+                                axe1SubTab === sub.id
+                                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                                  : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span>{sub.label}</span>
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                                axe1SubTab === sub.id ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {sub.badge}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* View 1: Budget Dashboard */}
+                        {axe1SubTab === 'budget' && (
+                          <div className="space-y-4">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+                              <AdminBudgetDashboard
+                                onDataChange={(updated) => {
+                                  updateEditablePageData((data) => ({
+                                    ...data,
+                                    budgetData: updated,
+                                  }));
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* View 2: Transport Scolaire */}
+                        {axe1SubTab === 'transport' && (
+                          <div className="space-y-6">
+                            {(() => {
+                              const transport = getTransportData();
+                              return (
+                                <>
+                                  <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
                                     <div>
-                                      <Label className="text-[10px] text-slate-500 font-semibold">Élèves transportés</Label>
+                                      <h4 className="text-sm font-bold text-slate-900">
+                                        Transport Scolaire & Distribution Géographique des Familles
+                                      </h4>
+                                      <p className="text-xs text-slate-500">
+                                        Effectifs par commune (Saly, Ngaparou, Somone, Mbour), circuits de navettes et grille tarifaire.
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Button type="button" size="sm" onClick={addTransportCommune} className="bg-sky-600 hover:bg-sky-700 text-white text-xs">
+                                        <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une commune
+                                      </Button>
+                                      <Button type="button" size="sm" onClick={addTransportCircuit} className="bg-french-blue hover:bg-blue-700 text-white text-xs">
+                                        <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une ligne / circuit
+                                      </Button>
+                                    </div>
+                                  </div>
+
+                                  {/* KPIs */}
+                                  <div className="grid gap-3 sm:grid-cols-4">
+                                    <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3.5">
+                                      <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">Total Élèves (R1+R2)</span>
                                       <Input
                                         type="number"
-                                        value={circuit.eleves}
-                                        onChange={(e) => updateTransportCircuit(cirIdx, 'eleves', e.target.value)}
-                                        className="text-xs h-7 font-bold text-sky-800"
+                                        value={transport.stats.totalEleves}
+                                        onChange={(e) => updateTransportStat('totalEleves', Number(e.target.value) || 0)}
+                                        className="mt-1 font-bold text-lg text-sky-900 bg-white h-9"
                                       />
                                     </div>
-                                    <div>
-                                      <Label className="text-[10px] text-slate-500 font-semibold">Départ</Label>
+                                    <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5">
+                                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Part résidant à Saly</span>
                                       <Input
-                                        value={circuit.horaireDepart}
-                                        onChange={(e) => updateTransportCircuit(cirIdx, 'horaireDepart', e.target.value)}
-                                        className="text-xs h-7"
-                                        placeholder="07h15"
+                                        value={transport.stats.partSaly}
+                                        onChange={(e) => updateTransportStat('partSaly', e.target.value)}
+                                        className="mt-1 font-bold text-lg text-blue-900 bg-white h-9"
+                                        placeholder="49 %"
+                                      />
+                                    </div>
+                                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3.5">
+                                      <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Périphérie immédiate</span>
+                                      <Input
+                                        value={transport.stats.partPeripherie}
+                                        onChange={(e) => updateTransportStat('partPeripherie', e.target.value)}
+                                        className="mt-1 font-bold text-lg text-indigo-900 bg-white h-9"
+                                        placeholder="42 %"
+                                      />
+                                    </div>
+                                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+                                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Éloignés (&gt; 30 km)</span>
+                                      <Input
+                                        value={transport.stats.partEloignee}
+                                        onChange={(e) => updateTransportStat('partEloignee', e.target.value)}
+                                        className="mt-1 font-bold text-lg text-amber-900 bg-white h-9"
+                                        placeholder="9 %"
                                       />
                                     </div>
                                   </div>
-                                  <div>
-                                    <Label className="text-[10px] text-slate-500 font-semibold">Arrêts desservis</Label>
+
+                                  {/* Communes Distribution Table */}
+                                  <div className="rounded-xl border bg-white p-4 space-y-3">
+                                    <div className="flex items-center justify-between border-b pb-2">
+                                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                                        Répartition des Familles par Commune ({transport.communes.length})
+                                      </h4>
+                                      <span className="text-xs text-slate-500">
+                                        Effectifs constatés d’après les adresses de rentrée
+                                      </span>
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-left text-xs divide-y">
+                                        <thead className="bg-slate-50 font-semibold text-slate-700">
+                                          <tr>
+                                            <th className="p-2.5">Ville / Commune</th>
+                                            <th className="p-2.5">Total Élèves</th>
+                                            <th className="p-2.5">Part estimée</th>
+                                            <th className="p-2.5">Jauge de représentation</th>
+                                            <th className="p-2.5 text-right">Action</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y text-slate-700">
+                                          {transport.communes.map((c, cIdx) => {
+                                            const numPart = parseInt(c.part, 10) || 0;
+                                            return (
+                                              <tr key={`commune-${cIdx}`} className="hover:bg-slate-50">
+                                                <td className="p-2.5">
+                                                  <Input
+                                                    value={c.ville}
+                                                    onChange={(e) => updateTransportCommune(cIdx, 'ville', e.target.value)}
+                                                    className="h-7 text-xs font-semibold w-40"
+                                                  />
+                                                </td>
+                                                <td className="p-2.5">
+                                                  <Input
+                                                    type="number"
+                                                    value={c.total}
+                                                    onChange={(e) => updateTransportCommune(cIdx, 'total', e.target.value)}
+                                                    className="h-7 text-xs font-bold w-24 text-sky-900"
+                                                  />
+                                                </td>
+                                                <td className="p-2.5">
+                                                  <Input
+                                                    value={c.part}
+                                                    onChange={(e) => updateTransportCommune(cIdx, 'part', e.target.value)}
+                                                    className="h-7 text-xs w-20"
+                                                  />
+                                                </td>
+                                                <td className="p-2.5 w-48">
+                                                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                                                    <div
+                                                      className="h-full bg-sky-600 rounded-full transition-all"
+                                                      style={{ width: `${Math.min(100, Math.max(0, numPart))}%` }}
+                                                    />
+                                                  </div>
+                                                </td>
+                                                <td className="p-2.5 text-right">
+                                                  <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => removeTransportCommune(cIdx)}
+                                                    className="h-6 px-1.5 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                    title="Supprimer la commune"
+                                                  >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                  </Button>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+
+                                  {/* Bus Circuits and Lines */}
+                                  <div className="space-y-3">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                                      Circuits et Lignes de Ramassage Préconisés ({transport.circuits.length})
+                                    </h4>
+                                    <div className="grid gap-3 sm:grid-cols-3">
+                                      {transport.circuits.map((circuit, cirIdx) => (
+                                        <div key={`circuit-${cirIdx}`} className="rounded-xl border bg-white p-4 shadow-sm space-y-2.5">
+                                          <div className="flex items-center justify-between border-b pb-1.5">
+                                            <div className="flex items-center gap-1.5">
+                                              <BusFront className="h-4 w-4 text-sky-600" />
+                                              <span className="font-bold text-xs text-french-blue">Ligne {cirIdx + 1}</span>
+                                            </div>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => removeTransportCircuit(cirIdx)}
+                                              className="h-6 px-1.5 text-red-500 hover:text-red-700"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+
+                                          <div className="space-y-2 text-xs">
+                                            <div>
+                                              <Label className="text-[10px] text-slate-500 font-semibold">Nom de la ligne</Label>
+                                              <Input
+                                                value={circuit.name}
+                                                onChange={(e) => updateTransportCircuit(cirIdx, 'name', e.target.value)}
+                                                className="text-xs h-7 font-medium"
+                                              />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <div>
+                                                <Label className="text-[10px] text-slate-500 font-semibold">Élèves transportés</Label>
+                                                <Input
+                                                  type="number"
+                                                  value={circuit.eleves}
+                                                  onChange={(e) => updateTransportCircuit(cirIdx, 'eleves', e.target.value)}
+                                                  className="text-xs h-7 font-bold text-sky-800"
+                                                />
+                                              </div>
+                                              <div>
+                                                <Label className="text-[10px] text-slate-500 font-semibold">Départ</Label>
+                                                <Input
+                                                  value={circuit.horaireDepart}
+                                                  onChange={(e) => updateTransportCircuit(cirIdx, 'horaireDepart', e.target.value)}
+                                                  className="text-xs h-7"
+                                                  placeholder="07h15"
+                                                />
+                                              </div>
+                                            </div>
+                                            <div>
+                                              <Label className="text-[10px] text-slate-500 font-semibold">Arrêts desservis</Label>
+                                              <Input
+                                                value={circuit.arrets}
+                                                onChange={(e) => updateTransportCircuit(cirIdx, 'arrets', e.target.value)}
+                                                className="text-xs h-7 text-slate-700"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Tariff Grid */}
+                                  <div className="rounded-xl border bg-slate-50 p-4 space-y-3">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                                      Grille Tarifaire Indicative par Zone
+                                    </h4>
+                                    <div className="grid gap-3 sm:grid-cols-3">
+                                      {transport.tarifs.map((tarif, tIdx) => (
+                                        <div key={`tarif-${tIdx}`} className="p-3 rounded-lg border bg-white text-xs space-y-1">
+                                          <p className="font-bold text-french-blue">{tarif.zone}</p>
+                                          <p className="text-[11px] text-slate-500">{tarif.description}</p>
+                                          <div className="pt-2 border-t mt-2 flex items-center justify-between font-bold">
+                                            <span className="text-slate-700">{tarif.mensuel.toLocaleString('fr-FR')} FCFA / mois</span>
+                                            <span className="text-slate-500 text-[11px]">({tarif.annuel.toLocaleString('fr-FR')} FCFA / an)</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
+
+                        {/* View 3: Categorized Subpages */}
+                        {axe1SubTab === 'fiches' && renderAxisCategorizedFiches('axe-1', 'Axe 1', AXE1_CATEGORIES)}
+
+                        {/* View 4: Timeline actions */}
+                        {axe1SubTab === 'jalons' && renderAxisTimelineEditor('axe1', 'Axe 1 : Bien-être, Cadre de vie & Infrastructures')}
+                      </div>
+                    )}
+
+                    {/* ==================== ONGLET AXE 2 ==================== */}
+                    {planStrategiqueSubTab === 'axe2' && (
+                      <div className="space-y-6">
+                        {/* Axe 2 Header Banner */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-blue-200 bg-blue-50/60">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded bg-blue-700 text-white text-xs font-bold px-2 py-0.5">
+                                AXE 2
+                              </span>
+                              <h3 className="text-base font-bold text-slate-900">
+                                Langues, Interculturalité & Ouverture internationale
+                              </h3>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Filière bilingue SI / DNBi / BFI, parcours artistique PEAC, mobilités AEFE, jumelages et voyages éducatifs.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button asChild size="sm" variant="outline" className="text-xs text-blue-700 border-blue-300 hover:bg-blue-50">
+                              <a href="/section-internationale-bfi?draft=1" target="_blank" rel="noreferrer">
+                                <Eye className="mr-1.5 h-3.5 w-3.5 text-blue-600" /> Voir page SI & BFI
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Axe 2 Internal Sub-view selector */}
+                        <div className="flex flex-wrap gap-2 border-b pb-3">
+                          {[
+                            { id: 'fiches' as const, label: '📁 Fiches Projets & Cursus de l’Axe 2', badge: '8 fiches' },
+                            { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
+                          ].map((sub) => (
+                            <Button
+                              key={sub.id}
+                              type="button"
+                              size="sm"
+                              variant={axe2SubTab === sub.id ? 'default' : 'outline'}
+                              onClick={() => setAxe2SubTab(sub.id)}
+                              className={`text-xs ${
+                                axe2SubTab === sub.id
+                                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                                  : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span>{sub.label}</span>
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                                axe2SubTab === sub.id ? 'bg-blue-700 text-blue-100' : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {sub.badge}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* View: Categorized Subpages */}
+                        {axe2SubTab === 'fiches' && renderAxisCategorizedFiches('axe-2', 'Axe 2', AXE2_CATEGORIES)}
+
+                        {/* View: Timeline actions */}
+                        {axe2SubTab === 'jalons' && renderAxisTimelineEditor('axe2', 'Axe 2 : Langues, Interculturalité & Ouverture internationale')}
+                      </div>
+                    )}
+
+                    {/* ==================== ONGLET AXE 3 ==================== */}
+                    {planStrategiqueSubTab === 'axe3' && (
+                      <div className="space-y-6">
+                        {/* Axe 3 Header Banner */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/60">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded bg-amber-600 text-white text-xs font-bold px-2 py-0.5">
+                                AXE 3
+                              </span>
+                              <h3 className="text-base font-bold text-slate-900">
+                                Innovation, Numérique & Pédagogie active
+                              </h3>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Équipement 1 PC par lycéen, classes mobiles, curriculum spiralaire, initiation au code, intelligence artificielle et mécénat.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button asChild size="sm" variant="outline" className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50">
+                              <a href="/pc-par-lyceen?draft=1" target="_blank" rel="noreferrer">
+                                <Eye className="mr-1.5 h-3.5 w-3.5 text-amber-600" /> Voir page 1 PC par Lycéen
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Axe 3 Internal Sub-view selector */}
+                        <div className="flex flex-wrap gap-2 border-b pb-3">
+                          {[
+                            { id: 'fiches' as const, label: '📁 Fiches Projets & Équipements de l’Axe 3', badge: '10 fiches' },
+                            { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
+                          ].map((sub) => (
+                            <Button
+                              key={sub.id}
+                              type="button"
+                              size="sm"
+                              variant={axe3SubTab === sub.id ? 'default' : 'outline'}
+                              onClick={() => setAxe3SubTab(sub.id)}
+                              className={`text-xs ${
+                                axe3SubTab === sub.id
+                                  ? 'bg-amber-600 text-white font-bold shadow-xs'
+                                  : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span>{sub.label}</span>
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                                axe3SubTab === sub.id ? 'bg-amber-700 text-amber-100' : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {sub.badge}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* View: Categorized Subpages */}
+                        {axe3SubTab === 'fiches' && renderAxisCategorizedFiches('axe-3', 'Axe 3', AXE3_CATEGORIES)}
+
+                        {/* View: Timeline actions */}
+                        {axe3SubTab === 'jalons' && renderAxisTimelineEditor('axe3', 'Axe 3 : Innovation, Numérique & Pédagogie active')}
+                      </div>
+                    )}
+
+                    {/* ==================== ONGLET AXE 4 ==================== */}
+                    {planStrategiqueSubTab === 'axe4' && (
+                      <div className="space-y-6">
+                        {/* Axe 4 Header Banner */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-indigo-200 bg-indigo-50/60">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="rounded bg-indigo-700 text-white text-xs font-bold px-2 py-0.5">
+                                AXE 4
+                              </span>
+                              <h3 className="text-base font-bold text-slate-900">
+                                Façonner les réussites, Citoyenneté & Parcours de l’Élève
+                              </h3>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Organisation du Bac Blanc, films annuels d’orientation par cycle, réussite aux examens, valorisation de l'erreur et citoyenneté.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button asChild size="sm" variant="outline" className="text-xs text-indigo-700 border-indigo-300 hover:bg-indigo-50">
+                              <a href="/planification-bac-blanc?draft=1" target="_blank" rel="noreferrer">
+                                <Eye className="mr-1.5 h-3.5 w-3.5 text-indigo-600" /> Voir page Bac Blanc
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Axe 4 Internal Sub-view selector */}
+                        <div className="flex flex-wrap gap-2 border-b pb-3">
+                          {[
+                            { id: 'bac-blanc' as const, label: '🎓 Organisation du Bac Blanc', badge: 'Planning' },
+                            { id: 'film-annuel' as const, label: '📅 Films Annuels par Cycle', badge: 'Cycles 3e-Term' },
+                            { id: 'fiches' as const, label: '📁 Fiches Projets & Orientation', badge: '12 fiches' },
+                            { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
+                          ].map((sub) => (
+                            <Button
+                              key={sub.id}
+                              type="button"
+                              size="sm"
+                              variant={axe4SubTab === sub.id ? 'default' : 'outline'}
+                              onClick={() => setAxe4SubTab(sub.id)}
+                              className={`text-xs ${
+                                axe4SubTab === sub.id
+                                  ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                                  : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span>{sub.label}</span>
+                              <span className={`ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full ${
+                                axe4SubTab === sub.id ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {sub.badge}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* View 1: Bac Blanc */}
+                        {axe4SubTab === 'bac-blanc' && (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-3 border-b pb-2">
+                              <div>
+                                <h3 className="text-sm font-bold text-french-blue">Organisation et Sessions du Bac Blanc</h3>
+                                <p className="text-xs text-slate-500">Gérez les journées, épreuves, salles et affectations de surveillance.</p>
+                              </div>
+                              <Button type="button" size="sm" onClick={addScheduleDay} className="bg-french-blue hover:bg-blue-700 text-white text-xs">
+                                <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter une journée d’examen
+                              </Button>
+                            </div>
+                            {(getEditablePageData().bacBlancSchedule as Record<string, unknown>[]).map((day, dayIndex) => (
+                              <div key={`exam-day-${dayIndex}`} className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
+                                <div className="flex items-center justify-between border-b pb-2">
+                                  <span className="font-bold text-sm text-french-blue">
+                                    Journée {dayIndex + 1} : {String(day.label || 'Nouvelle date')}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeScheduleDay(dayIndex)}
+                                    className="h-8 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer la journée
+                                  </Button>
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                  <div className="grid gap-1">
+                                    <Label className="text-xs font-semibold">Date</Label>
                                     <Input
-                                      value={circuit.arrets}
-                                      onChange={(e) => updateTransportCircuit(cirIdx, 'arrets', e.target.value)}
-                                      className="text-xs h-7 text-slate-700"
+                                      type="date"
+                                      value={String(day.date || '')}
+                                      onChange={(event) => updateScheduleDay(dayIndex, 'date', event.target.value)}
+                                      className="text-xs"
+                                    />
+                                  </div>
+                                  <div className="grid gap-1">
+                                    <Label className="text-xs font-semibold">Libellé affiché</Label>
+                                    <Input
+                                      value={String(day.label || '')}
+                                      onChange={(event) => updateScheduleDay(dayIndex, 'label', event.target.value)}
+                                      className="text-xs"
+                                    />
+                                  </div>
+                                  <div className="grid gap-1">
+                                    <Label className="text-xs font-semibold">Épreuve / Thématique</Label>
+                                    <Input
+                                      value={String(day.focus || '')}
+                                      onChange={(event) => updateScheduleDay(dayIndex, 'focus', event.target.value)}
+                                      className="text-xs"
+                                    />
+                                  </div>
+                                  <div className="grid gap-1 sm:col-span-3">
+                                    <Label className="text-xs font-semibold">Note / Consignes logistiques</Label>
+                                    <Textarea
+                                      value={String(day.note || '')}
+                                      onChange={(event) => updateScheduleDay(dayIndex, 'note', event.target.value)}
+                                      className="text-xs min-h-[60px]"
                                     />
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
 
-                        {/* Tariff Grid */}
-                        <div className="rounded-xl border bg-slate-50 p-4 space-y-3">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                            Grille Tarifaire Indicative par Zone
-                          </h4>
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            {transport.tarifs.map((tarif, tIdx) => (
-                              <div key={`tarif-${tIdx}`} className="p-3 rounded-lg border bg-white text-xs space-y-1">
-                                <p className="font-bold text-french-blue">{tarif.zone}</p>
-                                <p className="text-[11px] text-slate-500">{tarif.description}</p>
-                                <div className="pt-2 border-t mt-2 flex items-center justify-between font-bold">
-                                  <span className="text-slate-700">{tarif.mensuel.toLocaleString('fr-FR')} FCFA / mois</span>
-                                  <span className="text-slate-500 text-[11px]">({tarif.annuel.toLocaleString('fr-FR')} FCFA / an)</span>
+                                <div className="space-y-3 pt-3 border-t">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                      Salles & Horaires ({((day.rooms as Record<string, unknown>[]) || []).length})
+                                    </h4>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => addScheduleRoom(dayIndex)} className="text-xs h-7">
+                                      <Plus className="mr-1 h-3 w-3" /> Ajouter une salle
+                                    </Button>
+                                  </div>
+                                  {((day.rooms as Record<string, unknown>[]) || []).map((room, roomIndex) => (
+                                    <div key={`room-${roomIndex}`} className="grid gap-2.5 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
+                                      {([
+                                        ['room', 'Salle'], ['examTitle', 'Épreuve'], ['examTime', 'Horaire'], ['leadExaminer', 'Responsable'],
+                                        ['surveillanceTeam', 'Surveillance (noms séparés par virgules)'], ['notes', 'Note particulière'],
+                                      ] as const).map(([field, label]) => (
+                                        <div key={field} className="grid gap-1">
+                                          <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
+                                          <Input
+                                            value={field === 'surveillanceTeam' ? ((room.surveillanceTeam as string[]) || []).join(', ') : String(room[field] || '')}
+                                            onChange={(event) => updateScheduleRoom(dayIndex, roomIndex, field, event.target.value)}
+                                            className="bg-white text-xs h-8"
+                                          />
+                                        </div>
+                                      ))}
+                                      <div className="sm:col-span-2 flex justify-end pt-1">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => removeScheduleRoom(dayIndex, roomIndex)}
+                                          className="h-7 text-xs text-red-500 hover:text-red-700"
+                                        >
+                                          <Trash2 className="mr-1 h-3 w-3" /> Retirer cette salle
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             ))}
                           </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
+                        )}
 
-              {/* Sub-tab 4: Bac Blanc */}
-              {planStrategiqueSubTab === 'bac-blanc' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3 border-b pb-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-french-blue">Organisation du Bac Blanc</h3>
-                      <p className="text-xs text-slate-500">Gérez les journées, épreuves, salles et affectations de surveillance.</p>
-                    </div>
-                    <Button type="button" size="sm" onClick={addScheduleDay} className="bg-french-blue hover:bg-blue-700 text-white text-xs">
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter une journée d’examen
-                    </Button>
-                  </div>
-                  {(getEditablePageData().bacBlancSchedule as Record<string, unknown>[]).map((day, dayIndex) => (
-                    <div key={`exam-day-${dayIndex}`} className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
-                      <div className="flex items-center justify-between border-b pb-2">
-                        <span className="font-bold text-sm text-french-blue">
-                          Journée {dayIndex + 1} : {String(day.label || 'Nouvelle date')}
-                        </span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeScheduleDay(dayIndex)}
-                          className="h-8 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer la journée
-                        </Button>
-                      </div>
+                        {/* View 2: Film Annuel */}
+                        {axe4SubTab === 'film-annuel' && (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-3 border-b pb-2">
+                              <div>
+                                <h3 className="text-sm font-bold text-french-blue">Films annuels & parcours par cycle</h3>
+                                <p className="text-xs text-slate-500">Maternelle, Élémentaire, Collège, Lycée et actions d’orientation.</p>
+                              </div>
+                              <Button type="button" size="sm" onClick={addFilmLevel} className="bg-french-blue hover:bg-blue-700 text-white text-xs">
+                                <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un cycle / niveau
+                              </Button>
+                            </div>
+                            {Object.entries(getEditablePageData().filmAnnuelData as Record<string, Record<string, unknown>>).map(([levelKey, level]) => (
+                              <div key={levelKey} className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
+                                <div className="flex items-center justify-between border-b pb-2">
+                                  <span className="font-bold text-sm text-french-blue">Niveau : {String(level.level || levelKey)}</span>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeFilmLevel(levelKey)}
+                                    className="h-8 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer ce niveau
+                                  </Button>
+                                </div>
 
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="grid gap-1">
-                          <Label className="text-xs font-semibold">Date</Label>
-                          <Input
-                            type="date"
-                            value={String(day.date || '')}
-                            onChange={(event) => updateScheduleDay(dayIndex, 'date', event.target.value)}
-                            className="text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs font-semibold">Libellé affiché</Label>
-                          <Input
-                            value={String(day.label || '')}
-                            onChange={(event) => updateScheduleDay(dayIndex, 'label', event.target.value)}
-                            className="text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs font-semibold">Épreuve / Thématique</Label>
-                          <Input
-                            value={String(day.focus || '')}
-                            onChange={(event) => updateScheduleDay(dayIndex, 'focus', event.target.value)}
-                            className="text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1 sm:col-span-3">
-                          <Label className="text-xs font-semibold">Note / Consignes logistiques</Label>
-                          <Textarea
-                            value={String(day.note || '')}
-                            onChange={(event) => updateScheduleDay(dayIndex, 'note', event.target.value)}
-                            className="text-xs min-h-[60px]"
-                          />
-                        </div>
-                      </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div className="grid gap-1">
+                                    <Label className="text-xs font-semibold">Nom du cycle</Label>
+                                    <Input
+                                      value={String(level.level || '')}
+                                      onChange={(event) => updateFilmLevel(levelKey, 'level', event.target.value)}
+                                      className="text-xs"
+                                    />
+                                  </div>
+                                  <div className="grid gap-1">
+                                    <Label className="text-xs font-semibold">Chapeau introductif</Label>
+                                    <Input
+                                      value={String(level.subtitle || '')}
+                                      onChange={(event) => updateFilmLevel(levelKey, 'subtitle', event.target.value)}
+                                      className="text-xs"
+                                    />
+                                  </div>
+                                </div>
 
-                      <div className="space-y-3 pt-3 border-t">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                            Salles & Horaires ({((day.rooms as Record<string, unknown>[]) || []).length})
-                          </h4>
-                          <Button type="button" size="sm" variant="outline" onClick={() => addScheduleRoom(dayIndex)} className="text-xs h-7">
-                            <Plus className="mr-1 h-3 w-3" /> Ajouter une salle
-                          </Button>
-                        </div>
-                        {((day.rooms as Record<string, unknown>[]) || []).map((room, roomIndex) => (
-                          <div key={`room-${roomIndex}`} className="grid gap-2.5 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
-                            {([
-                              ['room', 'Salle'], ['examTitle', 'Épreuve'], ['examTime', 'Horaire'], ['leadExaminer', 'Responsable'],
-                              ['surveillanceTeam', 'Surveillance (noms séparés par virgules)'], ['notes', 'Note particulière'],
-                            ] as const).map(([field, label]) => (
-                              <div key={field} className="grid gap-1">
-                                <Label className="text-[11px] font-semibold text-slate-600">{label}</Label>
-                                <Input
-                                  value={field === 'surveillanceTeam' ? ((room.surveillanceTeam as string[]) || []).join(', ') : String(room[field] || '')}
-                                  onChange={(event) => updateScheduleRoom(dayIndex, roomIndex, field, event.target.value)}
-                                  className="bg-white text-xs h-8"
-                                />
+                                <div className="space-y-3 pt-3 border-t">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                      Actions & Projets de {String(level.level || levelKey)} ({((level.actions as Record<string, unknown>[]) || []).length})
+                                    </h4>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => addFilmAction(levelKey)} className="text-xs h-7">
+                                      <Plus className="mr-1 h-3 w-3" /> Ajouter une action
+                                    </Button>
+                                  </div>
+                                  {((level.actions as Record<string, unknown>[]) || []).map((action, actionIndex) => (
+                                    <div key={`action-${actionIndex}`} className="grid gap-2.5 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
+                                      {(['title', 'period', 'description', 'actors'] as const).map((field) => (
+                                        <div key={field} className="grid gap-1">
+                                          <Label className="text-[11px] font-semibold text-slate-600">
+                                            {field === 'title' ? 'Intitulé de l’action' : field === 'period' ? 'Période' : field === 'description' ? 'Description' : 'Acteurs / Intervenants'}
+                                          </Label>
+                                          {field === 'description' ? (
+                                            <Textarea
+                                              value={String(action[field] || '')}
+                                              onChange={(event) => updateFilmAction(levelKey, actionIndex, field, event.target.value)}
+                                              className="bg-white text-xs min-h-[50px]"
+                                            />
+                                          ) : (
+                                            <Input
+                                              value={String(action[field] || '')}
+                                              onChange={(event) => updateFilmAction(levelKey, actionIndex, field, event.target.value)}
+                                              className="bg-white text-xs h-8"
+                                            />
+                                          )}
+                                        </div>
+                                      ))}
+                                      <div className="grid gap-1">
+                                        <Label className="text-[11px] font-semibold text-slate-600">Étape du parcours</Label>
+                                        <select
+                                          className="h-8 rounded-md border bg-white px-2 text-xs"
+                                          value={String(action.phase || 'Mieux se connaître')}
+                                          onChange={(event) => updateFilmAction(levelKey, actionIndex, 'phase', event.target.value)}
+                                        >
+                                          <option>Mieux se connaître</option>
+                                          <option>Plonger dans le monde professionnel</option>
+                                          <option>Finaliser les projets</option>
+                                        </select>
+                                      </div>
+                                      <div className="flex items-end justify-end">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => removeFilmAction(levelKey, actionIndex)}
+                                          className="h-7 text-xs text-red-500 hover:text-red-700"
+                                        >
+                                          <Trash2 className="mr-1 h-3 w-3" /> Supprimer l’action
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             ))}
-                            <div className="sm:col-span-2 flex justify-end pt-1">
+                          </div>
+                        )}
+
+                        {/* View 3: Categorized Subpages */}
+                        {axe4SubTab === 'fiches' && renderAxisCategorizedFiches('axe-4', 'Axe 4', AXE4_CATEGORIES)}
+
+                        {/* View 4: Timeline actions */}
+                        {axe4SubTab === 'jalons' && renderAxisTimelineEditor('axe4', 'Axe 4 : Façonner les réussites, Citoyenneté & Orientation')}
+                      </div>
+                    )}
+
+                    {/* ==================== VUE D'ENSEMBLE DU PLAN ==================== */}
+                    {planStrategiqueSubTab === 'overview' && (
+                      <div className="space-y-6">
+                        {/* Overview Top Hero */}
+                        <div className="p-5 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50 to-white shadow-xs">
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                              <span className="rounded bg-emerald-600 text-white text-[11px] font-bold px-2.5 py-0.5 uppercase tracking-wider">
+                                Plan Stratégique LFJP (2026–2030)
+                              </span>
+                              <h3 className="text-lg font-playfair font-bold text-slate-900 mt-2">
+                                Vue d’ensemble & Architecture Complète des 4 Axes
+                              </h3>
+                              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                                Retrouvez ci-dessous la synthèse de l’ensemble des 4 axes stratégiques, leurs budgets et leurs 45 fiches projets associées, organisées rigoureusement selon l’arborescence du site public.
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
                               <Button
                                 type="button"
                                 size="sm"
-                                variant="ghost"
-                                onClick={() => removeScheduleRoom(dayIndex, roomIndex)}
-                                className="h-7 text-xs text-red-500 hover:text-red-700"
+                                onClick={() => openRubriqueEditor('/plan-strategique', 'Plan Stratégique', undefined, 'rubrique-plan-strategique')}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
                               >
-                                <Trash2 className="mr-1 h-3 w-3" /> Retirer cette salle
+                                <Pencil className="mr-1.5 h-3.5 w-3.5" /> Modifier les blocs de la page principale
+                              </Button>
+                              <Button asChild size="sm" variant="outline" className="text-xs text-slate-700 hover:bg-slate-50">
+                                <a href="/plan-strategique?draft=1" target="_blank" rel="noreferrer">
+                                  <Eye className="mr-1.5 h-3.5 w-3.5 text-emerald-600" /> Voir en ligne
+                                </a>
                               </Button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                        </div>
 
-              {/* Sub-tab 3: Films Annuels */}
-              {planStrategiqueSubTab === 'film-annuel' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3 border-b pb-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-french-blue">Films annuels & parcours par cycle</h3>
-                      <p className="text-xs text-slate-500">Maternelle, Élémentaire, Collège, Lycée et actions d’orientation.</p>
-                    </div>
-                    <Button type="button" size="sm" onClick={addFilmLevel} className="bg-french-blue hover:bg-blue-700 text-white text-xs">
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un cycle / niveau
-                    </Button>
-                  </div>
-                  {Object.entries(getEditablePageData().filmAnnuelData as Record<string, Record<string, unknown>>).map(([levelKey, level]) => (
-                    <div key={levelKey} className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
-                      <div className="flex items-center justify-between border-b pb-2">
-                        <span className="font-bold text-sm text-french-blue">Niveau : {String(level.level || levelKey)}</span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeFilmLevel(levelKey)}
-                          className="h-8 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer ce niveau
-                        </Button>
-                      </div>
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="grid gap-1">
-                          <Label className="text-xs font-semibold">Nom du cycle</Label>
+                        {/* Search bar across all axes */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                           <Input
-                            value={String(level.level || '')}
-                            onChange={(event) => updateFilmLevel(levelKey, 'level', event.target.value)}
-                            className="text-xs"
+                            placeholder="Rechercher une fiche projet, un mot-clé ou une sous-page du Plan Stratégique..."
+                            value={planOverviewSearch}
+                            onChange={(e) => setPlanOverviewSearch(e.target.value)}
+                            className="pl-9 text-xs bg-white h-9"
                           />
                         </div>
-                        <div className="grid gap-1">
-                          <Label className="text-xs font-semibold">Chapeau introductif</Label>
-                          <Input
-                            value={String(level.subtitle || '')}
-                            onChange={(event) => updateFilmLevel(levelKey, 'subtitle', event.target.value)}
-                            className="text-xs"
-                          />
-                        </div>
-                      </div>
 
-                      <div className="space-y-3 pt-3 border-t">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                            Actions & Projets de {String(level.level || levelKey)} ({((level.actions as Record<string, unknown>[]) || []).length})
-                          </h4>
-                          <Button type="button" size="sm" variant="outline" onClick={() => addFilmAction(levelKey)} className="text-xs h-7">
-                            <Plus className="mr-1 h-3 w-3" /> Ajouter une action
-                          </Button>
-                        </div>
-                        {((level.actions as Record<string, unknown>[]) || []).map((action, actionIndex) => (
-                          <div key={`action-${actionIndex}`} className="grid gap-2.5 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
-                            {(['title', 'period', 'description', 'actors'] as const).map((field) => (
-                              <div key={field} className="grid gap-1">
-                                <Label className="text-[11px] font-semibold text-slate-600">
-                                  {field === 'title' ? 'Intitulé de l’action' : field === 'period' ? 'Période' : field === 'description' ? 'Description' : 'Acteurs / Intervenants'}
-                                </Label>
-                                {field === 'description' ? (
-                                  <Textarea
-                                    value={String(action[field] || '')}
-                                    onChange={(event) => updateFilmAction(levelKey, actionIndex, field, event.target.value)}
-                                    className="bg-white text-xs min-h-[50px]"
-                                  />
-                                ) : (
-                                  <Input
-                                    value={String(action[field] || '')}
-                                    onChange={(event) => updateFilmAction(levelKey, actionIndex, field, event.target.value)}
-                                    className="bg-white text-xs h-8"
-                                  />
-                                )}
+                        {/* 4 Axes Synthesis Cards */}
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                          {[
+                            {
+                              id: 'axe1' as const,
+                              title: 'Axe 1 · Bien-être & Cadre de Vie',
+                              desc: 'Infrastructures, Budget 775M, Transport, Santé, Climat scolaire',
+                              count: '15 fiches',
+                              color: 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50',
+                              textColor: 'text-emerald-800',
+                              btnColor: 'bg-emerald-600 hover:bg-emerald-700',
+                              icon: Target,
+                            },
+                            {
+                              id: 'axe2' as const,
+                              title: 'Axe 2 · Langues & Ouverture',
+                              desc: 'Bilinguisme SI / DNBi / BFI, PEAC, Mobilités AEFE, Partenariats',
+                              count: '8 fiches',
+                              color: 'border-blue-200 bg-blue-50/50 hover:bg-blue-50',
+                              textColor: 'text-blue-800',
+                              btnColor: 'bg-blue-600 hover:bg-blue-700',
+                              icon: Globe2,
+                            },
+                            {
+                              id: 'axe3' as const,
+                              title: 'Axe 3 · Numérique & Innovation',
+                              desc: '1 PC par Lycéen, classes mobiles, IA, Code, Lab numérique, Mécénat',
+                              count: '10 fiches',
+                              color: 'border-amber-200 bg-amber-50/50 hover:bg-amber-50',
+                              textColor: 'text-amber-800',
+                              btnColor: 'bg-amber-600 hover:bg-amber-700',
+                              icon: Sparkles,
+                            },
+                            {
+                              id: 'axe4' as const,
+                              title: 'Axe 4 · Réussites & Citoyenneté',
+                              desc: 'Organisation Bac Blanc, Films annuels orientation, Réussite citoyenne',
+                              count: '12 fiches',
+                              color: 'border-indigo-200 bg-indigo-50/50 hover:bg-indigo-50',
+                              textColor: 'text-indigo-800',
+                              btnColor: 'bg-indigo-600 hover:bg-indigo-700',
+                              icon: GraduationCap,
+                            },
+                          ].map((c) => {
+                            const Icon = c.icon;
+                            return (
+                              <div
+                                key={c.id}
+                                className={`p-4 rounded-xl border ${c.color} transition-all flex flex-col justify-between gap-3 shadow-xs`}
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="p-2 rounded-lg bg-white shadow-xs">
+                                      <Icon className="h-4 w-4 text-slate-700" />
+                                    </div>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-slate-700 border">
+                                      {c.count}
+                                    </span>
+                                  </div>
+                                  <h4 className={`font-bold text-xs ${c.textColor}`}>{c.title}</h4>
+                                  <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed">
+                                    {c.desc}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => setPlanStrategiqueSubTab(c.id)}
+                                  className={`text-white text-xs font-semibold h-8 w-full ${c.btnColor}`}
+                                >
+                                  Accéder à cet axe
+                                </Button>
                               </div>
-                            ))}
-                            <div className="grid gap-1">
-                              <Label className="text-[11px] font-semibold text-slate-600">Étape du parcours</Label>
-                              <select
-                                className="h-8 rounded-md border bg-white px-2 text-xs"
-                                value={String(action.phase || 'Mieux se connaître')}
-                                onChange={(event) => updateFilmAction(levelKey, actionIndex, 'phase', event.target.value)}
-                              >
-                                <option>Mieux se connaître</option>
-                                <option>Plonger dans le monde professionnel</option>
-                                <option>Finaliser les projets</option>
-                              </select>
-                            </div>
-                            <div className="flex items-end justify-end">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeFilmAction(levelKey, actionIndex)}
-                                className="h-7 text-xs text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="mr-1 h-3 w-3" /> Supprimer l’action
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                            );
+                          })}
+                        </div>
 
-              {/* Sub-tab 4: Sous-pages */}
-              {planStrategiqueSubTab === 'subpages' && renderRubriqueSubpages('plan-strategique', '/plan-strategique', 'Plan Stratégique')}
+                        {/* Hierarchical Subpage Tree matching Netlify */}
+                        <div className="space-y-4 pt-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                            <FolderTree className="h-4 w-4 text-emerald-600" />
+                            Arborescence détaillée de toutes les sous-pages du Plan Stratégique
+                          </h4>
+
+                          {(() => {
+                            const pillar = SITE_PILLARS.find((p) => p.id === 'plan-strategique');
+                            if (!pillar?.axes) return null;
+
+                            const query = planOverviewSearch.trim().toLowerCase();
+
+                            return (
+                              <div className="space-y-4">
+                                {pillar.axes.map((axis) => {
+                                  const matchingSubpages = axis.subpages.filter(
+                                    (sub) =>
+                                      !query ||
+                                      sub.name.toLowerCase().includes(query) ||
+                                      sub.path.toLowerCase().includes(query) ||
+                                      (sub.description && sub.description.toLowerCase().includes(query))
+                                  );
+
+                                  if (query && matchingSubpages.length === 0) return null;
+
+                                  return (
+                                    <div key={axis.id} className="rounded-xl border bg-white p-4 shadow-xs space-y-3">
+                                      <div className="flex items-center justify-between border-b pb-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
+                                            {axis.badge}
+                                          </span>
+                                          <span className="font-bold text-xs text-slate-900">{axis.name}</span>
+                                        </div>
+                                        <span className="text-[11px] text-slate-500 font-medium">
+                                          {matchingSubpages.length} fiches affichées
+                                        </span>
+                                      </div>
+
+                                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                        {matchingSubpages.map((sub) => {
+                                          const isCustomized = pages.some(
+                                            (p) => normalizePageSlug(p.slug) === normalizePageSlug(sub.path)
+                                          );
+                                          return (
+                                            <div
+                                              key={sub.path}
+                                              className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 flex items-center justify-between gap-2 text-xs"
+                                            >
+                                              <div className="min-w-0 flex-1">
+                                                <p className="font-semibold text-slate-800 truncate">{sub.name}</p>
+                                                <code className="text-[10px] text-slate-400 font-mono block truncate">
+                                                  {sub.path}
+                                                </code>
+                                              </div>
+                                              <div className="flex items-center gap-1 shrink-0">
+                                                <Button
+                                                  type="button"
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={() =>
+                                                    openRubriqueEditor(
+                                                      sub.path,
+                                                      sub.name,
+                                                      `/plan-strategique/${axis.id}`,
+                                                      'rubrique-plan-strategique'
+                                                    )
+                                                  }
+                                                  className="h-6 px-1.5 text-[11px] text-emerald-700 hover:bg-emerald-50"
+                                                  title="Modifier les blocs"
+                                                >
+                                                  <Pencil className="h-3 w-3" />
+                                                </Button>
+                                                <Button asChild size="sm" variant="ghost" className="h-6 px-1.5 text-[11px] text-slate-500 hover:text-slate-900">
+                                                  <a href={`${sub.path}?draft=1`} target="_blank" rel="noreferrer" title="Voir la page">
+                                                    <Eye className="h-3 w-3" />
+                                                  </a>
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
 
