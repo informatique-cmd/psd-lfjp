@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -48,7 +48,6 @@ import {
   type BudgetProject,
 } from '@/data/budgetTransportData';
 import pageDataFile from '@/content/pageData.json';
-import { isContentDraftPreview } from '@/lib/contentDraft';
 
 const XOF_TO_EUR = 655.957;
 const YEARS = [2026, 2027, 2028, 2029, 2030];
@@ -79,21 +78,18 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
   // Helper to detect outdated / desynchronized drafts (e.g. old schema or missing projects)
   const isStaleProjectList = useCallback((projects?: BudgetProject[]): boolean => {
-    if (!projects || projects.length < 7) return true;
+    if (!projects || !Array.isArray(projects) || projects.length === 0) return true;
     const hasCouverture3Years = projects.some(
       (p) =>
         (p.id.includes('sport') || p.title.toLowerCase().includes('couverture')) &&
         (p.durationYears === 3 || p.period?.includes('2028'))
     );
-    const hasExtension = projects.some(
-      (p) => p.id.includes('extension') || p.title.toLowerCase().includes('extension')
-    );
-    return hasCouverture3Years || !hasExtension;
+    return hasCouverture3Years;
   }, []);
 
   // Load initial budget data from pageData or draft, prioritizing official 775M dataset
   const initialData = useMemo<BudgetData>(() => {
-    if (typeof window !== 'undefined' && isContentDraftPreview()) {
+    if (typeof window !== 'undefined') {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
@@ -115,7 +111,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
   // Normalization: Ensure all projects have the required interactive fields matching psd-lfjp.netlify.app & psd-lfjp.vercel.app
   const normalizeProjects = useCallback((rawProjects?: BudgetProject[]): BudgetProject[] => {
-    const list = rawProjects && rawProjects.length >= 7 && !isStaleProjectList(rawProjects)
+    const list = rawProjects && Array.isArray(rawProjects) && rawProjects.length > 0 && !isStaleProjectList(rawProjects)
       ? rawProjects
       : defaultBudgetData.projects;
 
@@ -181,7 +177,12 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     normalizeProjects(initialData.projects)
   );
 
-  // Self-heal stale localStorage draft on mount
+  const projectsRef = useRef(projectsList);
+  useEffect(() => {
+    projectsRef.current = projectsList;
+  }, [projectsList]);
+
+  // Self-heal stale localStorage draft on mount only if genuinely corrupt
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -213,7 +214,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
   const baseRevenue = initialData.tuitionBaseRevenue || DEFAULT_BASE_REVENUE;
 
-  // Sync with global custom events or local storage changes
+  // Sync with global custom events or local storage changes without infinite loops
   useEffect(() => {
     const handleUpdate = () => {
       try {
@@ -221,7 +222,12 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed?.budgetData?.projects) {
-            setProjectsList(normalizeProjects(parsed.budgetData.projects));
+            const nextList = normalizeProjects(parsed.budgetData.projects);
+            const currentSig = projectsRef.current.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
+            const nextSig = nextList.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
+            if (currentSig !== nextSig) {
+              setProjectsList(nextList);
+            }
           }
           if (parsed?.budgetData?.tuitionSimulations) {
             setFeeRates((prevRates) => {
@@ -244,7 +250,12 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
         return;
       }
       if (customEvt.detail?.budgetData?.projects) {
-        setProjectsList(normalizeProjects(customEvt.detail.budgetData.projects));
+        const nextList = normalizeProjects(customEvt.detail.budgetData.projects);
+        const currentSig = projectsRef.current.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
+        const nextSig = nextList.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
+        if (currentSig !== nextSig) {
+          setProjectsList(nextList);
+        }
       }
     };
 
@@ -880,15 +891,15 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                       : 'bg-slate-50/80 border-slate-200 opacity-70'
                   }`}
                 >
-                  {/* Top Row: Mini Icon + Title & actions + Compact Switch */}
+                  {/* Top Row: Mini Icon + Title & actions + Ultra-compact Switch */}
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       <div
-                        className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${
+                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
                           project.isActive ? 'bg-slate-100 text-slate-700' : 'bg-slate-200 text-slate-400'
                         }`}
                       >
-                        {getProjectIcon(project.id, project.title, 'w-3 h-3')}
+                        {getProjectIcon(project.id, project.title, 'w-2.5 h-2.5')}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
@@ -915,19 +926,26 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                       </div>
                     </div>
 
-                    {/* Compact toggle switch cocher / décocher */}
-                    <label
-                      className="relative inline-flex items-center cursor-pointer shrink-0"
+                    {/* Compact toggle switch cocher / décocher (non-rebounding button) */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={project.isActive}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleProject(project.id);
+                      }}
+                      className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                        project.isActive ? 'bg-blue-600' : 'bg-slate-300'
+                      }`}
                       title={project.isActive ? 'Projet actif (cliquer pour décocher)' : 'Projet inactif (cliquer pour cocher)'}
                     >
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={project.isActive}
-                        onChange={() => toggleProject(project.id)}
+                      <span
+                        className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                          project.isActive ? 'translate-x-3' : 'translate-x-0'
+                        }`}
                       />
-                      <div className="w-7 h-4 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-3 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all shadow-xs"></div>
-                    </label>
+                    </button>
                   </div>
 
                   <p className="text-xs text-slate-500 mb-3 line-clamp-2">

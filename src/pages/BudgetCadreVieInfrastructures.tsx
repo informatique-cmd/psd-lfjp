@@ -3,8 +3,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BudgetCadreVieInfrastructures from '../components/BudgetCadreVieInfrastructures';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Home, BarChart3, ShieldCheck } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Home, BarChart3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const BudgetCadreVieInfrastructuresPage = () => {
   const navigate = useNavigate();
@@ -54,15 +54,6 @@ const BudgetCadreVieInfrastructuresPage = () => {
                   <p className="text-lg font-semibold">2026 – 2030</p>
                 </div>
               </div>
-
-              <Link
-                to="/espace-direction"
-                className="inline-flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-french-blue hover:bg-blue-600 text-white text-xs font-semibold shadow-md transition-all border border-blue-400/30 cursor-pointer"
-                title="Accéder à l'espace de gestion et publication"
-              >
-                <ShieldCheck className="w-4 h-4 text-white" />
-                <span>Espace Direction / CMS</span>
-              </Link>
             </div>
           </div>
         </div>
