@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle, AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown,
-  BarChart3, Bell, Bold, BookOpen, BusFront, Calculator, Check, CheckCircle2, ChevronDown, ChevronRight, ChartNoAxesCombined, Coins, Copy, CornerDownRight, Database, Download, ExternalLink, Eye, FileDown, FilePlus, FileText, FileUp, FolderPlus, FolderTree,
+  BarChart3, Bell, Bold, BookOpen, BusFront, Calculator, Check, CheckCircle2, ChevronDown, ChevronRight, ChartNoAxesCombined, Coins, Copy, CornerDownRight, Database, Download, ExternalLink, Eye, FileDown, FilePlus, FileText, FileUp, FolderKanban, FolderPlus, FolderTree,
   Github, Globe2, GraduationCap, Heart, Home as HomeIcon, Image, Italic, Key, Layers3, ListPlus, Lock, LogOut, Mail, MapPin, Maximize2,
   Menu, MessageSquareText, Minimize2, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose,
   PanelRightOpen, Pencil, Plus, RefreshCw, Rocket, Save, Search, Send, Settings2, ShieldCheck, Sliders, Smartphone, Sparkles, Tablet,
@@ -324,6 +324,7 @@ const Admin = () => {
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
   const [editorModeActive, setEditorModeActive] = useState(false);
+  const [editorActiveTab, setEditorActiveTab] = useState<'visual' | 'budget'>('visual');
   const [githubDeployToken, setGithubDeployToken] = useState(() => {
     if (typeof window === 'undefined') return getDefaultDeployToken();
     return window.localStorage.getItem('lfjp_github_token') || getDefaultDeployToken();
@@ -3558,39 +3559,77 @@ const Admin = () => {
             </button>
           </div>
 
+          {/* Center: Mode Switcher (Site In-Situ vs Budget & Projets) */}
+          <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 sm:p-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setEditorActiveTab('visual')}
+              className={`h-7 px-2 sm:px-3 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                editorActiveTab === 'visual'
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Édition du site</span>
+              <span className="sm:hidden">Site</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEditorActiveTab('budget')}
+              className={`h-7 px-2 sm:px-3 text-xs font-semibold rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                editorActiveTab === 'budget'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+              title="Gestion des projets d’investissement et du budget (775 M FCFA)"
+            >
+              <FolderKanban className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Budget & Projets (775M)</span>
+              <span className="sm:hidden">Budget</span>
+            </button>
+          </div>
+
           {/* Right: Harmonized, Non-Overflowing Responsive Actions Toolbar */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Toggle Button Activer / Désactiver les modifications */}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const nextState = !editorModeActive;
-                setEditorModeActive(nextState);
-                if (!nextState) setSelectedVisualElement(null);
-                previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-set-edit-mode', active: nextState }, window.location.origin);
-              }}
-              className={`h-8 text-xs font-semibold px-2.5 sm:px-3 shrink-0 transition-colors ${
-                editorModeActive
-                  ? 'border-amber-500 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/30'
-                  : 'border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200'
-              }`}
-              title={editorModeActive ? "Désactiver la modification (naviguer sur les liens du site)" : "Activer la modification directe des textes et images"}
-            >
-              <Pencil className={`h-3.5 w-3.5 shrink-0 ${editorModeActive ? 'text-amber-400 mr-1 sm:mr-1.5' : 'text-slate-400 mr-1 sm:mr-1.5'}`} />
-              {editorModeActive ? (
-                <>
-                  <span className="hidden md:inline">Édition active</span>
-                  <span className="md:hidden">Actif</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden md:inline">Modifier le site</span>
-                  <span className="md:hidden">Modifier</span>
-                </>
-              )}
-            </Button>
+            {/* Toggle Button Activer / Désactiver les modifications (only in visual mode) */}
+            {editorActiveTab === 'visual' ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const nextState = !editorModeActive;
+                  setEditorModeActive(nextState);
+                  if (!nextState) setSelectedVisualElement(null);
+                  previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-set-edit-mode', active: nextState }, window.location.origin);
+                }}
+                className={`h-8 text-xs font-semibold px-2.5 sm:px-3 shrink-0 transition-colors ${
+                  editorModeActive
+                    ? 'border-amber-500 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/30'
+                    : 'border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200'
+                }`}
+                title={editorModeActive ? "Désactiver la modification (naviguer sur les liens du site)" : "Activer la modification directe des textes et images"}
+              >
+                <Pencil className={`h-3.5 w-3.5 shrink-0 ${editorModeActive ? 'text-amber-400 mr-1 sm:mr-1.5' : 'text-slate-400 mr-1 sm:mr-1.5'}`} />
+                {editorModeActive ? (
+                  <>
+                    <span className="hidden md:inline">Édition active</span>
+                    <span className="md:hidden">Actif</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden md:inline">Modifier le site</span>
+                    <span className="md:hidden">Modifier</span>
+                  </>
+                )}
+              </Button>
+            ) : (
+              <span className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-900/40 border border-blue-500/30 text-blue-300 text-xs font-semibold shrink-0">
+                Axe 1 · Investissements 775 M
+              </span>
+            )}
 
             {/* Status indicator: only when pending admin approval */}
             {pendingDeployment?.status === 'pending_admin_approval' && (
@@ -3739,8 +3778,8 @@ const Admin = () => {
           </div>
         )}
 
-        {/* Clear Helper Banner when Edit Mode is active */}
-        {editorModeActive && (
+        {/* Clear Helper Banner when Edit Mode is active (only in visual mode) */}
+        {editorActiveTab === 'visual' && editorModeActive && (
           <div className="shrink-0 bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-200 flex items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2">
               <Pencil className="h-4 w-4 text-amber-400 shrink-0" />
@@ -3754,8 +3793,59 @@ const Admin = () => {
           </div>
         )}
 
-        {/* Main Workspace: 100% Full-Screen Grand Format Live Site + Content Inspector */}
-        <div className="flex min-h-0 flex-1 overflow-hidden relative">
+        {/* Main Workspace: Either Budget & Projets Dashboard or Visual Live Site */}
+        {editorActiveTab === 'budget' ? (
+          <div className="flex-1 min-h-0 overflow-y-auto bg-slate-900/95 p-3 sm:p-6 text-slate-900 select-text">
+            <div className="max-w-7xl mx-auto space-y-4 pb-12">
+              {/* Header Banner */}
+              <div className="rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 border border-blue-500/30 p-5 sm:p-6 text-white shadow-xl flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-blue-200 font-bold mb-1">
+                    <span>Axe 1 · Bien-être, Cadre de vie & Infrastructures</span>
+                    <span>·</span>
+                    <span>Espace Éditeur</span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-bold font-playfair text-white">
+                    Gestion du Budget & des Projets (775 M FCFA)
+                  </h1>
+                  <p className="text-xs sm:text-sm text-blue-200/90 mt-1 max-w-2xl">
+                    Ajoutez de nouveaux projets, modifiez les montants, ajustez les dates et cochez/décochez les fiches. Tout est immédiatement répercuté sur l’analyse financière et les graphiques.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setVisualRoute('/plan-strategique/axe-1');
+                      setEditorActiveTab('visual');
+                    }}
+                    className="h-8 text-xs bg-white/10 hover:bg-white/20 text-white border-white/20 cursor-pointer"
+                    title="Voir le rendu public de la page Axe 1"
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1.5" />
+                    Voir la page sur le site
+                  </Button>
+                </div>
+              </div>
+
+              {/* The exact AdminBudgetDashboard component */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-5 shadow-2xl">
+                <AdminBudgetDashboard
+                  onDataChange={(updated) => {
+                    updateEditablePageData((data) => ({
+                      ...data,
+                      budgetData: updated,
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Main Workspace: 100% Full-Screen Grand Format Live Site + Content Inspector */
+          <div className="flex min-h-0 flex-1 overflow-hidden relative">
           {/* 100% Full Width Live Site Iframe */}
           <main className="flex-1 min-w-0 flex flex-col bg-slate-950 overflow-hidden relative">
             <div ref={previewCanvas} className="relative flex-1 min-h-0 w-full h-full overflow-hidden bg-slate-900">
@@ -3766,6 +3856,22 @@ const Admin = () => {
                 src={`${visualRoute}?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`}
                 className="block w-full h-full bg-white border-0 shadow-inner"
               />
+
+              {/* Floating Shortcut to Budget Dashboard in Editor View */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => setEditorActiveTab('budget')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-french-blue to-indigo-600 hover:from-blue-600 hover:to-indigo-500 text-white font-bold text-xs rounded-full shadow-2xl border border-blue-400/40 transition-transform hover:scale-105 cursor-pointer backdrop-blur-md"
+                  title="Ouvrir la gestion des projets et du budget de l'Axe 1"
+                >
+                  <FolderKanban className="w-4 h-4 text-blue-200 shrink-0" />
+                  <span>Gérer les Projets & Budget Axe 1 (775 M)</span>
+                  <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold">
+                    + Ajouter
+                  </span>
+                </button>
+              </div>
 
               {/* Visual Indicator pin on clicked element: ONLY when editorModeActive is true */}
               {editorModeActive && selectedVisualElement?.rect && (
@@ -3930,9 +4036,8 @@ const Admin = () => {
               </div>
             </aside>
           )}
-
-
         </div>
+      )}
 
         {/* Modal: Demande de Déploiement sur Vercel */}
         {isEditorDeployModalOpen && (
