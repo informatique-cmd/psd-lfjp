@@ -3,8 +3,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BudgetCadreVieInfrastructures from '../components/BudgetCadreVieInfrastructures';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Home, BarChart3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Home, BarChart3, ShieldCheck } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 
 const BudgetCadreVieInfrastructuresPage = () => {
   const navigate = useNavigate();
@@ -44,7 +44,7 @@ const BudgetCadreVieInfrastructuresPage = () => {
                 « Cadre de vie & infrastructures ».
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
                   <BarChart3 className="h-6 w-6" aria-hidden="true" />
@@ -54,14 +54,23 @@ const BudgetCadreVieInfrastructuresPage = () => {
                   <p className="text-lg font-semibold">2026 – 2030</p>
                 </div>
               </div>
+
+              <Link
+                to="/espace-direction"
+                className="inline-flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-french-blue hover:bg-blue-600 text-white text-xs font-semibold shadow-md transition-all border border-blue-400/30 cursor-pointer"
+                title="Accéder à l'espace de gestion et publication"
+              >
+                <ShieldCheck className="w-4 h-4 text-white" />
+                <span>Espace Direction / CMS</span>
+              </Link>
             </div>
           </div>
         </div>
       </header>
 
       <main id="budget-cadre-vie" className="flex-1">
-        <div className="container mx-auto max-w-7xl px-6 lg:px-12 py-10 md:py-14">
-          <div className="rounded-[28px] border border-slate-200/70 bg-white shadow-lg shadow-slate-200/40 px-4 pb-8 pt-4 md:px-8 md:pb-10 md:pt-6">
+        <div className="container mx-auto max-w-7xl px-3 sm:px-6 lg:px-12 py-8 md:py-12">
+          <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xl p-3 sm:p-5 md:p-6">
             <BudgetCadreVieInfrastructures />
           </div>
         </div>
