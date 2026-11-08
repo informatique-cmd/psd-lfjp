@@ -4095,18 +4095,6 @@ const Admin = () => {
             <span className="hidden sm:inline">Enregistrer</span>
           </Button>
 
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={forceSyncWithLiveSite}
-            className="h-8 text-xs text-sky-300 hover:text-white hover:bg-slate-800 border border-slate-700/80 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 cursor-pointer"
-            title="Recharger et synchroniser instantanément les contenus avec la dernière version officielle en ligne"
-          >
-            <RefreshCw className="h-3.5 w-3.5 text-sky-400 shrink-0" />
-            <span className="hidden xl:inline">Sync en ligne</span>
-          </Button>
-
           {canPublish && (
             <Button
               type="button"
@@ -4527,14 +4515,6 @@ const Admin = () => {
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    onClick={forceSyncWithLiveSite}
-                    className="bg-blue-900/60 hover:bg-blue-900 text-blue-100 hover:text-white border border-blue-400/30 font-semibold text-xs shadow-sm cursor-pointer"
-                    title="Recharger et synchroniser ce navigateur avec les contenus officiels publiés"
-                  >
-                    <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-blue-200" /> Synchroniser en ligne
-                  </Button>
                   <Button
                     type="button"
                     onClick={() => {
