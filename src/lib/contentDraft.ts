@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { APP_BUILD_VERSION } from '@/config/buildVersion';
 
 export const isContentDraftPreview = () =>
   typeof window !== 'undefined' && (
@@ -17,6 +18,8 @@ export const clearAllDraftStorage = () => {
     window.localStorage.removeItem('lfjp-admin-page-data-draft');
     window.localStorage.removeItem('lfjp-admin-page-text-draft');
     window.localStorage.removeItem('lfjp-admin-rubriques-v3');
+    window.localStorage.removeItem('lfjp-admin-rubriques-v4');
+    window.localStorage.removeItem('lfjp-admin-rubriques-v5');
     window.localStorage.removeItem('lfjp_preview_active');
     window.sessionStorage.removeItem('lfjp-preview-mode');
     window.sessionStorage.removeItem('lfjp_preview_active');
@@ -30,6 +33,13 @@ export const clearAllDraftStorage = () => {
 export const readContentDraft = <T,>(key: string, fallback: T): T => {
   if (!isContentDraftPreview()) return fallback;
   try {
+    const storedVersion = window.localStorage.getItem('lfjp_app_build_version');
+    if (storedVersion !== APP_BUILD_VERSION) {
+      // Discard outdated drafts on version bump
+      clearAllDraftStorage();
+      window.localStorage.setItem('lfjp_app_build_version', APP_BUILD_VERSION);
+      return fallback;
+    }
     const saved = window.localStorage.getItem(key);
     if (!saved) return fallback;
     const parsed: unknown = JSON.parse(saved);

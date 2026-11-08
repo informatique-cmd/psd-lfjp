@@ -31,6 +31,7 @@ import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
 import { pageTextDraftStorageKey } from '@/lib/pageOverrides';
 import { clearAllDraftStorage } from '@/lib/contentDraft';
+import { APP_BUILD_VERSION } from '@/config/buildVersion';
 import { SITE_PILLARS, type HierarchyPillar, type HierarchySubpage, type HierarchyAxis } from '@/data/siteHierarchy';
 import {
   loadRubriquesDraft,
@@ -143,6 +144,13 @@ const restaurantEditorGroups: { title: string; datasets: { key: keyof typeof res
 ];
 
 const loadPageDataDraft = () => {
+  if (typeof window !== 'undefined') {
+    const stored = window.localStorage.getItem('lfjp_app_build_version');
+    if (stored !== APP_BUILD_VERSION) {
+      window.localStorage.removeItem(pageDataDraftStorageKey);
+      return { ...defaultPageData, ...pageDataFile };
+    }
+  }
   const savedData = window.localStorage.getItem(pageDataDraftStorageKey);
   if (!savedData) return { ...defaultPageData, ...pageDataFile };
   try {
@@ -166,6 +174,13 @@ const isValidPageTextOverrides = (value: unknown) => isRecord(value) &&
       Object.entries(entry).every(([field, item]) => ['text', 'src', 'alt', 'href'].includes(field) && typeof item === 'string')));
 
 const loadContentDraft = (): Content => {
+  if (typeof window !== 'undefined') {
+    const stored = window.localStorage.getItem('lfjp_app_build_version');
+    if (stored !== APP_BUILD_VERSION) {
+      window.localStorage.removeItem(draftStorageKey);
+      return siteContent;
+    }
+  }
   const savedDraft = window.localStorage.getItem(draftStorageKey);
   if (!savedDraft) return siteContent;
   try {
@@ -181,6 +196,13 @@ const loadContentDraft = (): Content => {
 };
 
 const loadPagesDraft = (): ManagedPage[] => {
+  if (typeof window !== 'undefined') {
+    const stored = window.localStorage.getItem('lfjp_app_build_version');
+    if (stored !== APP_BUILD_VERSION) {
+      window.localStorage.removeItem(pagesDraftStorageKey);
+      return pagesFile.pages as ManagedPage[];
+    }
+  }
   const savedPages = window.localStorage.getItem(pagesDraftStorageKey);
   if (!savedPages) return pagesFile.pages as ManagedPage[];
   try {
@@ -247,6 +269,13 @@ const Admin = () => {
   const [pageDataJson, setPageDataJson] = useState(() => JSON.stringify(loadPageDataDraft(), null, 2));
   const [pageTextJson, setPageTextJson] = useState(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const stored = window.localStorage.getItem('lfjp_app_build_version');
+        if (stored !== APP_BUILD_VERSION) {
+          window.localStorage.removeItem(pageTextDraftStorageKey);
+          return JSON.stringify(publishedPageText, null, 2);
+        }
+      }
       return window.localStorage.getItem(pageTextDraftStorageKey) || JSON.stringify(publishedPageText, null, 2);
     } catch {
       return JSON.stringify(publishedPageText, null, 2);
@@ -486,6 +515,28 @@ const Admin = () => {
       window.clearInterval(pollInterval);
     };
   }, []);
+
+  // Automatic purge of stale drafts across ALL browsers on version change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedVersion = window.localStorage.getItem('lfjp_app_build_version');
+      if (storedVersion !== APP_BUILD_VERSION) {
+        clearAllDraftStorage();
+        window.localStorage.setItem('lfjp_app_build_version', APP_BUILD_VERSION);
+      }
+    }
+  }, []);
+
+  const forceSyncWithLiveSite = () => {
+    clearAllDraftStorage();
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('lfjp_app_build_version');
+      window.localStorage.removeItem('lfjp-admin-rubriques-v3');
+      window.localStorage.removeItem('lfjp-admin-rubriques-v4');
+      window.localStorage.removeItem('lfjp-admin-rubriques-v5');
+      window.location.reload();
+    }
+  };
 
   const handleEditorSubmitForDeploy = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -4044,6 +4095,18 @@ const Admin = () => {
             <span className="hidden sm:inline">Enregistrer</span>
           </Button>
 
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={forceSyncWithLiveSite}
+            className="h-8 text-xs text-sky-300 hover:text-white hover:bg-slate-800 border border-slate-700/80 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 cursor-pointer"
+            title="Recharger et synchroniser instantanément les contenus avec la dernière version officielle en ligne"
+          >
+            <RefreshCw className="h-3.5 w-3.5 text-sky-400 shrink-0" />
+            <span className="hidden xl:inline">Sync en ligne</span>
+          </Button>
+
           {canPublish && (
             <Button
               type="button"
@@ -4463,13 +4526,21 @@ const Admin = () => {
                     Administrez, créez, modifiez et supprimez l’ensemble des contenus, pages, sous-rubriques, données et plannings du site en temps réel.
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={forceSyncWithLiveSite}
+                    className="bg-blue-900/60 hover:bg-blue-900 text-blue-100 hover:text-white border border-blue-400/30 font-semibold text-xs shadow-sm cursor-pointer"
+                    title="Recharger et synchroniser ce navigateur avec les contenus officiels publiés"
+                  >
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-blue-200" /> Synchroniser en ligne
+                  </Button>
                   <Button
                     type="button"
                     onClick={() => {
                       setActiveSection('publication');
                     }}
-                    className="bg-white text-french-blue hover:bg-blue-50 font-semibold text-xs shadow"
+                    className="bg-white text-french-blue hover:bg-blue-50 font-semibold text-xs shadow cursor-pointer"
                   >
                     <Send className="mr-1.5 h-3.5 w-3.5" /> Publier vers Vercel
                   </Button>

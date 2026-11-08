@@ -104,19 +104,24 @@ export const defaultRubriques: AdminRubrique[] = [
   },
 ];
 
-const RUBRIQUES_STORAGE_KEY = 'lfjp-admin-rubriques-v3';
+import { APP_BUILD_VERSION } from '@/config/buildVersion';
+
+const RUBRIQUES_STORAGE_KEY = 'lfjp-admin-rubriques-v5';
 
 export function loadRubriquesDraft(): AdminRubrique[] {
-  // 1. Check if draft exists in browser localStorage
+  // 1. If stored app build version matches current version, allow local draft
   if (typeof window !== 'undefined') {
     try {
-      const raw = window.localStorage.getItem(RUBRIQUES_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed
-            .filter((r) => r.id !== 'contact' && r.path !== '/contact')
-            .sort((a, b) => a.order - b.order);
+      const storedVersion = window.localStorage.getItem('lfjp_app_build_version');
+      if (storedVersion === APP_BUILD_VERSION) {
+        const raw = window.localStorage.getItem(RUBRIQUES_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed
+              .filter((r) => r.id !== 'contact' && r.path !== '/contact')
+              .sort((a, b) => a.order - b.order);
+          }
         }
       }
     } catch {
@@ -133,7 +138,7 @@ export function loadRubriquesDraft(): AdminRubrique[] {
   }
 
   // 3. Fallback to official 5 rubriques
-  return defaultRubriques;
+  return defaultRubriques.filter((r) => r.id !== 'contact' && r.path !== '/contact');
 }
 
 export function saveRubriquesDraft(rubriques: AdminRubrique[]): void {
@@ -142,6 +147,7 @@ export function saveRubriquesDraft(rubriques: AdminRubrique[]): void {
     const sanitized = rubriques
       .filter((r) => r.id !== 'contact' && r.path !== '/contact')
       .map((r, i) => ({ ...r, order: i + 1 }));
+    window.localStorage.setItem('lfjp_app_build_version', APP_BUILD_VERSION);
     window.localStorage.setItem(RUBRIQUES_STORAGE_KEY, JSON.stringify(sanitized));
 
     // Synchronize into lfjp-admin-page-data-draft so pageData payload includes rubriques on deploy
