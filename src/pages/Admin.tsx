@@ -2119,10 +2119,11 @@ const Admin = () => {
               bd.summaryCards.totalInvestment = totalProj;
             }
             if (Array.isArray(bd.financialTimeline) && bd.summaryCards) {
+              const ANEFE_GRANT = 89_999_998;
               const totalRec = bd.financialTimeline.reduce((acc: number, r: { recettesTotales?: number; capacite?: number }) => acc + (Number(r.recettesTotales) || Number(r.capacite) || 0), 0);
-              bd.summaryCards.estimatedCapacity = totalRec;
+              bd.summaryCards.estimatedCapacity = totalRec + ANEFE_GRANT;
               const totalInv = Number(bd.summaryCards.totalInvestment) || 0;
-              bd.summaryCards.fundingGap = Math.max(0, totalInv - totalRec);
+              bd.summaryCards.fundingGap = Math.max(0, totalInv - (totalRec + ANEFE_GRANT));
             }
             persistPageData(currentPD);
           }
@@ -2619,12 +2620,14 @@ const Admin = () => {
       if (!projects[index]) return data;
       projects[index] = { ...projects[index], [field]: field === 'budget' ? Number(value) || 0 : value };
       
-      // Keep summary cards in 100% correlation with projects
+      // Keep summary cards in 100% correlation with projects & official ANEFE endowment
+      const ANEFE_GRANT = 89_999_998;
       const totalInvestment = projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
-      const estimatedCapacity = budget.financialTimeline.reduce(
+      const annualCashFlow = budget.financialTimeline.reduce(
         (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
         0
       );
+      const estimatedCapacity = annualCashFlow + ANEFE_GRANT;
       const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
 
       return {
@@ -2635,6 +2638,7 @@ const Admin = () => {
           summaryCards: {
             ...budget.summaryCards,
             totalInvestment,
+            estimatedCapacity,
             fundingGap,
           },
         },
@@ -2655,11 +2659,13 @@ const Admin = () => {
         color: 'from-blue-100 to-indigo-50',
       };
       const updatedProjects = [...budget.projects, newProject];
+      const ANEFE_GRANT = 89_999_998;
       const totalInvestment = updatedProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
-      const estimatedCapacity = budget.financialTimeline.reduce(
+      const annualCashFlow = budget.financialTimeline.reduce(
         (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
         0
       );
+      const estimatedCapacity = annualCashFlow + ANEFE_GRANT;
       const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
 
       return {
@@ -2670,6 +2676,7 @@ const Admin = () => {
           summaryCards: {
             ...budget.summaryCards,
             totalInvestment,
+            estimatedCapacity,
             fundingGap,
           },
         },
@@ -2682,11 +2689,13 @@ const Admin = () => {
     updateEditablePageData((data) => {
       const budget = (data.budgetData as BudgetData) || defaultBudgetData;
       const updatedProjects = budget.projects.filter((_, i) => i !== index);
+      const ANEFE_GRANT = 89_999_998;
       const totalInvestment = updatedProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
-      const estimatedCapacity = budget.financialTimeline.reduce(
+      const annualCashFlow = budget.financialTimeline.reduce(
         (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
         0
       );
+      const estimatedCapacity = annualCashFlow + ANEFE_GRANT;
       const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
 
       return {
@@ -2697,6 +2706,7 @@ const Admin = () => {
           summaryCards: {
             ...budget.summaryCards,
             totalInvestment,
+            estimatedCapacity,
             fundingGap,
           },
         },
@@ -2719,11 +2729,13 @@ const Admin = () => {
         return updated;
       });
 
+      const ANEFE_GRANT = 89_999_998;
       const totalInvestment = budget.projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
-      const estimatedCapacity = timeline.reduce(
+      const annualCashFlow = timeline.reduce(
         (sum, row) => sum + (Number(row.recettesTotales) || (Number(row.capacite) + Number(row.leviers)) || 0),
         0
       );
+      const estimatedCapacity = annualCashFlow + ANEFE_GRANT;
       const fundingGap = Math.max(0, totalInvestment - estimatedCapacity);
 
       return {
@@ -2733,6 +2745,7 @@ const Admin = () => {
           financialTimeline: timeline,
           summaryCards: {
             ...budget.summaryCards,
+            totalInvestment,
             estimatedCapacity,
             fundingGap,
           },

@@ -267,22 +267,15 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     };
   }, [normalizeProjects]);
 
-  // Currency Formatter Helper
+  // Currency Formatter Helper matching official screenshots (e.g. 775 000 000 FCFA)
   const formatCurrency = useCallback(
     (value: number, curr?: 'XOF' | 'EUR') => {
       const targetCurr = curr || currency;
       if (targetCurr === 'EUR') {
-        return new Intl.NumberFormat('fr-FR', {
-          style: 'currency',
-          currency: 'EUR',
-          maximumFractionDigits: 0,
-        }).format(value / XOF_TO_EUR);
+        const eur = Math.round(value / XOF_TO_EUR);
+        return `${new Intl.NumberFormat('fr-FR').format(eur)} €`;
       }
-      return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'XOF',
-        maximumFractionDigits: 0,
-      }).format(value);
+      return `${new Intl.NumberFormat('fr-FR').format(Math.round(value))} FCFA`;
     },
     [currency]
   );
@@ -466,10 +459,6 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
   }, []);
 
   const handleDeleteProject = useCallback((id: string) => {
-    if (typeof window !== 'undefined') {
-      const ok = window.confirm('Voulez-vous vraiment supprimer ce projet d’investissement ?');
-      if (!ok) return;
-    }
     setProjectsList((prev) => prev.filter((p) => p.id !== id));
     if (editingProject?.id === id) {
       setEditingProject(null);
@@ -478,12 +467,6 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
   }, [editingProject]);
 
   const resetAllToDefaults = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const ok = window.confirm(
-        'Voulez-vous vraiment réinitialiser toutes les données de simulation aux valeurs officielles (775 M FCFA) ?'
-      );
-      if (!ok) return;
-    }
     setProjectsList(normalizeProjects(defaultBudgetData.projects));
     setFeeRates({ 2026: 5.4, 2027: 0.4, 2028: 0.0, 2029: 0.0, 2030: 0.0 });
     setSaveStatus('saved');
@@ -762,7 +745,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                 Investissement Total
               </p>
               <p
-                className="text-lg sm:text-xl xl:text-2xl font-bold font-playfair text-slate-900 tracking-tight"
+                className="text-lg sm:text-xl xl:text-2xl font-bold font-playfair text-slate-900 tracking-tight whitespace-nowrap"
                 data-currency-amount={financialData.totalInvestment}
               >
                 {formatCurrency(financialData.totalInvestment)}
@@ -792,7 +775,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                 Manque à gagner (Fin 2030)
               </p>
               <p
-                className={`text-lg sm:text-xl xl:text-2xl font-bold font-playfair tracking-tight ${
+                className={`text-lg sm:text-xl xl:text-2xl font-bold font-playfair tracking-tight whitespace-nowrap ${
                   financialData.fundingGap > 0 ? 'text-red-600' : 'text-emerald-600'
                 }`}
                 data-currency-amount={financialData.fundingGap}
@@ -832,7 +815,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                 Capacité Totale
               </p>
               <p
-                className="text-lg sm:text-xl xl:text-2xl font-bold font-playfair text-emerald-600 tracking-tight"
+                className="text-lg sm:text-xl xl:text-2xl font-bold font-playfair text-emerald-600 tracking-tight whitespace-nowrap"
                 data-currency-amount={financialData.totalCapacity}
               >
                 {formatCurrency(financialData.totalCapacity)}
