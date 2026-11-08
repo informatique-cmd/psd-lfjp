@@ -55,7 +55,7 @@ const YEARS = [2026, 2027, 2028, 2029, 2030];
 const EXTENDED_YEARS = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035];
 const DEFAULT_BASE_REVENUE = 1_203_146_500;
 
-export const getProjectIcon = (id: string, title?: string, className = 'w-3.5 h-3.5') => {
+export const getProjectIcon = (id: string, title?: string, className = 'w-3 h-3') => {
   const s = `${id} ${title || ''}`.toLowerCase();
   if (s.includes('clim')) return <Wind className={className} />;
   if (s.includes('solaire') || s.includes('solar')) return <Sun className={className} />;
@@ -77,7 +77,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
   const [editingProject, setEditingProject] = useState<BudgetProject | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
 
-  // Helper to detect outdated / desynchronized drafts (e.g. old 110M 2026 spend or missing projects)
+  // Helper to detect outdated / desynchronized drafts (e.g. old schema or missing projects)
   const isStaleProjectList = useCallback((projects?: BudgetProject[]): boolean => {
     if (!projects || projects.length < 7) return true;
     const hasCouverture3Years = projects.some(
@@ -88,20 +88,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     const hasExtension = projects.some(
       (p) => p.id.includes('extension') || p.title.toLowerCase().includes('extension')
     );
-    const total = projects.reduce((s, p) => s + (Number(p.totalCost) || Number(p.budget) || 0), 0);
-    if (hasCouverture3Years || !hasExtension || total === 675_000_000) return true;
-
-    // Check if 2026 spend matches official 135M when all projects active
-    const spend2026 = projects.reduce((sum, p) => {
-      const s = p.startYear || 2026;
-      const d = p.durationYears || 1;
-      const e = s + d - 1;
-      if (p.isActive && 2026 >= s && 2026 <= e) {
-        return sum + Math.round((Number(p.totalCost) || Number(p.budget) || 0) / d);
-      }
-      return sum;
-    }, 0);
-    return spend2026 !== 135_000_000;
+    return hasCouverture3Years || !hasExtension;
   }, []);
 
   // Load initial budget data from pageData or draft, prioritizing official 775M dataset
@@ -174,7 +161,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
         title: p.title || p.name || defaultMatch?.title || 'Projet',
         name: p.name || p.title || defaultMatch?.name || 'Projet',
         category,
-        isActive: p.isActive ?? true,
+        isActive: p.isActive !== false,
         isVariable: isVar,
         variableMin: varMin,
         variableMax: varMax,
@@ -253,6 +240,9 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
     const handleCustom = (event: Event) => {
       const customEvt = event as CustomEvent;
+      if (customEvt.detail?.source === 'admin_budget_dashboard') {
+        return;
+      }
       if (customEvt.detail?.budgetData?.projects) {
         setProjectsList(normalizeProjects(customEvt.detail.budgetData.projects));
       }
@@ -649,7 +639,9 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
           window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
           window.dispatchEvent(
-            new CustomEvent('lfjp_page_data_changed', { detail: { budgetData: updatedBudgetData } })
+            new CustomEvent('lfjp_page_data_changed', {
+              detail: { budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
+            })
           );
           if (onDataChange) {
             onDataChange(updatedBudgetData);
@@ -882,25 +874,25 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                 <div
                   key={project.id}
                   data-project-id={project.id}
-                  className={`p-4 rounded-xl border transition-all duration-200 ${
+                  className={`p-3 sm:p-3.5 rounded-xl border transition-all duration-200 ${
                     project.isActive
-                      ? 'bg-white border-slate-200 shadow-sm'
-                      : 'bg-slate-50 border-slate-200 opacity-75'
+                      ? 'bg-white border-slate-200 shadow-xs'
+                      : 'bg-slate-50/80 border-slate-200 opacity-70'
                   }`}
                 >
-                  {/* Top Row: Icon + Title & admin actions + iOS switch */}
+                  {/* Top Row: Mini Icon + Title & actions + Compact Switch */}
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       <div
-                        className={`p-1.5 rounded-md shrink-0 ${
+                        className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${
                           project.isActive ? 'bg-slate-100 text-slate-700' : 'bg-slate-200 text-slate-400'
                         }`}
                       >
-                        {getProjectIcon(project.id, project.title, 'w-3.5 h-3.5')}
+                        {getProjectIcon(project.id, project.title, 'w-3 h-3')}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <h3 className="font-bold text-slate-800 text-xs sm:text-sm leading-snug">
+                          <h3 className="font-bold text-slate-800 text-xs sm:text-[13px] leading-tight">
                             {project.name || project.title}
                           </h3>
                           <button
@@ -909,7 +901,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                             className="text-slate-400 hover:text-blue-600 p-0.5 rounded transition cursor-pointer"
                             title="Modifier ce projet"
                           >
-                            <Pencil className="w-3 h-3" />
+                            <Pencil className="w-2.5 h-2.5" />
                           </button>
                           <button
                             type="button"
@@ -917,21 +909,24 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                             className="text-slate-400 hover:text-red-600 p-0.5 rounded transition cursor-pointer"
                             title="Supprimer ce projet"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-2.5 h-2.5" />
                           </button>
                         </div>
                       </div>
                     </div>
 
-                    {/* iOS-style toggle switch */}
-                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    {/* Compact toggle switch cocher / décocher */}
+                    <label
+                      className="relative inline-flex items-center cursor-pointer shrink-0"
+                      title={project.isActive ? 'Projet actif (cliquer pour décocher)' : 'Projet inactif (cliquer pour cocher)'}
+                    >
                       <input
                         type="checkbox"
                         className="sr-only peer"
                         checked={project.isActive}
                         onChange={() => toggleProject(project.id)}
                       />
-                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-7 h-4 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:bg-blue-600 peer-checked:after:translate-x-3 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all shadow-xs"></div>
                     </label>
                   </div>
 
