@@ -3857,22 +3857,6 @@ const Admin = () => {
                 className="block w-full h-full bg-white border-0 shadow-inner"
               />
 
-              {/* Floating Shortcut to Budget Dashboard in Editor View */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-                <button
-                  type="button"
-                  onClick={() => setEditorActiveTab('budget')}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-french-blue to-indigo-600 hover:from-blue-600 hover:to-indigo-500 text-white font-bold text-xs rounded-full shadow-2xl border border-blue-400/40 transition-transform hover:scale-105 cursor-pointer backdrop-blur-md"
-                  title="Ouvrir la gestion des projets et du budget de l'Axe 1"
-                >
-                  <FolderKanban className="w-4 h-4 text-blue-200 shrink-0" />
-                  <span>Gérer les Projets & Budget Axe 1 (775 M)</span>
-                  <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold">
-                    + Ajouter
-                  </span>
-                </button>
-              </div>
-
               {/* Visual Indicator pin on clicked element: ONLY when editorModeActive is true */}
               {editorModeActive && selectedVisualElement?.rect && (
                 <div
