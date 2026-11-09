@@ -73,18 +73,16 @@ const BreadcrumbNav = () => {
             </BreadcrumbLink>
           </BreadcrumbItem>
           
-          {ancestors.map(({ path, name }) => (
-            <React.Fragment key={path}>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to={path} className="text-french-blue hover:underline">
-                    {name}
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </React.Fragment>
-          ))}
+          {ancestors.flatMap(({ path, name }) => [
+            <BreadcrumbSeparator key={`sep-${path}`} />,
+            <BreadcrumbItem key={`item-${path}`}>
+              <BreadcrumbLink asChild>
+                <Link to={path} className="text-french-blue hover:underline">
+                  {name}
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>,
+          ])}
           
           <BreadcrumbSeparator />
           
