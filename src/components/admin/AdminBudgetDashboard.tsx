@@ -78,13 +78,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
   // Helper to detect outdated / desynchronized drafts (e.g. old schema or missing projects)
   const isStaleProjectList = useCallback((projects?: BudgetProject[]): boolean => {
-    if (!projects || !Array.isArray(projects) || projects.length === 0) return true;
-    const hasCouverture3Years = projects.some(
-      (p) =>
-        (p.id.includes('sport') || p.title.toLowerCase().includes('couverture')) &&
-        (p.durationYears === 3 || p.period?.includes('2028'))
-    );
-    return hasCouverture3Years;
+    return !projects || !Array.isArray(projects) || projects.length === 0;
   }, []);
 
   // Load initial budget data from pageData or draft, prioritizing official 775M dataset
@@ -182,24 +176,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     projectsRef.current = projectsList;
   }, [projectsList]);
 
-  // Self-heal stale localStorage draft on mount only if genuinely corrupt
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.budgetData?.projects && isStaleProjectList(parsed.budgetData.projects)) {
-            parsed.budgetData = defaultBudgetData;
-            window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(parsed));
-            setProjectsList(normalizeProjects(defaultBudgetData.projects));
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }, [isStaleProjectList, normalizeProjects]);
+  // Preserve any drafts without destructive resets
 
   // Fee rates for each year (default: 2026 => 5.4%, 2027 => 0.4%, others => 0%)
   const [feeRates, setFeeRates] = useState<Record<number, number>>(() => {

@@ -670,6 +670,17 @@ const Admin = () => {
       let finalPageDataStr = pageDataJson;
       try {
         const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+        const draftRaw = typeof window !== 'undefined' ? window.localStorage.getItem(pageDataDraftStorageKey) : null;
+        if (draftRaw) {
+          try {
+            const draftParsed = JSON.parse(draftRaw) as Record<string, unknown>;
+            if (draftParsed?.budgetData) {
+              parsed.budgetData = draftParsed.budgetData;
+            }
+          } catch {
+            // ignore draft parse error
+          }
+        }
         parsed.rubriques = sanitizedRubriquesList;
         finalPageDataStr = JSON.stringify(parsed, null, 2);
       } catch {
@@ -1827,7 +1838,7 @@ const Admin = () => {
       const validationErrors = validateManagedPages(currentPagesList);
       if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
 
-      const pageDataStr = customFiles?.pageData || pageDataJson || window.localStorage.getItem(pageDataDraftStorageKey) || '{}';
+      const pageDataStr = customFiles?.pageData || window.localStorage.getItem(pageDataDraftStorageKey) || pageDataJson || '{}';
       const parsedPageData = JSON.parse(pageDataStr) as Record<string, unknown>;
       if (!isValidPageData(parsedPageData)) {
         throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de déployer.');

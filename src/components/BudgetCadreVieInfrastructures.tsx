@@ -79,8 +79,30 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
         setBudgetData(customEvent.detail.budgetData);
       }
     };
+    const handleStorage = () => {
+      try {
+        const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          if (parsed?.budgetData?.projects) {
+            setBudgetData(parsed.budgetData as BudgetData);
+            return;
+          }
+        }
+        const fileBudget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
+        if (fileBudget) setBudgetData(fileBudget);
+      } catch {
+        // ignore storage parse errors
+      }
+    };
     window.addEventListener('lfjp_page_data_changed', handleSync);
-    return () => window.removeEventListener('lfjp_page_data_changed', handleSync);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('lfjp_draft_cleared', handleStorage);
+    return () => {
+      window.removeEventListener('lfjp_page_data_changed', handleSync);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('lfjp_draft_cleared', handleStorage);
+    };
   }, []);
 
   const formatCurrency = useCallback(
@@ -403,7 +425,7 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
                 <br />
                 • Concours & subventions externes : Dotation ANEFE et réserves foncières estimées à 89 999 998 FCFA.
                 <br />
-                • Manque à gagner net à résorber : {formatCurrency(fundingGap)} pour équilibrer l'ensemble des 7 projets clés.
+                • Manque à gagner net à résorber : {formatCurrency(fundingGap)} pour équilibrer l'ensemble des {activeProjects.length} projets clés.
               </p>
             </div>
           </div>
