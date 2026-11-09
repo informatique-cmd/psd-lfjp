@@ -14,7 +14,7 @@ const timelineDraftFallback = {
 const PSDAxe3 = () => {
   const [isTimelineExpanded, setTimelineExpanded] = useState(false);
   const pageData = useContentDraft('lfjp-admin-page-data-draft', timelineDraftFallback);
-  const timeline = pageData.psdTimelines.axe3;
+  const timeline = pageData?.psdTimelines?.axe3 || psdTimelineData.axe3;
 
   const timelineYears = Array.from({ length: timeline.endYear - timeline.startYear + 1 }, (_, index) => timeline.startYear + index);
   const startYear = timelineYears[0];

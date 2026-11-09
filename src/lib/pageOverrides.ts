@@ -108,53 +108,59 @@ export const applyPageTextOverrides = (root: HTMLElement, pathname: string, over
   isApplyingOverrides = true;
   try {
     Object.entries(pageOverrides).forEach(([path, override]) => {
-      let node = resolveNodePath(root, path);
-      if (!node && override.text) {
-        // Fallback: If node not found at index path (e.g. slight cross-browser DOM variation),
-        // look for matching element by data-cms-key or data-currency-amount
-        const parsed = parseCurrencyText(override.text);
-        if (parsed) {
-          const el = root.querySelector('[data-cms-key="project-budget-proj-clim"], [data-currency-amount]');
-          if (el) {
-            const textChild = Array.from(el.childNodes).find((n) => n.nodeType === Node.TEXT_NODE);
-            if (textChild) node = textChild;
+      try {
+        let node = resolveNodePath(root, path);
+        if (!node && override.text) {
+          // Fallback: If node not found at index path, look for matching element by data-cms-key or data-currency-amount
+          const parsed = parseCurrencyText(override.text);
+          if (parsed) {
+            const el = root.querySelector('[data-cms-key="project-budget-proj-clim"], [data-currency-amount]');
+            if (el) {
+              const textChild = Array.from(el.childNodes).find((n) => n.nodeType === Node.TEXT_NODE);
+              if (textChild) node = textChild;
+            }
           }
         }
-      }
-      if (!node) return;
-    if (override.text !== undefined && node.nodeType === Node.TEXT_NODE) {
-      let nextText = override.text;
-      const parsed = parseCurrencyText(override.text);
-      if (parsed) {
-        const targetCurrency = detectTargetCurrency(node);
-        nextText = formatConvertedCurrency(parsed.amount, parsed.currency, targetCurrency);
-      } else {
-        const parentEl = node.parentElement;
-        const currencyAttr = parentEl?.getAttribute('data-currency-amount');
-        if (currencyAttr) {
-          const baseAmount = parseInt(currencyAttr, 10);
-          if (!isNaN(baseAmount) && baseAmount > 0) {
-            const userNum = parseInt(override.text.replace(/[^0-9]/g, ''), 10);
-            const amountToUse = !isNaN(userNum) && userNum > 0 ? userNum : baseAmount;
-            const targetCurrency = detectTargetCurrency(node);
-            nextText = formatConvertedCurrency(amountToUse, 'XOF', targetCurrency);
-          }
-        }
-      }
+        if (!node || !node.parentNode) return;
 
-      if (node.textContent !== nextText) {
-        node.textContent = nextText;
+        if (override.text !== undefined && node.nodeType === Node.TEXT_NODE) {
+          let nextText = override.text;
+          const parsed = parseCurrencyText(override.text);
+          if (parsed) {
+            const targetCurrency = detectTargetCurrency(node);
+            nextText = formatConvertedCurrency(parsed.amount, parsed.currency, targetCurrency);
+          } else {
+            const parentEl = node.parentElement;
+            const currencyAttr = parentEl?.getAttribute('data-currency-amount');
+            if (currencyAttr) {
+              const baseAmount = parseInt(currencyAttr, 10);
+              if (!isNaN(baseAmount) && baseAmount > 0) {
+                const userNum = parseInt(override.text.replace(/[^0-9]/g, ''), 10);
+                const amountToUse = !isNaN(userNum) && userNum > 0 ? userNum : baseAmount;
+                const targetCurrency = detectTargetCurrency(node);
+                nextText = formatConvertedCurrency(amountToUse, 'XOF', targetCurrency);
+              }
+            }
+          }
+
+          if (node.textContent !== nextText) {
+            node.textContent = nextText;
+          }
+        }
+        if (node instanceof HTMLImageElement) {
+          if (override.src !== undefined && node.getAttribute('src') !== override.src) node.setAttribute('src', override.src);
+          if (override.alt !== undefined && node.alt !== override.alt) node.alt = override.alt;
+        }
+        if (node instanceof HTMLAnchorElement && override.href !== undefined && node.getAttribute('href') !== override.href) {
+          node.setAttribute('href', override.href);
+        }
+      } catch {
+        // Silently skip unresolvable node path
       }
-    }
-    if (node instanceof HTMLImageElement) {
-      if (override.src !== undefined && node.getAttribute('src') !== override.src) node.setAttribute('src', override.src);
-      if (override.alt !== undefined && node.alt !== override.alt) node.alt = override.alt;
-    }
-    if (node instanceof HTMLAnchorElement && override.href !== undefined && node.getAttribute('href') !== override.href) {
-      node.setAttribute('href', override.href);
-    }
-  });
-} finally {
-  isApplyingOverrides = false;
-}
+    });
+  } catch {
+    // Silently ignore batch override errors
+  } finally {
+    isApplyingOverrides = false;
+  }
 };

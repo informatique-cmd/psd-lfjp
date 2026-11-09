@@ -106,12 +106,13 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
   }, []);
 
   const formatCurrency = useCallback(
-    (amountInXOF: number): string => {
+    (amountInXOF?: number | null): string => {
+      const num = typeof amountInXOF === 'number' && Number.isFinite(amountInXOF) ? amountInXOF : 0;
       if (currency === 'EUR') {
-        const val = Math.round(amountInXOF / XOF_TO_EUR);
+        const val = Math.round(num / XOF_TO_EUR);
         return `${val.toLocaleString('fr-FR').replace(/\s/g, ' ')} €`;
       }
-      return `${amountInXOF.toLocaleString('fr-FR').replace(/\s/g, ' ')} FCFA`;
+      return `${num.toLocaleString('fr-FR').replace(/\s/g, ' ')} FCFA`;
     },
     [currency]
   );
@@ -328,13 +329,13 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
                     </div>
                   </div>
 
-                  {project.description && (
+                  {Boolean(project.description && project.description.trim()) && (
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {project.description}
                     </p>
                   )}
 
-                  {project.link && (
+                  {Boolean(project.link && project.link.trim()) && (
                     <div className="pt-1">
                       <Link
                         to={project.link}

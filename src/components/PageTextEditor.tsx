@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { applyPageTextOverrides, getNodePath, loadPageTextOverrides, pageTextDraftStorageKey, type PageElementOverride, type PageTextOverrides } from '@/lib/pageOverrides';
+import { isContentDraftPreview } from '@/lib/contentDraft';
 import { loadActiveUserProfile } from '@/data/adminProfilesAndRubriques';
 
 const PageTextEditor = () => {
@@ -97,6 +98,10 @@ const PageTextEditor = () => {
     const root = document.getElementById('root');
     if (!root || isEditorRoute) return;
 
+    // Do NOT run DOM mutation observer on the public website!
+    // It is only used when actively inside the admin iframe preview or draft preview.
+    if (!isEmbeddedInAdmin && !isContentDraftPreview()) return;
+
     const pageOverrides = overrides[location.pathname];
     if (!pageOverrides || Object.keys(pageOverrides).length === 0) {
       return;
@@ -117,7 +122,7 @@ const PageTextEditor = () => {
       if (rafId) cancelAnimationFrame(rafId);
       observer.disconnect();
     };
-  }, [isEditorRoute, location.pathname, overrides]);
+  }, [isEditorRoute, isEmbeddedInAdmin, location.pathname, overrides]);
 
   // When modification mode is active inside the Visual Editor iframe, intercept clicks on links and buttons in capture phase
   // so that clicking anywhere on the page allows selecting and editing the text/content instead of navigating away!

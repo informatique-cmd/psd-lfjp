@@ -351,11 +351,12 @@ const Admin = () => {
   const [selectedPsdAxis, setSelectedPsdAxis] = useState<'axe1' | 'axe2' | 'axe3' | 'axe4'>('axe1');
   const [user, setUser] = useState<{ login: string; avatar_url?: string } | null>(() => {
     if (typeof window !== 'undefined') {
+      const hostname = window?.location?.hostname || '';
       if (
         window.sessionStorage.getItem('lfjp_admin_local_session') === '1' ||
-        window.location.hostname.includes('run.app') ||
-        window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1'
+        hostname.includes('run.app') ||
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1'
       ) {
         return { login: 'direction-lfjp', avatar_url: 'https://i.imgur.com/0YmGlXO.png' };
       }
@@ -364,11 +365,13 @@ const Admin = () => {
   });
   const [authorizedUsers, setAuthorizedUsers] = useState<string[]>(['direction-lfjp', 'informatique-cmd']);
   const [authChecked, setAuthChecked] = useState(() => {
-    return typeof window !== 'undefined' && (
+    if (typeof window === 'undefined') return false;
+    const hostname = window?.location?.hostname || '';
+    return (
       window.sessionStorage.getItem('lfjp_admin_local_session') === '1' ||
-      window.location.hostname.includes('run.app') ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1'
+      hostname.includes('run.app') ||
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1'
     );
   });
   const [status, setStatus] = useState('');

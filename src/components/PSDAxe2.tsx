@@ -13,7 +13,7 @@ const timelineDraftFallback = {
 const PSDAxe2 = () => {
   const [isTimelineExpanded, setTimelineExpanded] = useState(false);
   const pageData = useContentDraft('lfjp-admin-page-data-draft', timelineDraftFallback);
-  const timeline = pageData.psdTimelines.axe2;
+  const timeline = pageData?.psdTimelines?.axe2 || psdTimelineData.axe2;
   const objectifs = [
     {
       content: (

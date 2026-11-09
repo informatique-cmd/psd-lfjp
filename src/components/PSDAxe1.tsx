@@ -44,7 +44,7 @@ type ActionSection = {
 const PSDAxe1 = () => {
   const [isTimelineExpanded, setTimelineExpanded] = useState(false);
   const pageData = useContentDraft('lfjp-admin-page-data-draft', timelineDraftFallback);
-  const timeline = pageData.psdTimelines.axe1;
+  const timeline = pageData?.psdTimelines?.axe1 || psdTimelineData.axe1;
   const objectifs = [
     {
       content: (
