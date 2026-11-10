@@ -957,25 +957,6 @@
         "color": "from-indigo-100 to-indigo-50",
         "link": "/projets/projet-extension-phase-1",
         "showLink": true
-      },
-      {
-        "id": "proj-1794259407530",
-        "title": "test",
-        "name": "test",
-        "category": "infra",
-        "description": "",
-        "period": "2026 – 2032",
-        "budget": 50000000,
-        "totalCost": 50000000,
-        "startYear": 2026,
-        "durationYears": 7,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 25000000,
-        "variableMax": 75000000,
-        "color": "from-blue-100 to-indigo-50",
-        "link": "/projets/test",
-        "showLink": true
       }
     ],
     "financialTimeline": [
