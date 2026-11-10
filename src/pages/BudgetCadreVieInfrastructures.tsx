@@ -7,11 +7,6 @@ import {
   ArrowLeft,
   Home,
   BarChart3,
-  Sliders,
-  Eye,
-  CheckCircle2,
-  ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import pageDataFile from '@/content/pageData.json';
@@ -32,22 +27,7 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
     window.location.search.includes('mode=editor') ||
     window.location.search.includes('admin=1')
   );
-
-  const [viewMode, setViewMode] = useState<'editor' | 'vitrine'>(() => {
-    if (typeof window !== 'undefined') {
-      const search = window.location.search;
-      if (search.includes('embedded=1') || search.includes('edit=1') || search.includes('mode=editor') || window.parent !== window) {
-        return 'editor';
-      }
-      try {
-        const saved = window.sessionStorage.getItem('lfjp_budget_view_mode');
-        if (saved === 'editor' || saved === 'vitrine') return saved;
-      } catch {
-        // ignore
-      }
-    }
-    return isEmbeddedInAdmin || isEditRequested ? 'editor' : 'vitrine';
-  });
+  const isEditorMode = isEmbeddedInAdmin || isEditRequested;
 
   const [maxYear, setMaxYear] = useState<number>(() => {
     let budget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
@@ -211,79 +191,10 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
 
       {/* Main Content Area: right below the Axe 1 Header */}
       <main id="budget-cadre-vie" className="flex-1 -mt-8 sm:-mt-10 pb-16 relative z-10">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-4">
-          {/* Mode Switcher Bar (Espace Éditeur / Vue Site Vitrine) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200/80">
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('editor');
-                  try {
-                    window.sessionStorage.setItem('lfjp_budget_view_mode', 'editor');
-                  } catch {
-                    // ignore
-                  }
-                }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'editor'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                title="Accéder au tableau de bord complet avec privilèges d'administrateur (ajout, modification, suppression)"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>Espace Éditeur & Gestion</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                  viewMode === 'editor' ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  Privilège Administrateur
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('vitrine');
-                  try {
-                    window.sessionStorage.setItem('lfjp_budget_view_mode', 'vitrine');
-                  } catch {
-                    // ignore
-                  }
-                }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'vitrine'
-                    ? 'bg-[#005BAC] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                title="Afficher le rendu public du site vitrine"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>Vue Site Vitrine</span>
-              </button>
-            </div>
-
-            {/* Live synchronization indicator */}
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Synchronisation active en direct</span>
-              </span>
-            </div>
-          </div>
-
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Conditional View: Editor Full Dashboard (image_0282f093.png) OR Showcase View */}
-          {viewMode === 'editor' ? (
-            <div className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-7 shadow-xs space-y-4">
-              <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-wrap items-center justify-between gap-3 text-xs text-emerald-900">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span>
-                    <strong>Espace Éditeur Axe 1 activé :</strong> Vous disposez des privilèges d'administrateur pour ajouter (<span className="font-semibold">+ Ajouter</span>), modifier, supprimer et ajuster les investissements. Vos modifications sont synchronisées instantanément avec le site vitrine.
-                  </span>
-                </div>
-              </div>
-
+          {isEditorMode ? (
+            <div className="rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-7 shadow-xs">
               {/* Full AdminBudgetDashboard matching image_0282f093.png */}
               <AdminBudgetDashboard onDataChange={handleBudgetChange} />
             </div>
