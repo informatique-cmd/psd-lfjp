@@ -606,36 +606,6 @@ export const ProjectDetailPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer Navigation Bar */}
-        <div className="pt-4 flex flex-wrap items-center justify-between gap-4 border-t border-slate-200">
-          <Button
-            variant="outline"
-            className="cursor-pointer"
-            onClick={() => navigate('/budget-cadre-vie-infrastructures')}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour au budget Cadre de Vie
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              className="cursor-pointer"
-              onClick={() => navigate('/plan-strategique')}
-            >
-              Plan Stratégique complet
-            </Button>
-            <Button
-              variant="default"
-              className="bg-[#005BAC] hover:bg-blue-700 text-white cursor-pointer"
-              onClick={() => navigate('/espace-direction')}
-            >
-              Espace SuperAdmin
-              <ExternalLink className="w-3.5 h-3.5 ml-2" />
-            </Button>
-          </div>
-        </div>
       </main>
 
       <Footer />
