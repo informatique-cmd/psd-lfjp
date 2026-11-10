@@ -3583,6 +3583,42 @@ const Admin = () => {
                 </span>
               </div>
             </button>
+
+            {/* Direct Page Navigation Shortcuts for Editor */}
+            <div className="hidden md:flex items-center gap-1.5 ml-2 border-l border-slate-800 pl-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setVisualRoute('/');
+                  setSelectedVisualElement(null);
+                  if (previewFrame.current) {
+                    previewFrame.current.src = `/?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+                  }
+                }}
+                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                  visualRoute === '/' ? 'bg-slate-800 text-white font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                Accueil
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVisualRoute('/budget-cadre-vie-infrastructures');
+                  setSelectedVisualElement(null);
+                  if (previewFrame.current) {
+                    previewFrame.current.src = `/budget-cadre-vie-infrastructures?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+                  }
+                }}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                  visualRoute === '/budget-cadre-vie-infrastructures' ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 font-bold' : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60'
+                }`}
+                title="Accéder directement à l'Axe 1 Cadre de Vie & Gestion des projets"
+              >
+                <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Axe 1 · Cadre de Vie</span>
+              </button>
+            </div>
           </div>
 
           {/* Right: Harmonized, Non-Overflowing Responsive Actions Toolbar */}
