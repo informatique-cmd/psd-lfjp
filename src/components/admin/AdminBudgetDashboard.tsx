@@ -514,14 +514,16 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       .filter((p) => p.isActive)
       .reduce((sum, p) => sum + (Number(p.totalCost) || Number(p.budget) || 0), 0);
 
-    // Cumul des flux annuels d'exploitation (socle LFJP + leviers écolages)
-    const annualCashFlowTotal = timeline.reduce((sum, r) => sum + r.investmentCapacity, 0);
+    // Cumul des flux annuels d'exploitation (socle LFJP + leviers écolages) pour le plan stratégique 2026–2030
+    const annualCashFlowTotal = timeline
+      .filter((r) => YEARS.includes(r.year))
+      .reduce((sum, r) => sum + r.investmentCapacity, 0);
 
     // Dotation & subvention officielle ANEFE + réserves foncières (alignement officiel Netlify : 685 139 418 FCFA)
     const ANEFE_GRANT = 89_999_998;
     const totalCapacity = annualCashFlowTotal + ANEFE_GRANT;
 
-    // Manque à gagner / besoin net de financement à combler à l'horizon 2030 (ex: 775 000 000 - 685 139 418 = 89 860 582 FCFA)
+    // Manque à gagner / besoin net de financement à combler à l'horizon 2030
     const fundingGap = Math.max(0, totalInvestment - totalCapacity);
     const yearsWithDeficit = timeline.filter((r) => r.balance < 0).length;
 

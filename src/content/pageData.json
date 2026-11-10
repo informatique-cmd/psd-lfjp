@@ -821,8 +821,8 @@
   "budgetData": {
     "summaryCards": {
       "totalInvestment": 825000000,
-      "fundingGap": 0,
-      "estimatedCapacity": 933224172
+      "fundingGap": 139860582,
+      "estimatedCapacity": 685139418
     },
     "projects": [
       {
