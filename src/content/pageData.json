@@ -880,7 +880,7 @@
         "variableMax": 80000000,
         "color": "from-lime-100 to-emerald-50",
         "link": "/projets/acquisition-terrain",
-        "showLink": true
+        "showLink": false
       },
       {
         "id": "proj-cantine",
@@ -918,7 +918,7 @@
         "variableMax": 65000000,
         "color": "from-emerald-100 to-emerald-50",
         "link": "/projets/solaire-terrain-de-sport",
-        "showLink": true
+        "showLink": false
       },
       {
         "id": "proj-piscine",
@@ -937,7 +937,7 @@
         "variableMax": 150000000,
         "color": "from-sky-100 to-blue-50",
         "link": "/projets/piscine",
-        "showLink": true
+        "showLink": false
       },
       {
         "id": "proj-extension",
@@ -956,7 +956,7 @@
         "variableMax": 250000000,
         "color": "from-indigo-100 to-indigo-50",
         "link": "/projets/projet-extension-phase-1",
-        "showLink": true
+        "showLink": false
       }
     ],
     "financialTimeline": [
