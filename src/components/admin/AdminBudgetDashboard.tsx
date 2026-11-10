@@ -9,6 +9,9 @@ import {
   CheckCircle2,
   Coins,
   Euro,
+  ExternalLink,
+  Eye,
+  EyeOff,
   FolderKanban,
   Info,
   Layers,
@@ -28,6 +31,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
   Bar,
   CartesianGrid,
@@ -44,6 +48,8 @@ import type { TooltipProps } from 'recharts';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import {
   defaultBudgetData,
+  slugifyProject,
+  getProjectDetailLink,
   type BudgetData,
   type BudgetProject,
 } from '@/data/budgetTransportData';
@@ -145,11 +151,15 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       const varMin = p.variableMin ?? (defaultMatch?.variableMin ?? Math.round(budgetVal * 0.6));
       const varMax = p.variableMax ?? (defaultMatch?.variableMax ?? Math.round(budgetVal * 1.4));
 
+      const finalTitle = p.title || p.name || defaultMatch?.title || 'Projet';
+      const effectiveLink = p.link && p.link.trim() ? p.link.trim() : (defaultMatch?.link || getProjectDetailLink({ id: p.id, title: finalTitle }));
+      const isShowLink = p.showLink !== undefined ? p.showLink : (defaultMatch?.showLink ?? true);
+
       return {
         ...p,
         id: p.id || defaultMatch?.id || `proj-${idx}`,
-        title: p.title || p.name || defaultMatch?.title || 'Projet',
-        name: p.name || p.title || defaultMatch?.name || 'Projet',
+        title: finalTitle,
+        name: p.name || finalTitle,
         category,
         isActive: p.isActive !== false,
         isVariable: isVar,
@@ -162,7 +172,8 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
         description: p.description || defaultMatch?.description || '',
         period: p.period || `${startYear}${durationYears > 1 ? ` – ${startYear + durationYears - 1}` : ''}`,
         color: p.color || defaultMatch?.color || 'from-sky-100 to-sky-50',
-        link: p.link || defaultMatch?.link,
+        link: effectiveLink,
+        showLink: isShowLink,
       };
     });
   }, [isStaleProjectList]);
@@ -359,6 +370,18 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     setSaveStatus('saved');
   }, []);
 
+  const toggleProjectLinkVisibility = useCallback((id: string) => {
+    setProjectsList((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const currentShow = p.showLink !== false;
+        const updatedLink = p.link && p.link.trim() ? p.link : getProjectDetailLink(p);
+        return { ...p, showLink: !currentShow, link: updatedLink };
+      })
+    );
+    setSaveStatus('saved');
+  }, []);
+
   const openAddProjectModal = useCallback(() => {
     const newId = `proj-${Date.now()}`;
     const newProject: BudgetProject = {
@@ -377,14 +400,20 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       variableMin: 25_000_000,
       variableMax: 80_000_000,
       color: 'from-blue-100 to-indigo-50',
-      link: '',
+      link: '/projets/nouveau-projet',
+      showLink: true,
     };
     setEditingProject(newProject);
     setIsAddingNew(true);
   }, []);
 
   const openEditProjectModal = useCallback((project: BudgetProject) => {
-    setEditingProject({ ...project });
+    const effectiveLink = project.link && project.link.trim() ? project.link.trim() : getProjectDetailLink(project);
+    setEditingProject({
+      ...project,
+      link: effectiveLink,
+      showLink: project.showLink !== false,
+    });
     setIsAddingNew(false);
   }, []);
 
@@ -403,6 +432,9 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     };
     const cat = projectToSave.category || 'infra';
     const finalTitle = (projectToSave.title || projectToSave.name || '').trim() || 'Nouveau projet';
+    const finalLink = projectToSave.link && projectToSave.link.trim()
+      ? projectToSave.link.trim()
+      : getProjectDetailLink({ id: projectToSave.id, title: finalTitle });
 
     const normalized: BudgetProject = {
       ...projectToSave,
@@ -420,6 +452,8 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       variableMin: Math.round(budgetVal * 0.5),
       variableMax: Math.max(budgetVal + 20_000_000, Math.round(budgetVal * 1.5)),
       isActive: projectToSave.isActive ?? true,
+      link: finalLink,
+      showLink: projectToSave.showLink !== false,
     };
 
     setProjectsList((prev) => {
@@ -841,7 +875,8 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               const durationY = project.durationYears || 1;
               const endY = startY + durationY - 1;
               const currentCost = Number(project.totalCost) || Number(project.budget) || 0;
-              const hasLink = Boolean(project.link);
+              const effectiveLink = project.link && project.link.trim() ? project.link.trim() : getProjectDetailLink(project);
+              const isLinkShown = project.showLink !== false;
 
               return (
                 <div
@@ -996,17 +1031,36 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                     </div>
                   )}
 
-                  {hasLink && (
-                    <div className="mt-2.5 pt-2 border-t border-slate-100/70 flex justify-end">
-                      <a
-                        href={project.link}
+                  <div className="mt-2.5 pt-2 border-t border-slate-100/70 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleProjectLinkVisibility(project.id)}
+                      className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md transition cursor-pointer ${
+                        isLinkShown
+                          ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                      title={isLinkShown ? "Lien visible (cliquer pour masquer)" : "Lien masqué (cliquer pour afficher)"}
+                    >
+                      {isLinkShown ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      <span>{isLinkShown ? 'Lien affiché' : 'Lien masqué'}</span>
+                    </button>
+
+                    {isLinkShown ? (
+                      <Link
+                        to={effectiveLink}
                         className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                        title="Consulter la fiche détaillée du projet"
                       >
                         Consulter la fiche détaillée
                         <ArrowUpRight className="w-3 h-3" />
-                      </a>
-                    </div>
-                  )}
+                      </Link>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic">
+                        Fiche masquée sur le site
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -1500,7 +1554,17 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                 <input
                   type="text"
                   value={editingProject.title || editingProject.name || ''}
-                  onChange={(e) => setEditingProject({ ...editingProject, title: e.target.value, name: e.target.value })}
+                  onChange={(e) => {
+                    const newTitle = e.target.value;
+                    const autoSlug = `/projets/${slugifyProject(newTitle)}`;
+                    const shouldAutoUpdateLink = isAddingNew || !editingProject.link || editingProject.link.startsWith('/projets/');
+                    setEditingProject({
+                      ...editingProject,
+                      title: newTitle,
+                      name: newTitle,
+                      link: shouldAutoUpdateLink ? autoSlug : editingProject.link,
+                    });
+                  }}
                   placeholder="ex: Restauration scolaire, Climatisation phases 2 & 3..."
                   className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
                 />
@@ -1639,6 +1703,78 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
                   placeholder="Précisez le périmètre des investissements..."
                   className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              {/* Fiche détaillée & Lien de consultation */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                      Lien de consultation de la fiche détaillée
+                    </label>
+                    <p className="text-[10px] text-slate-500">
+                      Généré automatiquement pour chaque projet • Possibilité d'afficher ou masquer le lien
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={editingProject.showLink !== false}
+                    onClick={() =>
+                      setEditingProject({
+                        ...editingProject,
+                        showLink: editingProject.showLink === false,
+                      })
+                    }
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      editingProject.showLink !== false ? 'bg-blue-600' : 'bg-slate-300'
+                    }`}
+                    title={editingProject.showLink !== false ? 'Lien visible sur la fiche (cliquer pour masquer)' : 'Lien masqué sur la fiche (cliquer pour afficher)'}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                        editingProject.showLink !== false ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-[11px] mb-1 font-semibold text-slate-600">
+                    <span>URL de la fiche détaillée :</span>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${editingProject.showLink !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+                      {editingProject.showLink !== false ? 'Lien affiché' : 'Lien masqué'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editingProject.link || ''}
+                      onChange={(e) =>
+                        setEditingProject({
+                          ...editingProject,
+                          link: e.target.value,
+                        })
+                      }
+                      placeholder="/projets/mon-projet"
+                      className="flex-1 px-3 py-1.5 text-xs font-mono border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white"
+                    />
+                    {Boolean(editingProject.link && editingProject.link.trim()) && (
+                      <Link
+                        to={editingProject.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 text-xs rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold flex items-center gap-1 transition"
+                        title="Prévisualiser la fiche détaillée du projet"
+                      >
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        <span>Tester</span>
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 

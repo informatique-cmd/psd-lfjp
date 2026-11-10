@@ -32,6 +32,7 @@ import {
 } from 'recharts';
 import {
   defaultBudgetData,
+  getProjectDetailLink,
   type BudgetData,
   type BudgetProject,
 } from '@/data/budgetTransportData';
@@ -361,19 +362,24 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
                           </h3>
                         </div>
 
-                        {project.link && project.link.trim() ? (
-                          <Link
-                            to={project.link}
-                            aria-label={`Consulter la fiche détaillée de ${project.title}`}
-                            className="w-7 h-7 rounded-lg bg-white border border-slate-200/80 shadow-xs flex items-center justify-center text-slate-700 hover:text-french-blue hover:border-slate-300 transition-colors shrink-0 cursor-pointer"
-                          >
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                          </Link>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#1E293B] text-white shrink-0">
-                            Lien à venir
-                          </span>
-                        )}
+                        {(() => {
+                          const effectiveLink = project.link && project.link.trim() ? project.link.trim() : getProjectDetailLink(project);
+                          const isLinkVisible = project.showLink !== false && Boolean(effectiveLink);
+
+                          return isLinkVisible ? (
+                            <Link
+                              to={effectiveLink}
+                              aria-label={`Consulter la fiche détaillée de ${project.title}`}
+                              className="w-7 h-7 rounded-lg bg-white border border-slate-200/80 shadow-xs flex items-center justify-center text-slate-700 hover:text-french-blue hover:border-slate-300 transition-colors shrink-0 cursor-pointer"
+                            >
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            </Link>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#1E293B] text-white shrink-0">
+                              Lien à venir
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="flex items-center gap-1 text-[11px] font-medium text-[#005BAC]">

@@ -47,6 +47,7 @@ import IntroductionAuCode from "./pages/IntroductionAuCode";
 import ModuleIA from "./pages/ModuleIA";
 import EducationNumeriqueCitoyen from "./pages/EducationNumeriqueCitoyen";
 import BudgetCadreVieInfrastructuresPage from "./pages/BudgetCadreVieInfrastructures";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 import Connectivite20 from "./pages/Connectivite20";
 import ProfilDigitalLFJP from "./pages/ProfilDigitalLFJP";
 import LaboratoireNumerique from "./pages/LaboratoireNumerique";
@@ -447,6 +448,8 @@ const App = () => {
                     <BackToTop />
                   </>
                 } />
+                <Route path="/projets/:slug" element={<ProjectDetailPage />} />
+                <Route path="/fiche-projet/:slug" element={<ProjectDetailPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<ManagedPage />} />
               </Routes>

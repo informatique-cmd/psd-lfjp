@@ -31,10 +31,17 @@ const BreadcrumbNav = () => {
   
   const currentPath = '/' + pathnames.join('/');
   const managedPage = managedPages.find((page) => page.slug === currentPath);
-  const currentRoute = routes[currentPath] || (managedPage ? {
+  let currentRoute = routes[currentPath] || (managedPage ? {
     name: managedPage.title,
     parent: managedPage.parent,
   } : undefined);
+
+  if (!currentRoute && (pathnames[0] === 'projets' || pathnames[0] === 'fiche-projet')) {
+    currentRoute = {
+      name: 'Fiche détaillée du projet',
+      parent: '/budget-cadre-vie-infrastructures',
+    };
+  }
 
   if (!currentRoute) return null;
 

@@ -8,6 +8,7 @@ export interface BudgetProject {
   totalCost?: number;
   color: string;
   link?: string;
+  showLink?: boolean;
   category?: 'equipment' | 'infra' | 'land';
   isActive?: boolean;
   isVariable?: boolean;
@@ -16,6 +17,24 @@ export interface BudgetProject {
   startYear?: number;
   durationYears?: number;
 }
+
+export const slugifyProject = (text: string): string => {
+  return (text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'projet';
+};
+
+export const getProjectDetailLink = (project: { id?: string; title?: string; name?: string; link?: string }): string => {
+  if (project.link && project.link.trim()) {
+    return project.link.trim();
+  }
+  const slug = slugifyProject(project.title || project.name || project.id || 'projet');
+  return `/projets/${slug}`;
+};
 
 export interface CashFlowYear {
   year: number;
@@ -110,6 +129,7 @@ export const defaultBudgetData: BudgetData = {
       variableMax: 90000000,
       color: 'from-sky-100 to-sky-50',
       link: '/climatisation-durable',
+      showLink: true,
     },
     {
       id: 'proj-sport-couv',
@@ -128,6 +148,7 @@ export const defaultBudgetData: BudgetData = {
       variableMax: 90000000,
       color: 'from-amber-100 to-orange-50',
       link: '/couverture-terrain-sport',
+      showLink: true,
     },
     {
       id: 'proj-foncier',
@@ -145,6 +166,8 @@ export const defaultBudgetData: BudgetData = {
       variableMin: 50000000,
       variableMax: 80000000,
       color: 'from-lime-100 to-emerald-50',
+      link: '/projets/acquisition-terrain',
+      showLink: true,
     },
     {
       id: 'proj-cantine',
@@ -163,6 +186,7 @@ export const defaultBudgetData: BudgetData = {
       variableMax: 250000000,
       color: 'from-orange-100 to-amber-50',
       link: '/construction-cantine',
+      showLink: true,
     },
     {
       id: 'proj-solaire',
@@ -180,6 +204,8 @@ export const defaultBudgetData: BudgetData = {
       variableMin: 45000000,
       variableMax: 65000000,
       color: 'from-emerald-100 to-emerald-50',
+      link: '/projets/solaire-terrain-de-sport',
+      showLink: true,
     },
     {
       id: 'proj-piscine',
@@ -197,6 +223,8 @@ export const defaultBudgetData: BudgetData = {
       variableMin: 100000000,
       variableMax: 150000000,
       color: 'from-sky-100 to-blue-50',
+      link: '/projets/piscine',
+      showLink: true,
     },
     {
       id: 'proj-extension',
@@ -214,6 +242,8 @@ export const defaultBudgetData: BudgetData = {
       variableMin: 150000000,
       variableMax: 250000000,
       color: 'from-indigo-100 to-indigo-50',
+      link: '/projets/projet-extension-phase-1',
+      showLink: true,
     },
   ],
   financialTimeline: [
