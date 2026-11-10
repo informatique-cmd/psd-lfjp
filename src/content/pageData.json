@@ -946,23 +946,6 @@
         "variableMin": 150000000,
         "variableMax": 250000000,
         "color": "from-indigo-100 to-indigo-50"
-      },
-      {
-        "id": "proj-1794259407530",
-        "title": "test",
-        "name": "test",
-        "category": "infra",
-        "description": "",
-        "period": "2026 – 2032",
-        "budget": 50000000,
-        "totalCost": 50000000,
-        "startYear": 2026,
-        "durationYears": 7,
-        "isActive": false,
-        "isVariable": true,
-        "variableMin": 25000000,
-        "variableMax": 75000000,
-        "color": "from-blue-100 to-indigo-50"
       }
     ],
     "financialTimeline": [
@@ -1005,22 +988,6 @@
         "recettesTotales": 124042377,
         "depenses": 200000000,
         "solde": -75957623
-      },
-      {
-        "year": 2031,
-        "capacite": 54000000,
-        "leviers": 70042377,
-        "recettesTotales": 124042377,
-        "depenses": 0,
-        "solde": 124042377
-      },
-      {
-        "year": 2032,
-        "capacite": 54000000,
-        "leviers": 70042377,
-        "recettesTotales": 124042377,
-        "depenses": 0,
-        "solde": 124042377
       }
     ],
     "tuitionSimulations": [
@@ -1111,20 +1078,6 @@
         "end": 2030,
         "annualSpend": {
           "2030": 200000000
-        }
-      },
-      {
-        "project": "test",
-        "start": 2026,
-        "end": 2032,
-        "annualSpend": {
-          "2026": 7142857,
-          "2027": 7142857,
-          "2028": 7142857,
-          "2029": 7142857,
-          "2030": 7142857,
-          "2031": 7142857,
-          "2032": 7142857
         }
       }
     ],
