@@ -1,12 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BudgetCadreVieInfrastructures from '../components/BudgetCadreVieInfrastructures';
 import { ArrowLeft, Home, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import pageDataFile from '@/content/pageData.json';
+import { defaultBudgetData, type BudgetData } from '@/data/budgetTransportData';
 
 const BudgetCadreVieInfrastructuresPage = () => {
   const navigate = useNavigate();
+
+  const [maxYear, setMaxYear] = useState<number>(() => {
+    let budget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
+    if (typeof window !== 'undefined') {
+      try {
+        const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          if (parsed?.budgetData) budget = parsed.budgetData;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    const projects = (budget?.projects || defaultBudgetData.projects).filter((p) => p.isActive !== false);
+    return projects.reduce((max, p) => {
+      const s = p.startYear || 2026;
+      const d = p.durationYears || 1;
+      return Math.max(max, s + d - 1);
+    }, 2030);
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        let budget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
+        const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          if (parsed?.budgetData) budget = parsed.budgetData;
+        }
+        const projects = (budget?.projects || defaultBudgetData.projects).filter((p) => p.isActive !== false);
+        const nextMax = projects.reduce((max, p) => {
+          const s = p.startYear || 2026;
+          const d = p.durationYears || 1;
+          return Math.max(max, s + d - 1);
+        }, 2030);
+        setMaxYear(nextMax);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('lfjp_page_data_changed', handleUpdate);
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('lfjp_page_data_changed', handleUpdate);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col font-raleway bg-slate-100">
@@ -46,7 +97,7 @@ const BudgetCadreVieInfrastructuresPage = () => {
                 Budget d’amélioration
               </h1>
               <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl font-light">
-                Tableau de bord financier et projection 2026–2030 pour les investissements de l'axe « Cadre de vie & infrastructures ».
+                Tableau de bord financier et projection 2026–{maxYear} pour les investissements de l'axe « Cadre de vie & infrastructures ».
               </p>
             </div>
 
@@ -60,7 +111,7 @@ const BudgetCadreVieInfrastructuresPage = () => {
                   PÉRIODE
                 </p>
                 <p className="text-sm sm:text-base font-bold text-white tracking-wide">
-                  2026 – 2030
+                  2026 – {maxYear}
                 </p>
               </div>
             </div>

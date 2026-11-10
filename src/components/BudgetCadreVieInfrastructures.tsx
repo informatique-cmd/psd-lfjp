@@ -130,18 +130,29 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
     );
   }, [activeProjects]);
 
+  const calendarYears = useMemo(() => {
+    const maxEnd = activeProjects.reduce((max, p) => {
+      const s = p.startYear || 2026;
+      const d = p.durationYears || 1;
+      return Math.max(max, s + d - 1);
+    }, 2030);
+    const endYear = Math.min(2035, Math.max(2030, maxEnd));
+    const count = endYear - 2026 + 1;
+    return Array.from({ length: count }, (_, i) => 2026 + i);
+  }, [activeProjects]);
+
   const timelineData = useMemo(() => {
     const tl = budgetData.financialTimeline && budgetData.financialTimeline.length > 0
       ? budgetData.financialTimeline
       : defaultBudgetData.financialTimeline;
 
-    return YEARS.map((year) => {
+    return calendarYears.map((year) => {
       const row = tl.find((r) => Number(r.year) === year) || {
         year,
         capacite: 54_000_000,
         leviers: 70_042_377,
         recettesTotales: 124_042_377,
-        depenses: 155_000_000,
+        depenses: 0,
       };
 
       let annualExpenses = 0;
@@ -167,10 +178,13 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
         depensesXOF: annualExpenses,
       };
     });
-  }, [budgetData, activeProjects, currency]);
+  }, [calendarYears, budgetData, activeProjects, currency]);
 
+  // La capacité officielle du plan stratégique est bornée sur les 5 exercices 2026–2030 (685 139 418 FCFA)
   const annualCashFlowTotal = useMemo(() => {
-    return timelineData.reduce((sum, r) => sum + r.capaciteXOF, 0);
+    return timelineData
+      .filter((r) => r.yearNum <= 2030)
+      .reduce((sum, r) => sum + r.capaciteXOF, 0);
   }, [timelineData]);
 
   const totalCapacity = useMemo(() => {
@@ -194,7 +208,7 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
               Budget d'amélioration
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-              Vue synthétique des investissements, flux de trésorerie et leviers de financement sur 2026-2030.
+              Vue synthétique des investissements, flux de trésorerie et leviers de financement sur {calendarYears[0]}–{calendarYears[calendarYears.length - 1]}.
             </p>
           </div>
 
