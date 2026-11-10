@@ -820,8 +820,8 @@
   },
   "budgetData": {
     "summaryCards": {
-      "totalInvestment": 775000000,
-      "fundingGap": 89860582,
+      "totalInvestment": 825000000,
+      "fundingGap": 139860582,
       "estimatedCapacity": 685139418
     },
     "projects": [
@@ -958,7 +958,7 @@
         "totalCost": 50000000,
         "startYear": 2026,
         "durationYears": 7,
-        "isActive": false,
+        "isActive": true,
         "isVariable": true,
         "variableMin": 25000000,
         "variableMax": 75000000,
@@ -971,56 +971,56 @@
         "capacite": 43000000,
         "leviers": 64969911,
         "recettesTotales": 107969911,
-        "depenses": 135000000,
-        "solde": -27030089
+        "depenses": 142142857,
+        "solde": -34172946
       },
       {
         "year": 2027,
         "capacite": 37000000,
         "leviers": 70042377,
         "recettesTotales": 107042377,
-        "depenses": 126666667,
-        "solde": -19624290
+        "depenses": 133809524,
+        "solde": -26767147
       },
       {
         "year": 2028,
         "capacite": 62000000,
         "leviers": 70042377,
         "recettesTotales": 132042377,
-        "depenses": 156666667,
-        "solde": -24624290
+        "depenses": 163809524,
+        "solde": -31767147
       },
       {
         "year": 2029,
         "capacite": 54000001,
         "leviers": 70042377,
         "recettesTotales": 124042378,
-        "depenses": 156666667,
-        "solde": -32624289
+        "depenses": 163809524,
+        "solde": -39767146
       },
       {
         "year": 2030,
         "capacite": 54000000,
         "leviers": 70042377,
         "recettesTotales": 124042377,
-        "depenses": 200000000,
-        "solde": -75957623
+        "depenses": 207142857,
+        "solde": -83100480
       },
       {
         "year": 2031,
         "capacite": 54000000,
         "leviers": 70042377,
         "recettesTotales": 124042377,
-        "depenses": 0,
-        "solde": 124042377
+        "depenses": 7142857,
+        "solde": 116899520
       },
       {
         "year": 2032,
         "capacite": 54000000,
         "leviers": 70042377,
         "recettesTotales": 124042377,
-        "depenses": 0,
-        "solde": 124042377
+        "depenses": 7142857,
+        "solde": 116899520
       }
     ],
     "tuitionSimulations": [
