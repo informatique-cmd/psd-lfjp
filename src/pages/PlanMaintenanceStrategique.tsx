@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import RenouvellementInformatiqueTabs from '../components/RenouvellementInformatiqueTabs';
 import RenouvellementMobilierScolaire from '../components/RenouvellementMobilierScolaire';
 import { cn } from '@/lib/utils';
+import { useSmartBack } from '@/lib/navigation';
 
 const TAB_VALUES = ['peintures', 'informatique', 'acoustique', 'mobilier'] as const;
 type TabValue = typeof TAB_VALUES[number];
@@ -16,6 +17,7 @@ type TabValue = typeof TAB_VALUES[number];
 const PlanMaintenanceStrategique = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const handleBack = useSmartBack('/plan-strategique');
   const tabsListRef = useRef<HTMLDivElement | null>(null);
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(true);
@@ -91,7 +93,7 @@ const PlanMaintenanceStrategique = () => {
       </div>
 
       <div className="container mx-auto px-6 py-4 flex gap-2">
-        <Button variant="outline" onClick={() => navigate(-1)} className="flex items-center gap-2">
+        <Button variant="outline" onClick={handleBack} className="flex items-center gap-2">
           <ArrowLeft size={16} />
           Retour
         </Button>

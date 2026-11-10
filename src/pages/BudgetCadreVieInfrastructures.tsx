@@ -11,10 +11,12 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import pageDataFile from '@/content/pageData.json';
 import { defaultBudgetData, type BudgetData } from '@/data/budgetTransportData';
+import { useSmartBack } from '@/lib/navigation';
 
 export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const handleBack = useSmartBack('/plan-strategique');
 
   // Determine if running inside the editor / admin iframe or edit mode requested
   const isEmbeddedInAdmin = typeof window !== 'undefined' && (
@@ -140,7 +142,7 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
           <div className="flex items-center gap-2 text-xs text-slate-300">
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={handleBack}
               className="inline-flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
