@@ -650,6 +650,24 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
               detail: { budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
             })
           );
+          window.dispatchEvent(new Event('storage'));
+
+          if (window.parent && window.parent !== window) {
+            try {
+              window.parent.postMessage(
+                { type: 'lfjp_budget_data_updated', budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
+                '*'
+              );
+              window.parent.dispatchEvent(
+                new CustomEvent('lfjp_page_data_changed', {
+                  detail: { budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
+                })
+              );
+            } catch {
+              // ignore cross-origin/frame errors
+            }
+          }
+
           if (onDataChange) {
             onDataChange(updatedBudgetData);
           }
@@ -658,7 +676,7 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       } catch (err) {
         console.error('Error auto-saving budget draft:', err);
       }
-    }, 400);
+    }, 50);
 
     return () => clearTimeout(timer);
   }, [

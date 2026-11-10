@@ -124,6 +124,24 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
             detail: { budgetData: updatedBudgetData },
           })
         );
+        window.dispatchEvent(new Event('storage'));
+
+        if (window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage(
+              { type: 'lfjp_budget_data_updated', budgetData: updatedBudgetData, mergedDraft: merged },
+              '*'
+            );
+            window.parent.dispatchEvent(
+              new CustomEvent('lfjp_page_data_changed', {
+                detail: { budgetData: updatedBudgetData },
+              })
+            );
+          } catch {
+            // ignore cross-origin/frame errors
+          }
+        }
+
         computeMaxYear();
       }
     } catch (err) {

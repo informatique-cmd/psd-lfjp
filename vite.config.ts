@@ -110,6 +110,7 @@ export default defineConfig(({ mode }) => ({
                 // If direct deploy, push to GitHub main branch so Vercel builds & updates
                 const headerToken = (req.headers["x-github-token"] || (req.headers["authorization"] ? (req.headers["authorization"] as string).replace(/^Bearer\s+/i, '') : '')) as string;
                 const tokenFile = path.resolve(__dirname, ".git_token");
+                const diskToken = fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, "utf8").trim() : "";
                 const defaultToken = ['ghp', 'F1Nq8rGnhljOJMVtjVGCxB8XjCWRgq2zMD89'].join('_');
                 const token = headerToken || parsed.githubToken || process.env.GITHUB_TOKEN || diskToken || defaultToken;
                 if (token && !fs.existsSync(tokenFile)) {

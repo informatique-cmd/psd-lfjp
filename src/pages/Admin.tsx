@@ -710,6 +710,20 @@ const Admin = () => {
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       clearAllDraftStorage();
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(pageDataDraftStorageKey, finalPageDataStr);
+      }
+      setPageDataJson(finalPageDataStr);
+      try {
+        const parsedFinal = JSON.parse(finalPageDataStr) as Record<string, unknown>;
+        if (parsedFinal?.budgetData) {
+          window.dispatchEvent(
+            new CustomEvent('lfjp_page_data_changed', { detail: { budgetData: parsedFinal.budgetData } })
+          );
+        }
+      } catch {
+        // ignore
+      }
       if (pendingDeployment) {
         approveDeploymentRequest(pendingDeployment.id, userProfile.email);
         setPendingDeployment(loadPendingDeploymentRequest());
@@ -1364,6 +1378,21 @@ const Admin = () => {
         setSelectedVisualElement(null);
         return;
       }
+      if (event.data?.type === 'lfjp_budget_data_updated' && event.data.budgetData) {
+        const nextBudgetData = event.data.budgetData;
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            parsed.budgetData = nextBudgetData;
+            const updated = JSON.stringify(parsed, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
       if (event.data?.type !== 'lfjp-cms-select' || !isRecord(event.data.selection)) return;
       if (event.data.page && typeof event.data.page === 'string') {
         setVisualRoute(event.data.page);
@@ -1387,9 +1416,29 @@ const Admin = () => {
   useEffect(() => {
     const syncVisualDraft = (event: StorageEvent) => {
       if (event.key === pageTextDraftStorageKey && event.newValue) setPageTextJson(event.newValue);
+      if (event.key === pageDataDraftStorageKey && event.newValue) setPageDataJson(event.newValue);
+    };
+    const handleBudgetUpdate = (event: Event) => {
+      const custom = event as CustomEvent<{ budgetData?: BudgetData }>;
+      if (custom.detail?.budgetData) {
+        const nextBudget = custom.detail.budgetData;
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            parsed.budgetData = nextBudget;
+            return JSON.stringify(parsed, null, 2);
+          } catch {
+            return prev;
+          }
+        });
+      }
     };
     window.addEventListener('storage', syncVisualDraft);
-    return () => window.removeEventListener('storage', syncVisualDraft);
+    window.addEventListener('lfjp_page_data_changed', handleBudgetUpdate);
+    return () => {
+      window.removeEventListener('storage', syncVisualDraft);
+      window.removeEventListener('lfjp_page_data_changed', handleBudgetUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -1933,6 +1982,18 @@ const Admin = () => {
   const saveDraft = () => {
     try {
       const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+      // Read current draft from localStorage first so we NEVER revert recent budgetData modifications
+      const draftRaw = typeof window !== 'undefined' ? window.localStorage.getItem(pageDataDraftStorageKey) : null;
+      if (draftRaw) {
+        try {
+          const draftParsed = JSON.parse(draftRaw) as Record<string, unknown>;
+          if (draftParsed?.budgetData) {
+            parsed.budgetData = draftParsed.budgetData;
+          }
+        } catch {
+          // ignore draft parse error
+        }
+      }
       if (!isValidPageData(parsed)) {
         throw new Error('Les données de planning ou de film annuel sont invalides.');
       }
@@ -1947,6 +2008,18 @@ const Admin = () => {
       const updatedPageDataStr = JSON.stringify(parsed, null, 2);
       setPageDataJson(updatedPageDataStr);
       window.localStorage.setItem(pageDataDraftStorageKey, updatedPageDataStr);
+      // Synchronize iframe preview
+      try {
+        previewFrame.current?.contentWindow?.postMessage(
+          { type: 'lfjp_budget_data_updated', budgetData: parsed.budgetData },
+          window.location.origin
+        );
+        window.dispatchEvent(
+          new CustomEvent('lfjp_page_data_changed', { detail: { budgetData: parsed.budgetData } })
+        );
+      } catch {
+        // ignore
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.');
       return false;
