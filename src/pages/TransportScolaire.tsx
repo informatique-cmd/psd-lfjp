@@ -108,10 +108,6 @@ const TransportScolaire = () => {
     window.location.search.includes('mode=editor') ||
     window.location.search.includes('admin=1')
   );
-  const hasActiveSession = typeof window !== 'undefined' && (
-    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
-    window.sessionStorage.getItem('lfjp_admin_local_session') === '1'
-  );
   const [isEditorMode, setIsEditorMode] = React.useState<boolean>(
     () => isEmbeddedInAdmin || isEditRequested
   );
@@ -141,28 +137,15 @@ const TransportScolaire = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-4 flex items-center justify-between gap-2">
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleBack} className="cursor-pointer">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/')} className="cursor-pointer"> 
-            <Home className="mr-2 h-4 w-4" />
-            Accueil
-          </Button>
-        </div>
-        {!isEditorMode && hasActiveSession && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditorMode(true)}
-            className="border-sky-500 bg-sky-50 text-sky-800 hover:bg-sky-100 text-xs font-semibold"
-            title="Activer la modification pour le profil éditeur"
-          >
-            Mode Édition
-          </Button>
-        )}
+      <div className="container mx-auto px-6 py-4 flex gap-2">
+        <Button variant="outline" onClick={handleBack} className="cursor-pointer">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
+        <Button variant="outline" onClick={() => navigate('/')} className="cursor-pointer"> 
+          <Home className="mr-2 h-4 w-4" />
+          Accueil
+        </Button>
       </div>
 
       {isEditorMode ? (
