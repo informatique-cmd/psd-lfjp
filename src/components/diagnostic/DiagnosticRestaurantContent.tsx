@@ -18,9 +18,49 @@ const restaurantDraftFallback = {
   restaurant: (pageDataFile as { restaurant?: typeof restaurantPageData }).restaurant || restaurantPageData,
 };
 
+const getInitialRestaurant = (): typeof restaurantPageData => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.restaurant) {
+          return {
+            ...restaurantDraftFallback.restaurant,
+            ...parsed.restaurant,
+          };
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return restaurantDraftFallback.restaurant;
+};
+
 const DiagnosticRestaurantContent = () => {
-  const pageData = useContentDraft('lfjp-admin-page-data-draft', restaurantDraftFallback);
-  const restaurant = pageData.restaurant;
+  const [restaurant, setRestaurant] = React.useState<typeof restaurantPageData>(getInitialRestaurant);
+
+  React.useEffect(() => {
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent<{ restaurant?: typeof restaurantPageData; source?: string }>;
+      if (customEvent.detail?.source === 'restaurant_survey_editor') return;
+      if (customEvent.detail?.restaurant) {
+        setRestaurant(customEvent.detail.restaurant);
+      }
+    };
+    const handleStorage = () => {
+      setRestaurant(getInitialRestaurant());
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('lfjp_page_data_changed', handleSync);
+    window.addEventListener('lfjp_draft_cleared', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('lfjp_page_data_changed', handleSync);
+      window.removeEventListener('lfjp_draft_cleared', handleStorage);
+    };
+  }, []);
 
   const isEmbeddedInAdmin = typeof window !== 'undefined' && (
     window.location.search.includes('embedded=1') ||
@@ -32,9 +72,14 @@ const DiagnosticRestaurantContent = () => {
     window.location.search.includes('mode=editor') ||
     window.location.search.includes('admin=1')
   );
-  const showEditorControls = isEmbeddedInAdmin || isEditRequested;
+  const hasActiveSession = typeof window !== 'undefined' && (
+    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
+    window.sessionStorage.getItem('lfjp_admin_local_session') === '1'
+  );
+  const showEditorControls = isEmbeddedInAdmin || isEditRequested || hasActiveSession;
 
   const handleRestaurantChange = (updatedRestaurant: typeof restaurantPageData) => {
+    setRestaurant(updatedRestaurant);
     if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
@@ -53,7 +98,7 @@ const DiagnosticRestaurantContent = () => {
         window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
         window.dispatchEvent(
           new CustomEvent('lfjp_page_data_changed', {
-            detail: { restaurant: updatedRestaurant },
+            detail: { restaurant: updatedRestaurant, source: 'restaurant_survey_editor' },
           })
         );
         window.dispatchEvent(new Event('storage'));
@@ -61,8 +106,13 @@ const DiagnosticRestaurantContent = () => {
         if (window.parent && window.parent !== window) {
           try {
             window.parent.postMessage(
-              { type: 'lfjp_restaurant_data_updated', restaurant: updatedRestaurant },
+              { type: 'lfjp_restaurant_data_updated', restaurant: updatedRestaurant, source: 'restaurant_survey_editor' },
               '*'
+            );
+            window.parent.dispatchEvent(
+              new CustomEvent('lfjp_page_data_changed', {
+                detail: { restaurant: updatedRestaurant, source: 'restaurant_survey_editor' },
+              })
             );
           } catch {
             // ignore

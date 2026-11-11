@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   BarChart3,
   Plus,
   Trash2,
-  CheckCircle2,
   Sparkles,
   ChevronDown,
   ChevronUp,
@@ -22,12 +20,12 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
   restaurant,
   onChange,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<
     'student' | 'interest' | 'lunch' | 'days' | 'meals' | 'prices' | 'metrics'
   >('student');
 
-  // Helper to re-balance percentages to 100%
+  // Helper to re-balance student percentages to 100%
   const rebalanceStudentPercentages = () => {
     const list = restaurant.studentDistributionData || [];
     const totalEffectif = list.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
@@ -51,12 +49,31 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     onChange(next);
   };
 
+  // Student row updates: auto-correlate percentage when effectif value changes
   const updateStudentRow = (index: number, field: string, val: string | number) => {
     const list = [...(restaurant.studentDistributionData || [])];
+    const num = Number(val);
+    const parsedVal = (field === 'value' || field === 'percentage') ? (!isNaN(num) ? num : val) : val;
+
     list[index] = {
       ...list[index],
-      [field]: field === 'value' || field === 'percentage' ? Number(val) || 0 : val,
+      [field]: parsedVal,
     };
+
+    // If effectif (value) is edited, dynamically correlate percentage to the new total
+    if (field === 'value') {
+      const totalStudents = list.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
+      if (totalStudents > 0) {
+        list.forEach((item, i) => {
+          const itemVal = Math.max(0, Number(item.value)) || 0;
+          list[i] = {
+            ...item,
+            percentage: Math.round((itemVal / totalStudents) * 1000) / 10,
+          };
+        });
+      }
+    }
+
     onChange({ ...restaurant, studentDistributionData: list });
   };
 
@@ -71,7 +88,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     onChange({ ...restaurant, studentDistributionData: list });
   };
 
-  // Generic updater for array of objects with name/value/percentage
+  // Generic updater with dynamic chart auto-correlation
   const updateGenericRow = <K extends keyof RestaurantPageData>(
     key: K,
     index: number,
@@ -79,14 +96,47 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     val: string | number
   ) => {
     const current = (restaurant[key] as Record<string, unknown>[]) || [];
-    const updated = current.map((row, i) =>
+    let parsedVal: string | number = val;
+
+    if (key === 'keyMetrics' || key === 'alertPoints') {
+      // In metrics, value can be text like "1500-2000 FCFA" or a number like 92
+      if (typeof val === 'string') {
+        const num = Number(val);
+        parsedVal = !isNaN(num) && val.trim() !== '' ? num : val;
+      }
+    } else if (field === 'value' || field === 'percentage') {
+      const num = Number(val);
+      parsedVal = !isNaN(num) ? num : val;
+    }
+
+    let updated = current.map((row, i) =>
       i === index
         ? {
             ...row,
-            [field]: field === 'value' || field === 'percentage' ? Number(val) || 0 : val,
+            [field]: parsedVal,
           }
         : row
     );
+
+    // Dynamic auto-correlation for Intérêt Restauration (PieChart Oui / Non = 100%)
+    if (key === 'restaurationInterestData' && field === 'value' && updated.length === 2) {
+      const currentVal = Math.min(100, Math.max(0, Number(parsedVal) || 0));
+      const otherIndex = index === 0 ? 1 : 0;
+      updated[index] = { ...updated[index], value: currentVal };
+      updated[otherIndex] = { ...updated[otherIndex], value: 100 - currentVal };
+    }
+
+    // Dynamic auto-correlation for BarCharts (calculate percentage if value changes)
+    if ((key === 'currentLunchData' || key === 'serviceInterestByDayData' || key === 'mealTypePreferenceData') && field === 'value') {
+      const totalResponses = updated.reduce((s, r) => s + (Math.max(0, Number(r.value)) || 0), 0);
+      if (totalResponses > 0) {
+        updated = updated.map((r) => ({
+          ...r,
+          percentage: Math.round(((Math.max(0, Number(r.value)) || 0) / totalResponses) * 1000) / 10,
+        }));
+      }
+    }
+
     onChange({ ...restaurant, [key]: updated });
   };
 
@@ -101,7 +151,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
   };
 
   return (
-    <div className="mb-8 rounded-2xl border border-purple-200 bg-white p-4 sm:p-5 shadow-sm text-slate-800">
+    <div className="mb-8 rounded-2xl border border-purple-200 bg-white p-4 sm:p-5 shadow-sm text-slate-800" data-interactive="true">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-100 pb-3">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
@@ -152,7 +202,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
               { id: 'days', label: '4. Par jour (BarChart)' },
               { id: 'meals', label: '5. Types de repas (BarChart)' },
               { id: 'prices', label: '6. Budgets (PieCharts)' },
-              { id: 'metrics', label: '7. Chiffres clés' },
+              { id: 'metrics', label: '7. Chiffres clés & Alertes' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -174,7 +224,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Effectifs et pourcentages par niveau scolaire
+                  Effectifs et pourcentages par niveau scolaire (synchronisé avec BarChart)
                 </span>
                 <div className="flex items-center gap-2">
                   <Button
@@ -256,9 +306,14 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {activeTab === 'interest' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Intérêt pour la restauration scolaire (PieChart)
-                </span>
+                <div>
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Intérêt pour la restauration scolaire (PieChart)
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-light">
+                    Ajustez Oui ou Non : l'autre part se recalcule automatiquement pour totaliser 100%.
+                  </span>
+                </div>
                 <Button
                   type="button"
                   size="sm"
@@ -319,9 +374,14 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {activeTab === 'lunch' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Situation actuelle des repas (HorizontalBarChart)
-                </span>
+                <div>
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Situation actuelle des repas (HorizontalBarChart)
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-light">
+                    Les pourcentages s'actualisent automatiquement avec le nombre de réponses.
+                  </span>
+                </div>
                 <Button
                   type="button"
                   size="sm"
@@ -489,15 +549,26 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {activeTab === 'prices' && (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Budget plat unique (PieChart)
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Budget plat unique (PieChart)
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => addGenericRow('priceForDishData', { name: 'Autre budget', value: 10 })}
+                    className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Ajouter tranche
+                  </Button>
+                </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs divide-y divide-slate-200">
                     <thead className="bg-slate-50 font-semibold">
                       <tr>
                         <th className="p-2">Tranche</th>
                         <th className="p-2 w-24">Part (%)</th>
+                        <th className="p-2 text-right w-12">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -518,6 +589,17 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                               className="h-7 text-xs font-bold text-purple-900 bg-white"
                             />
                           </td>
+                          <td className="p-1.5 text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteGenericRow('priceForDishData', i)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -526,15 +608,26 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
               </div>
 
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Budget menu complet (PieChart)
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Budget menu complet (PieChart)
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => addGenericRow('priceForMenuData', { name: 'Autre budget', value: 10 })}
+                    className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Ajouter tranche
+                  </Button>
+                </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs divide-y divide-slate-200">
                     <thead className="bg-slate-50 font-semibold">
                       <tr>
                         <th className="p-2">Tranche</th>
                         <th className="p-2 w-24">Part (%)</th>
+                        <th className="p-2 text-right w-12">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -555,6 +648,17 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                               className="h-7 text-xs font-bold text-purple-900 bg-white"
                             />
                           </td>
+                          <td className="p-1.5 text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteGenericRow('priceForMenuData', i)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -564,27 +668,48 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
             </div>
           )}
 
-          {/* Tab 7: Statistiques clés */}
+          {/* Tab 7: Statistiques clés & Alertes */}
           {activeTab === 'metrics' && (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Statistiques clés
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Statistiques clés (MetricCard)
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => addGenericRow('keyMetrics', { name: 'Nouvelle stat clé', value: '80%', label: 'des réponses', trend: 'up' })}
+                    className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Ajouter stat
+                  </Button>
+                </div>
                 <div className="space-y-2">
                   {(restaurant.keyMetrics || []).map((m, i) => (
                     <div key={`km-${i}`} className="p-2.5 rounded-lg border bg-slate-50 text-xs space-y-1">
-                      <Input
-                        value={m.name}
-                        onChange={(e) => updateGenericRow('keyMetrics', i, 'name', e.target.value)}
-                        className="h-6.5 text-xs font-semibold bg-white"
-                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <Input
+                          value={m.name}
+                          onChange={(e) => updateGenericRow('keyMetrics', i, 'name', e.target.value)}
+                          className="h-6.5 text-xs font-semibold bg-white"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteGenericRow('keyMetrics', i)}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 shrink-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           value={String(m.value)}
                           onChange={(e) => updateGenericRow('keyMetrics', i, 'value', e.target.value)}
                           className="h-6.5 text-xs font-bold text-french-blue bg-white"
-                          placeholder="Valeur"
+                          placeholder="Valeur (ex: 92 ou 1500 FCFA)"
                         />
                         <Input
                           value={m.label || ''}
@@ -599,23 +724,44 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
               </div>
 
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Points d’attention
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Points d’attention (MetricCard)
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => addGenericRow('alertPoints', { name: 'Nouveau point d attention', value: '40%', label: 'des avis', trend: 'down' })}
+                    className="h-6 text-[11px] bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Ajouter point
+                  </Button>
+                </div>
                 <div className="space-y-2">
                   {(restaurant.alertPoints || []).map((m, i) => (
                     <div key={`ap-${i}`} className="p-2.5 rounded-lg border bg-amber-50/50 text-xs space-y-1">
-                      <Input
-                        value={m.name}
-                        onChange={(e) => updateGenericRow('alertPoints', i, 'name', e.target.value)}
-                        className="h-6.5 text-xs font-semibold bg-white"
-                      />
+                      <div className="flex items-center justify-between gap-2">
+                        <Input
+                          value={m.name}
+                          onChange={(e) => updateGenericRow('alertPoints', i, 'name', e.target.value)}
+                          className="h-6.5 text-xs font-semibold bg-white"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteGenericRow('alertPoints', i)}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 shrink-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <Input
                           value={String(m.value)}
                           onChange={(e) => updateGenericRow('alertPoints', i, 'value', e.target.value)}
                           className="h-6.5 text-xs font-bold text-amber-900 bg-white"
-                          placeholder="Valeur"
+                          placeholder="Valeur (ex: 36.3%)"
                         />
                         <Input
                           value={m.label || ''}

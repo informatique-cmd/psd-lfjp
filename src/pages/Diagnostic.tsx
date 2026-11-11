@@ -9,6 +9,9 @@ import DiagnosticRestaurantContent from '../components/diagnostic/DiagnosticRest
 import { ElcsDataProvider } from '../components/diagnostic/ElcsDataContext';
 
 const Diagnostic = () => {
+  const queryTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+  const initialTab = queryTab === 'restaurant' || queryTab === 'elcs' ? queryTab : 'psd';
+
   return (
     <div className="min-h-screen flex flex-col font-raleway">
       <Navbar showLogo={true} />
@@ -26,7 +29,7 @@ const Diagnostic = () => {
 
       <section className="py-12 md:py-16 bg-gray-50">
         <div className="container mx-auto px-6">
-          <Tabs defaultValue="psd" className="w-full">
+          <Tabs defaultValue={initialTab} className="w-full">
             <TabsList className="mb-8 w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 h-auto p-2 bg-white shadow-lg rounded-xl">
               <TabsTrigger
                 value="psd"

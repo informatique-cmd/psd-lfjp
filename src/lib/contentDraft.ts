@@ -7,7 +7,10 @@ export const isContentDraftPreview = () =>
     new URLSearchParams(window.location.search).get('edit') === '1' ||
     window.location.pathname.startsWith('/espace-direction') ||
     window.sessionStorage.getItem('lfjp-preview-mode') === '1' ||
-    window.sessionStorage.getItem('lfjp_preview_active') === '1'
+    window.sessionStorage.getItem('lfjp_preview_active') === '1' ||
+    window.sessionStorage.getItem('lfjp_admin_local_session') === '1' ||
+    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
+    window.self !== window.top
   );
 
 export const clearAllDraftStorage = () => {
@@ -55,11 +58,20 @@ export const readContentDraft = <T,>(key: string, fallback: T): T => {
 export const useContentDraft = <T,>(key: string, fallback: T): T => {
   const [value, setValue] = useState(() => readContentDraft(key, fallback));
   useEffect(() => {
-    const refresh = (event: StorageEvent) => {
-      if (event.key === key || event.key === null) setValue(readContentDraft(key, fallback));
+    const refresh = (event?: StorageEvent | Event) => {
+      const storageKey = event && 'key' in event ? (event as StorageEvent).key : null;
+      if (!storageKey || storageKey === key) {
+        setValue(readContentDraft(key, fallback));
+      }
     };
     window.addEventListener('storage', refresh);
-    return () => window.removeEventListener('storage', refresh);
+    window.addEventListener('lfjp_page_data_changed', refresh);
+    window.addEventListener('lfjp_draft_cleared', refresh);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('lfjp_page_data_changed', refresh);
+      window.removeEventListener('lfjp_draft_cleared', refresh);
+    };
   }, [fallback, key]);
   return value;
 };
