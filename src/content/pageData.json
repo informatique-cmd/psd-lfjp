@@ -1100,7 +1100,7 @@
       {
         "ville": "Saly",
         "total": 291,
-        "part": "49 %"
+        "part": "48 %"
       },
       {
         "ville": "Ngaparou",
@@ -1110,7 +1110,7 @@
       {
         "ville": "Mbour",
         "total": 99,
-        "part": "17 %"
+        "part": "16 %"
       },
       {
         "ville": "Somone",
@@ -1139,10 +1139,10 @@
       }
     ],
     "stats": {
-      "totalEleves": 593,
-      "partSaly": "49 %",
-      "partPeripherie": "42 %",
-      "partEloignee": "9 %"
+      "totalEleves": 603,
+      "partSaly": "48 %",
+      "partPeripherie": "47 %",
+      "partEloignee": "5 %"
     },
     "circuits": [
       {
