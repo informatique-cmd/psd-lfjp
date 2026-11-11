@@ -3,11 +3,6 @@ import {
   BusFront,
   Plus,
   Trash2,
-  CheckCircle2,
-  RefreshCw,
-  UploadCloud,
-  Check,
-  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,12 +17,10 @@ import pageDataFile from '@/content/pageData.json';
 
 export interface AdminTransportDashboardProps {
   onDataChange?: (data: TransportData) => void;
-  showPublishButton?: boolean;
 }
 
 export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = ({
   onDataChange,
-  showPublishButton = true,
 }) => {
   // Helper to load current transport data prioritizing localStorage draft then pageData.json then defaults
   const loadCurrentTransport = (): TransportData => {
@@ -52,9 +45,7 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
   };
 
   const [transport, setTransport] = useState<TransportData>(loadCurrentTransport);
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'synced'>('synced');
-  const [isDeploying, setIsDeploying] = useState<boolean>(false);
-  const [deployMessage, setDeployMessage] = useState<string | null>(null);
+  const [, setSaveStatus] = useState<'saved' | 'saving' | 'synced'>('synced');
 
   // Sync state if draft changes in another tab/window
   useEffect(() => {
@@ -246,52 +237,6 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
     });
   };
 
-  // Publication direct deploy trigger
-  const handlePublish = async () => {
-    setIsDeploying(true);
-    setDeployMessage('Envoi et publication des données en cours...');
-    try {
-      const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
-      let currentDraft: Record<string, unknown> = {};
-      if (raw) {
-        try {
-          currentDraft = JSON.parse(raw) || {};
-        } catch {
-          currentDraft = {};
-        }
-      }
-      const finalPageData = {
-        ...pageDataFile,
-        ...currentDraft,
-        transportData: transport,
-      };
-
-      const res = await fetch('/api/github/pull-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          directDeploy: true,
-          files: {
-            'src/content/pageData.json': JSON.stringify(finalPageData, null, 2),
-          },
-        }),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || 'Erreur lors du déploiement');
-      }
-
-      setDeployMessage('✅ Données publiées avec succès ! Le site en ligne s’actualise.');
-      setTimeout(() => setDeployMessage(null), 4000);
-    } catch (err) {
-      console.error(err);
-      setDeployMessage(`❌ Échec de publication : ${(err as Error).message}`);
-    } finally {
-      setIsDeploying(false);
-    }
-  };
-
   const tarifsList = transport.tarifs && transport.tarifs.length > 0 ? transport.tarifs : defaultTransportData.tarifs;
 
   return (
@@ -324,36 +269,8 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une ligne / circuit
           </Button>
-          {showPublishButton && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handlePublish}
-              disabled={isDeploying}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
-            >
-              {isDeploying ? (
-                <>
-                  <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Publication...
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="mr-1.5 h-3.5 w-3.5" /> Enregistrer & Publier
-                </>
-              )}
-            </Button>
-          )}
         </div>
       </div>
-
-      {deployMessage && (
-        <div className={`p-3 rounded-xl text-xs font-medium flex items-center justify-between border ${
-          deployMessage.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : deployMessage.startsWith('❌') ? 'bg-red-50 text-red-800 border-red-200' : 'bg-sky-50 text-sky-800 border-sky-200'
-        }`}>
-          <span>{deployMessage}</span>
-          <button type="button" onClick={() => setDeployMessage(null)} className="text-slate-400 hover:text-slate-600">✕</button>
-        </div>
-      )}
 
       {/* 4 KPIs Cards matching image_5ded3f36.png */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
