@@ -1100,12 +1100,12 @@
       {
         "ville": "Saly",
         "total": 291,
-        "part": "48 %"
+        "part": "47 %"
       },
       {
         "ville": "Ngaparou",
         "total": 120,
-        "part": "20 %"
+        "part": "19 %"
       },
       {
         "ville": "Mbour",
@@ -1130,19 +1130,24 @@
       {
         "ville": "Autres (> 30 km)",
         "total": 16,
-        "part": "3 %"
+        "part": "2 %"
       },
       {
         "ville": "Mali",
         "total": 10,
         "part": "2 %"
+      },
+      {
+        "ville": "Nouvelle commune",
+        "total": 19,
+        "part": "3 %"
       }
     ],
     "stats": {
-      "totalEleves": 603,
-      "partSaly": "48 %",
-      "partPeripherie": "47 %",
-      "partEloignee": "5 %"
+      "totalEleves": 622,
+      "partSaly": "47 %",
+      "partPeripherie": "46 %",
+      "partEloignee": "7 %"
     },
     "circuits": [
       {
