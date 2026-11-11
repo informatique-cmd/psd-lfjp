@@ -26,6 +26,7 @@ import { psdTimelineData } from '@/data/psdTimelineData';
 import { elcsData } from '@/components/diagnostic/ElcsDataContext';
 import { defaultBudgetData, defaultTransportData, type BudgetData, type TransportData, type BudgetProject, type TransportCommune, type TransportCircuit, type CashFlowYear, type TuitionSimulation } from '@/data/budgetTransportData';
 import { AdminBudgetDashboard } from '@/components/admin/AdminBudgetDashboard';
+import { AdminTransportDashboard } from '@/components/admin/AdminTransportDashboard';
 import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
@@ -2938,7 +2939,6 @@ const Admin = () => {
   };
 
   const removeTransportCommune = (index: number) => {
-    if (!assertCanDelete('la suppression d’une commune de transport')) return;
     updateEditablePageData((data) => {
       const transport = (data.transportData as TransportData) || defaultTransportData;
       return {
@@ -2979,7 +2979,6 @@ const Admin = () => {
   };
 
   const removeTransportCircuit = (index: number) => {
-    if (!assertCanDelete('la suppression d’une ligne de transport')) return;
     updateEditablePageData((data) => {
       const transport = (data.transportData as TransportData) || defaultTransportData;
       return {
@@ -6723,235 +6722,18 @@ const Admin = () => {
 
                         {/* View 2: Transport Scolaire */}
                         {axe1SubTab === 'transport' && (
-                          <div className="space-y-6">
-                            {(() => {
-                              const transport = getTransportData();
-                              return (
-                                <>
-                                  <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                                    <div>
-                                      <h4 className="text-sm font-bold text-slate-900">
-                                        Transport Scolaire & Distribution Géographique des Familles
-                                      </h4>
-                                      <p className="text-xs text-slate-500">
-                                        Effectifs par commune (Saly, Ngaparou, Somone, Mbour), circuits de navettes et grille tarifaire.
-                                      </p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <Button type="button" size="sm" onClick={addTransportCommune} className="bg-sky-600 hover:bg-sky-700 text-white text-xs">
-                                        <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une commune
-                                      </Button>
-                                      <Button type="button" size="sm" onClick={addTransportCircuit} className="bg-french-blue hover:bg-blue-700 text-white text-xs">
-                                        <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une ligne / circuit
-                                      </Button>
-                                    </div>
-                                  </div>
-
-                                  {/* KPIs */}
-                                  <div className="grid gap-3 sm:grid-cols-4">
-                                    <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3.5">
-                                      <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">Total Élèves (R1+R2)</span>
-                                      <Input
-                                        type="number"
-                                        value={transport.stats.totalEleves}
-                                        onChange={(e) => updateTransportStat('totalEleves', Number(e.target.value) || 0)}
-                                        className="mt-1 font-bold text-lg text-sky-900 bg-white h-9"
-                                      />
-                                    </div>
-                                    <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5">
-                                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Part résidant à Saly</span>
-                                      <Input
-                                        value={transport.stats.partSaly}
-                                        onChange={(e) => updateTransportStat('partSaly', e.target.value)}
-                                        className="mt-1 font-bold text-lg text-blue-900 bg-white h-9"
-                                        placeholder="49 %"
-                                      />
-                                    </div>
-                                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3.5">
-                                      <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-800">Périphérie immédiate</span>
-                                      <Input
-                                        value={transport.stats.partPeripherie}
-                                        onChange={(e) => updateTransportStat('partPeripherie', e.target.value)}
-                                        className="mt-1 font-bold text-lg text-indigo-900 bg-white h-9"
-                                        placeholder="42 %"
-                                      />
-                                    </div>
-                                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
-                                      <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">Éloignés (&gt; 30 km)</span>
-                                      <Input
-                                        value={transport.stats.partEloignee}
-                                        onChange={(e) => updateTransportStat('partEloignee', e.target.value)}
-                                        className="mt-1 font-bold text-lg text-amber-900 bg-white h-9"
-                                        placeholder="9 %"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  {/* Communes Distribution Table */}
-                                  <div className="rounded-xl border bg-white p-4 space-y-3">
-                                    <div className="flex items-center justify-between border-b pb-2">
-                                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                                        Répartition des Familles par Commune ({transport.communes.length})
-                                      </h4>
-                                      <span className="text-xs text-slate-500">
-                                        Effectifs constatés d’après les adresses de rentrée
-                                      </span>
-                                    </div>
-
-                                    <div className="overflow-x-auto">
-                                      <table className="w-full text-left text-xs divide-y">
-                                        <thead className="bg-slate-50 font-semibold text-slate-700">
-                                          <tr>
-                                            <th className="p-2.5">Ville / Commune</th>
-                                            <th className="p-2.5">Total Élèves</th>
-                                            <th className="p-2.5">Part estimée</th>
-                                            <th className="p-2.5">Jauge de représentation</th>
-                                            <th className="p-2.5 text-right">Action</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y text-slate-700">
-                                          {transport.communes.map((c, cIdx) => {
-                                            const numPart = parseInt(c.part, 10) || 0;
-                                            return (
-                                              <tr key={`commune-${cIdx}`} className="hover:bg-slate-50">
-                                                <td className="p-2.5">
-                                                  <Input
-                                                    value={c.ville}
-                                                    onChange={(e) => updateTransportCommune(cIdx, 'ville', e.target.value)}
-                                                    className="h-7 text-xs font-semibold w-40"
-                                                  />
-                                                </td>
-                                                <td className="p-2.5">
-                                                  <Input
-                                                    type="number"
-                                                    value={c.total}
-                                                    onChange={(e) => updateTransportCommune(cIdx, 'total', e.target.value)}
-                                                    className="h-7 text-xs font-bold w-24 text-sky-900"
-                                                  />
-                                                </td>
-                                                <td className="p-2.5">
-                                                  <Input
-                                                    value={c.part}
-                                                    onChange={(e) => updateTransportCommune(cIdx, 'part', e.target.value)}
-                                                    className="h-7 text-xs w-20"
-                                                  />
-                                                </td>
-                                                <td className="p-2.5 w-48">
-                                                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                                                    <div
-                                                      className="h-full bg-sky-600 rounded-full transition-all"
-                                                      style={{ width: `${Math.min(100, Math.max(0, numPart))}%` }}
-                                                    />
-                                                  </div>
-                                                </td>
-                                                <td className="p-2.5 text-right">
-                                                  <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => removeTransportCommune(cIdx)}
-                                                    className="h-6 px-1.5 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                    title="Supprimer la commune"
-                                                  >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                  </Button>
-                                                </td>
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </div>
-
-                                  {/* Bus Circuits and Lines */}
-                                  <div className="space-y-3">
-                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                                      Circuits et Lignes de Ramassage Préconisés ({transport.circuits.length})
-                                    </h4>
-                                    <div className="grid gap-3 sm:grid-cols-3">
-                                      {transport.circuits.map((circuit, cirIdx) => (
-                                        <div key={`circuit-${cirIdx}`} className="rounded-xl border bg-white p-4 shadow-sm space-y-2.5">
-                                          <div className="flex items-center justify-between border-b pb-1.5">
-                                            <div className="flex items-center gap-1.5">
-                                              <BusFront className="h-4 w-4 text-sky-600" />
-                                              <span className="font-bold text-xs text-french-blue">Ligne {cirIdx + 1}</span>
-                                            </div>
-                                            <Button
-                                              type="button"
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={() => removeTransportCircuit(cirIdx)}
-                                              className="h-6 px-1.5 text-red-500 hover:text-red-700"
-                                            >
-                                              <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-
-                                          <div className="space-y-2 text-xs">
-                                            <div>
-                                              <Label className="text-[10px] text-slate-500 font-semibold">Nom de la ligne</Label>
-                                              <Input
-                                                value={circuit.name}
-                                                onChange={(e) => updateTransportCircuit(cirIdx, 'name', e.target.value)}
-                                                className="text-xs h-7 font-medium"
-                                              />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                              <div>
-                                                <Label className="text-[10px] text-slate-500 font-semibold">Élèves transportés</Label>
-                                                <Input
-                                                  type="number"
-                                                  value={circuit.eleves}
-                                                  onChange={(e) => updateTransportCircuit(cirIdx, 'eleves', e.target.value)}
-                                                  className="text-xs h-7 font-bold text-sky-800"
-                                                />
-                                              </div>
-                                              <div>
-                                                <Label className="text-[10px] text-slate-500 font-semibold">Départ</Label>
-                                                <Input
-                                                  value={circuit.horaireDepart}
-                                                  onChange={(e) => updateTransportCircuit(cirIdx, 'horaireDepart', e.target.value)}
-                                                  className="text-xs h-7"
-                                                  placeholder="07h15"
-                                                />
-                                              </div>
-                                            </div>
-                                            <div>
-                                              <Label className="text-[10px] text-slate-500 font-semibold">Arrêts desservis</Label>
-                                              <Input
-                                                value={circuit.arrets}
-                                                onChange={(e) => updateTransportCircuit(cirIdx, 'arrets', e.target.value)}
-                                                className="text-xs h-7 text-slate-700"
-                                              />
-                                            </div>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  {/* Tariff Grid */}
-                                  <div className="rounded-xl border bg-slate-50 p-4 space-y-3">
-                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                                      Grille Tarifaire Indicative par Zone
-                                    </h4>
-                                    <div className="grid gap-3 sm:grid-cols-3">
-                                      {transport.tarifs.map((tarif, tIdx) => (
-                                        <div key={`tarif-${tIdx}`} className="p-3 rounded-lg border bg-white text-xs space-y-1">
-                                          <p className="font-bold text-french-blue">{tarif.zone}</p>
-                                          <p className="text-[11px] text-slate-500">{tarif.description}</p>
-                                          <div className="pt-2 border-t mt-2 flex items-center justify-between font-bold">
-                                            <span className="text-slate-700">{tarif.mensuel.toLocaleString('fr-FR')} FCFA / mois</span>
-                                            <span className="text-slate-500 text-[11px]">({tarif.annuel.toLocaleString('fr-FR')} FCFA / an)</span>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </>
-                              );
-                            })()}
+                          <div className="space-y-4">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm">
+                              <AdminTransportDashboard
+                                onDataChange={(updated) => {
+                                  updateEditablePageData((data) => ({
+                                    ...data,
+                                    transportData: updated,
+                                  }));
+                                }}
+                                showPublishButton={false}
+                              />
+                            </div>
                           </div>
                         )}
 
