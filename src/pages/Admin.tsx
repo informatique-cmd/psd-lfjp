@@ -6731,7 +6731,7 @@ const Admin = () => {
                                     transportData: updated,
                                   }));
                                 }}
-                                showPublishButton={false}
+                                onSwitchToVitrine={() => window.open('/transport-scolaire', '_blank')}
                               />
                             </div>
                           </div>

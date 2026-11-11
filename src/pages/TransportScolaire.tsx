@@ -108,7 +108,9 @@ const TransportScolaire = () => {
     window.location.search.includes('mode=editor') ||
     window.location.search.includes('admin=1')
   );
-  const isEditorMode = isEmbeddedInAdmin || isEditRequested;
+  const [isEditorMode, setIsEditorMode] = React.useState<boolean>(
+    () => isEmbeddedInAdmin || isEditRequested
+  );
 
   const activeCommunes = (liveTransport.communes && liveTransport.communes.length > 0)
     ? liveTransport.communes
@@ -152,6 +154,7 @@ const TransportScolaire = () => {
             <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-8 shadow-xs">
               <AdminTransportDashboard
                 onDataChange={(updated) => setLiveTransport(updated)}
+                onSwitchToVitrine={() => setIsEditorMode(false)}
               />
             </div>
           </div>

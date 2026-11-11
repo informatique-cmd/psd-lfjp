@@ -3,6 +3,8 @@ import {
   BusFront,
   Plus,
   Trash2,
+  Eye,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,12 +17,91 @@ import {
 } from '@/data/budgetTransportData';
 import pageDataFile from '@/content/pageData.json';
 
+/**
+ * Automatically calculates integer percentages that sum to EXACTLY 100%
+ * using the Hare-Niemeyer / Largest Remainder algorithm.
+ */
+export function calculateDynamicCommunesPercentages(
+  communes: TransportCommune[]
+): TransportCommune[] {
+  if (!communes || communes.length === 0) return [];
+  const totals = communes.map((c) => Math.max(0, Number(c.total) || 0));
+  const totalSum = totals.reduce((sum, val) => sum + val, 0);
+
+  if (totalSum === 0) {
+    const basePct = Math.floor(100 / communes.length);
+    const rem = 100 - basePct * communes.length;
+    return communes.map((c, i) => ({
+      ...c,
+      part: `${i === 0 ? basePct + rem : basePct} %`,
+    }));
+  }
+
+  const rawPcts = totals.map((t) => (t / totalSum) * 100);
+  const floorPcts = rawPcts.map((p) => Math.floor(p));
+  const remainders = rawPcts.map((p, i) => ({ index: i, rem: p - floorPcts[i] }));
+  const diff = 100 - floorPcts.reduce((sum, v) => sum + v, 0);
+
+  // Give 1 extra point to items with largest decimal parts
+  remainders.sort((a, b) => b.rem - a.rem);
+  for (let i = 0; i < diff && i < remainders.length; i++) {
+    floorPcts[remainders[i].index] += 1;
+  }
+
+  return communes.map((c, i) => ({
+    ...c,
+    part: `${floorPcts[i]} %`,
+  }));
+}
+
+/**
+ * Dynamically derives high-level KPIs based on communes distribution
+ */
+export function deriveStatsFromCommunes(
+  communes: TransportCommune[]
+): TransportData['stats'] {
+  const totalEleves = communes.reduce((sum, c) => sum + (Math.max(0, Number(c.total)) || 0), 0);
+
+  const getNumPart = (c?: TransportCommune) => {
+    if (!c) return 0;
+    return parseInt(c.part, 10) || 0;
+  };
+
+  const saly = communes.find((c) => c.ville.toLowerCase().includes('saly'));
+  const partSalyNum = getNumPart(saly);
+
+  // Peripherie: Ngaparou, Somone, Mbour, Malicounda, Nguerigne
+  const peripherieList = communes.filter((c) => {
+    const v = c.ville.toLowerCase();
+    return (
+      v.includes('ngaparou') ||
+      v.includes('somone') ||
+      v.includes('mbour') ||
+      v.includes('malicounda') ||
+      v.includes('nguerigne')
+    );
+  });
+  const partPeripherieNum = peripherieList.reduce((acc, c) => acc + getNumPart(c), 0);
+
+  // Distant: all other communes (Autres > 30 km, Dakar, Thiès, etc.)
+  const partEloigneeNum = Math.max(0, 100 - partSalyNum - partPeripherieNum);
+
+  return {
+    totalEleves,
+    partSaly: `${partSalyNum} %`,
+    partPeripherie: `${partPeripherieNum} %`,
+    partEloignee: `${partEloigneeNum} %`,
+  };
+}
+
 export interface AdminTransportDashboardProps {
   onDataChange?: (data: TransportData) => void;
+  onSwitchToVitrine?: () => void;
 }
 
 export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = ({
   onDataChange,
+  onSwitchToVitrine,
 }) => {
   // Helper to load current transport data prioritizing localStorage draft then pageData.json then defaults
   const loadCurrentTransport = (): TransportData => {
@@ -30,7 +111,16 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed?.transportData?.communes && parsed.transportData.communes.length > 0) {
-            return parsed.transportData as TransportData;
+            const balancedCommunes = calculateDynamicCommunesPercentages(parsed.transportData.communes);
+            const dynamicStats = deriveStatsFromCommunes(balancedCommunes);
+            return {
+              ...parsed.transportData,
+              communes: balancedCommunes,
+              stats: {
+                ...parsed.transportData.stats,
+                ...dynamicStats,
+              },
+            } as TransportData;
           }
         }
       } catch {
@@ -39,9 +129,19 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
     }
     const fileTransport = (pageDataFile as { transportData?: TransportData }).transportData;
     if (fileTransport?.communes && fileTransport.communes.length > 0) {
-      return fileTransport;
+      const balanced = calculateDynamicCommunesPercentages(fileTransport.communes);
+      return {
+        ...fileTransport,
+        communes: balanced,
+        stats: deriveStatsFromCommunes(balanced),
+      };
     }
-    return defaultTransportData;
+    const balancedDefault = calculateDynamicCommunesPercentages(defaultTransportData.communes);
+    return {
+      ...defaultTransportData,
+      communes: balancedDefault,
+      stats: deriveStatsFromCommunes(balancedDefault),
+    };
   };
 
   const [transport, setTransport] = useState<TransportData>(loadCurrentTransport);
@@ -55,7 +155,13 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
     const handleSync = (e: Event) => {
       const customEvent = e as CustomEvent<{ transportData?: TransportData }>;
       if (customEvent.detail?.transportData) {
-        setTransport(customEvent.detail.transportData);
+        const incoming = customEvent.detail.transportData;
+        const balanced = calculateDynamicCommunesPercentages(incoming.communes || []);
+        setTransport({
+          ...incoming,
+          communes: balanced,
+          stats: deriveStatsFromCommunes(balanced),
+        });
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -119,7 +225,7 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
     [onDataChange]
   );
 
-  // KPI updates
+  // KPI manual override
   const handleStatChange = (field: keyof TransportData['stats'], value: string | number) => {
     const nextStats = {
       ...transport.stats,
@@ -131,33 +237,89 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
     });
   };
 
-  // Communes updates
-  const handleCommuneChange = (index: number, field: keyof TransportCommune, value: string | number) => {
-    const nextCommunes = transport.communes.map((c, i) =>
-      i === index ? { ...c, [field]: field === 'total' ? Number(value) || 0 : value } : c
-    );
+  // Communes updates with dynamic recalculation (sum always 100%)
+  const handleCommuneChange = (
+    index: number,
+    field: keyof TransportCommune,
+    value: string | number
+  ) => {
+    let updatedCommunes: TransportCommune[];
+
+    if (field === 'total') {
+      const newTotal = Math.max(0, Number(value) || 0);
+      const tempCommunes = transport.communes.map((c, i) =>
+        i === index ? { ...c, total: newTotal } : c
+      );
+      // Automatically re-distribute percentages so sum = 100%
+      updatedCommunes = calculateDynamicCommunesPercentages(tempCommunes);
+    } else if (field === 'part') {
+      // User typed a specific percentage directly
+      const targetPct = Math.min(99, Math.max(1, parseInt(String(value), 10) || 1));
+      const otherStudents = transport.communes
+        .filter((_, i) => i !== index)
+        .reduce((sum, c) => sum + (Math.max(0, Number(c.total)) || 0), 0);
+
+      // Derive corresponding total students to match this target percentage
+      const derivedTotal = otherStudents > 0
+        ? Math.max(1, Math.round((otherStudents * targetPct) / (100 - targetPct)))
+        : 10;
+
+      const tempCommunes = transport.communes.map((c, i) =>
+        i === index ? { ...c, total: derivedTotal } : c
+      );
+      updatedCommunes = calculateDynamicCommunesPercentages(tempCommunes);
+    } else {
+      updatedCommunes = transport.communes.map((c, i) =>
+        i === index ? { ...c, [field]: value } : c
+      );
+    }
+
+    const updatedStats = deriveStatsFromCommunes(updatedCommunes);
     persistChanges({
       ...transport,
-      communes: nextCommunes,
+      communes: updatedCommunes,
+      stats: {
+        ...transport.stats,
+        ...updatedStats,
+      },
     });
   };
 
   const handleAddCommune = () => {
+    // Default effectif for new commune
+    const currentTotal = transport.communes.reduce((s, c) => s + (Number(c.total) || 0), 0);
+    const avgEffectif = currentTotal > 0 ? Math.max(5, Math.round(currentTotal / (transport.communes.length * 4))) : 15;
     const newCommune: TransportCommune = {
       ville: 'Nouvelle commune',
-      total: 10,
-      part: '2 %',
+      total: avgEffectif,
+      part: '0 %',
     };
+    const nextCommunes = [...transport.communes, newCommune];
+    const balancedCommunes = calculateDynamicCommunesPercentages(nextCommunes);
+    const updatedStats = deriveStatsFromCommunes(balancedCommunes);
+
     persistChanges({
       ...transport,
-      communes: [...transport.communes, newCommune],
+      communes: balancedCommunes,
+      stats: {
+        ...transport.stats,
+        ...updatedStats,
+      },
     });
   };
 
   const handleDeleteCommune = (index: number) => {
+    const filteredCommunes = transport.communes.filter((_, i) => i !== index);
+    const balancedCommunes = calculateDynamicCommunesPercentages(filteredCommunes);
+    const updatedStats = deriveStatsFromCommunes(balancedCommunes);
+
     persistChanges({
       ...transport,
-      communes: transport.communes.filter((_, i) => i !== index),
+      communes: balancedCommunes,
+      stats: {
+        ...transport.stats,
+        ...updatedStats,
+      },
     });
   };
 
@@ -237,11 +399,21 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
     });
   };
 
+  const handleSwitchToVitrine = () => {
+    if (onSwitchToVitrine) {
+      onSwitchToVitrine();
+    } else {
+      window.open('/transport-scolaire', '_blank');
+    }
+  };
+
   const tarifsList = transport.tarifs && transport.tarifs.length > 0 ? transport.tarifs : defaultTransportData.tarifs;
+  const totalCommunesEleves = transport.communes.reduce((s, c) => s + (Number(c.total) || 0), 0);
+  const totalCommunesPercent = transport.communes.reduce((s, c) => s + (parseInt(c.part, 10) || 0), 0);
 
   return (
     <div className="space-y-6 text-slate-800">
-      {/* Header matching image_5ded3f36.png */}
+      {/* Header matching image_5ded3f36.png + requested button right after ajouter circuit */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
@@ -269,6 +441,15 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" /> + Ajouter une ligne / circuit
           </Button>
+          {/* Bouton demandé : Basculer en Vue Vitrine tout juste après ajouter une ligne/circuit */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSwitchToVitrine}
+            className="border border-emerald-500 bg-white hover:bg-emerald-50 text-emerald-700 text-xs font-semibold shadow-xs cursor-pointer"
+          >
+            <Eye className="mr-1.5 h-3.5 w-3.5 text-emerald-600" /> Basculer en Vue Vitrine
+          </Button>
         </div>
       </div>
 
@@ -281,7 +462,7 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
           </Label>
           <Input
             type="number"
-            value={transport.stats?.totalEleves || 0}
+            value={transport.stats?.totalEleves || totalCommunesEleves}
             onChange={(e) => handleStatChange('totalEleves', e.target.value)}
             className="mt-1 font-bold text-lg text-sky-900 bg-white h-9"
           />
@@ -330,12 +511,18 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
       {/* Communes Distribution Table matching image_5ded3f36.png */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-            RÉPARTITION DES FAMILLES PAR COMMUNE ({transport.communes.length})
-          </h3>
-          <span className="text-xs text-slate-500 font-light">
-            Effectifs constatés d’après les adresses de rentrée
-          </span>
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              RÉPARTITION DES FAMILLES PAR COMMUNE ({transport.communes.length})
+            </h3>
+            <span className="text-[11px] text-slate-500 font-light">
+              Effectifs constatés d’après les adresses de rentrée • Pourcentages dynamiques recalculés à 100 %
+            </span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full font-semibold">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Total : {totalCommunesPercent} % ({totalCommunesEleves} élèves)</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -351,7 +538,7 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {transport.communes.map((commune, index) => {
-                const numericPart = parseInt(commune.part, 10) || (commune.total ? Math.round((commune.total / (transport.stats?.totalEleves || 593)) * 100) : 0);
+                const numericPart = parseInt(commune.part, 10) || 0;
                 return (
                   <tr key={`commune-row-${index}`} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-2">
@@ -374,8 +561,8 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
                       <Input
                         value={commune.part}
                         onChange={(e) => handleCommuneChange(index, 'part', e.target.value)}
-                        className="h-8 text-xs bg-white"
-                        placeholder="ex: 15 %"
+                        className="h-8 text-xs bg-white font-semibold text-sky-800"
+                        title="Pourcentage automatique recalculé sur le total de 100%"
                       />
                     </td>
                     <td className="p-2">
@@ -402,6 +589,17 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
                 );
               })}
             </tbody>
+            <tfoot className="bg-slate-50/70 border-t font-semibold text-slate-700">
+              <tr>
+                <td className="p-2.5">Total cumulé</td>
+                <td className="p-2.5 font-bold text-sky-900">{totalCommunesEleves}</td>
+                <td className="p-2.5 font-bold text-emerald-700">{totalCommunesPercent} %</td>
+                <td className="p-2.5 text-xs text-slate-500 font-normal">
+                  Somme calibrée à 100 % (ajustement automatique)
+                </td>
+                <td className="p-2.5 text-right font-medium text-emerald-600">100%</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
