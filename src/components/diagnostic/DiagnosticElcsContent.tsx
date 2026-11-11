@@ -6,12 +6,72 @@ import DiagnosticSummary from './DiagnosticSummary';
 import { useElcsData } from './ElcsDataContext';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import AdminElcsSurveyEditor from './AdminElcsSurveyEditor';
+import type { ElcsDataType } from './ElcsDataContext';
 
 const DiagnosticElcsContent = () => {
   const elcsData = useElcsData();
 
+  const isEmbeddedInAdmin = typeof window !== 'undefined' && (
+    window.location.search.includes('embedded=1') ||
+    (window.self !== window.top)
+  );
+  const isEditRequested = typeof window !== 'undefined' && (
+    window.location.search.includes('edit=1') ||
+    window.location.search.includes('draft=1') ||
+    window.location.search.includes('mode=editor') ||
+    window.location.search.includes('admin=1')
+  );
+  const showEditorControls = isEmbeddedInAdmin || isEditRequested;
+
+  const handleElcsChange = (updatedElcs: ElcsDataType) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        let currentDraft: Record<string, unknown> = {};
+        if (raw) {
+          try {
+            currentDraft = JSON.parse(raw) || {};
+          } catch {
+            currentDraft = {};
+          }
+        }
+        const merged = {
+          ...currentDraft,
+          elcsData: updatedElcs,
+        };
+        window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
+        window.dispatchEvent(
+          new CustomEvent('lfjp_page_data_changed', {
+            detail: { elcsData: updatedElcs },
+          })
+        );
+        window.dispatchEvent(new Event('storage'));
+
+        if (window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage(
+              { type: 'lfjp_elcs_data_updated', elcsData: updatedElcs },
+              '*'
+            );
+          } catch {
+            // ignore
+          }
+        }
+      } catch (err) {
+        console.error('Failed to save elcs draft', err);
+      }
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
+      {showEditorControls && (
+        <AdminElcsSurveyEditor
+          elcsData={elcsData}
+          onChange={handleElcsChange}
+        />
+      )}
       <DiagnosticCard 
         title="Analyse du Climat Scolaire" 
         description="Basée sur les Enquêtes Locales de Climat Scolaire (ELCS) 2024-2025"

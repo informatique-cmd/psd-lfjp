@@ -110,7 +110,7 @@ const defaultPageData = {
     title: 'Organisation du bac blanc – session de décembre',
     description: 'Vue synthétique de l’organisation de la journée du 10 décembre. Chaque carte détaille la surveillance principale, le support dédié et les consignes logistiques pour garantir une couverture complète des salles.',
   },
-  restaurant: restaurantPageData,
+  restaurant: (pageDataFile as { restaurant?: typeof restaurantPageData }).restaurant || restaurantPageData,
   psdTimelines: {
     ...psdTimelineData,
     axe4: psdTimelineData.axe4 || {
@@ -122,7 +122,7 @@ const defaultPageData = {
       ],
     },
   },
-  elcsData,
+  elcsData: (pageDataFile as { elcsData?: typeof elcsData }).elcsData || elcsData,
   budgetData: (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData,
   transportData: (pageDataFile as { transportData?: TransportData }).transportData || defaultTransportData,
 };
@@ -3696,7 +3696,7 @@ const Admin = () => {
             </button>
 
             {/* Direct Page Navigation Shortcuts for Editor */}
-            <div className="hidden md:flex items-center gap-1.5 ml-2 border-l border-slate-800 pl-3">
+            <div className="hidden lg:flex items-center gap-1.5 ml-2 border-l border-slate-800 pl-3">
               <button
                 type="button"
                 onClick={() => {
@@ -3728,6 +3728,57 @@ const Admin = () => {
               >
                 <Sliders className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Axe 1 · Cadre de Vie</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVisualRoute('/transport-scolaire');
+                  setSelectedVisualElement(null);
+                  if (previewFrame.current) {
+                    previewFrame.current.src = `/transport-scolaire?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+                  }
+                }}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                  visualRoute === '/transport-scolaire' ? 'bg-sky-600/30 text-sky-300 border border-sky-500/40 font-bold' : 'text-slate-400 hover:text-sky-300 hover:bg-slate-800/60'
+                }`}
+                title="Accéder directement à l'Axe 1 Transport Scolaire"
+              >
+                <BusFront className="w-3.5 h-3.5 text-sky-400" />
+                <span>Axe 1 · Transport</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVisualRoute('/diagnostic');
+                  setSelectedVisualElement(null);
+                  if (previewFrame.current) {
+                    previewFrame.current.src = `/diagnostic?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+                  }
+                }}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                  visualRoute === '/diagnostic' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40 font-bold' : 'text-slate-400 hover:text-purple-300 hover:bg-slate-800/60'
+                }`}
+                title="Accéder directement au Diagnostic, Sondages Restauration et ELCS"
+              >
+                <ChartNoAxesCombined className="w-3.5 h-3.5 text-purple-400" />
+                <span>Diagnostic & Sondages</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVisualRoute('/plan-strategique');
+                  setSelectedVisualElement(null);
+                  if (previewFrame.current) {
+                    previewFrame.current.src = `/plan-strategique?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+                  }
+                }}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                  visualRoute === '/plan-strategique' ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40 font-bold' : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/60'
+                }`}
+                title="Accéder directement au Plan Stratégique"
+              >
+                <Target className="w-3.5 h-3.5 text-amber-400" />
+                <span>Plan Stratégique</span>
               </button>
             </div>
           </div>

@@ -24,14 +24,19 @@ import pageDataFile from '@/content/pageData.json';
 export function calculateDynamicCommunesPercentages(
   communes: TransportCommune[]
 ): TransportCommune[] {
-  if (!communes || communes.length === 0) return [];
-  const totals = communes.map((c) => Math.max(0, Number(c.total) || 0));
+  if (!communes || !Array.isArray(communes) || communes.length === 0) return [];
+  const safe = communes.map((c) => ({
+    ville: c?.ville || 'Commune',
+    total: Math.max(0, Number(c?.total) || 0),
+    part: c?.part || '0 %',
+  }));
+  const totals = safe.map((c) => c.total);
   const totalSum = totals.reduce((sum, val) => sum + val, 0);
 
   if (totalSum === 0) {
-    const basePct = Math.floor(100 / communes.length);
-    const rem = 100 - basePct * communes.length;
-    return communes.map((c, i) => ({
+    const basePct = Math.floor(100 / safe.length);
+    const rem = 100 - basePct * safe.length;
+    return safe.map((c, i) => ({
       ...c,
       part: `${i === 0 ? basePct + rem : basePct} %`,
     }));
@@ -48,7 +53,7 @@ export function calculateDynamicCommunesPercentages(
     floorPcts[remainders[i].index] += 1;
   }
 
-  return communes.map((c, i) => ({
+  return safe.map((c, i) => ({
     ...c,
     part: `${floorPcts[i]} %`,
   }));
@@ -60,19 +65,20 @@ export function calculateDynamicCommunesPercentages(
 export function deriveStatsFromCommunes(
   communes: TransportCommune[]
 ): TransportData['stats'] {
-  const totalEleves = communes.reduce((sum, c) => sum + (Math.max(0, Number(c.total)) || 0), 0);
+  const safeCommunes = Array.isArray(communes) ? communes : [];
+  const totalEleves = safeCommunes.reduce((sum, c) => sum + (Math.max(0, Number(c?.total)) || 0), 0);
 
   const getNumPart = (c?: TransportCommune) => {
     if (!c) return 0;
-    return parseInt(c.part, 10) || 0;
+    return parseInt(String(c.part || '0'), 10) || 0;
   };
 
-  const saly = communes.find((c) => c.ville.toLowerCase().includes('saly'));
+  const saly = safeCommunes.find((c) => (c?.ville || '').toLowerCase().includes('saly'));
   const partSalyNum = getNumPart(saly);
 
   // Peripherie: Ngaparou, Somone, Mbour, Malicounda, Nguerigne
-  const peripherieList = communes.filter((c) => {
-    const v = c.ville.toLowerCase();
+  const peripherieList = safeCommunes.filter((c) => {
+    const v = (c?.ville || '').toLowerCase();
     return (
       v.includes('ngaparou') ||
       v.includes('somone') ||
@@ -110,16 +116,19 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed?.transportData?.communes && parsed.transportData.communes.length > 0) {
+          if (parsed?.transportData?.communes && Array.isArray(parsed.transportData.communes) && parsed.transportData.communes.length > 0) {
             const balancedCommunes = calculateDynamicCommunesPercentages(parsed.transportData.communes);
             const dynamicStats = deriveStatsFromCommunes(balancedCommunes);
             return {
+              ...defaultTransportData,
               ...parsed.transportData,
               communes: balancedCommunes,
               stats: {
-                ...parsed.transportData.stats,
+                ...(parsed.transportData.stats || {}),
                 ...dynamicStats,
               },
+              circuits: Array.isArray(parsed.transportData.circuits) && parsed.transportData.circuits.length > 0 ? parsed.transportData.circuits : defaultTransportData.circuits,
+              tarifs: Array.isArray(parsed.transportData.tarifs) && parsed.transportData.tarifs.length > 0 ? parsed.transportData.tarifs : defaultTransportData.tarifs,
             } as TransportData;
           }
         }
@@ -128,12 +137,15 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
       }
     }
     const fileTransport = (pageDataFile as { transportData?: TransportData }).transportData;
-    if (fileTransport?.communes && fileTransport.communes.length > 0) {
+    if (fileTransport?.communes && Array.isArray(fileTransport.communes) && fileTransport.communes.length > 0) {
       const balanced = calculateDynamicCommunesPercentages(fileTransport.communes);
       return {
+        ...defaultTransportData,
         ...fileTransport,
         communes: balanced,
         stats: deriveStatsFromCommunes(balanced),
+        circuits: Array.isArray(fileTransport.circuits) && fileTransport.circuits.length > 0 ? fileTransport.circuits : defaultTransportData.circuits,
+        tarifs: Array.isArray(fileTransport.tarifs) && fileTransport.tarifs.length > 0 ? fileTransport.tarifs : defaultTransportData.tarifs,
       };
     }
     const balancedDefault = calculateDynamicCommunesPercentages(defaultTransportData.communes);

@@ -11,6 +11,7 @@ import { restaurantPageData } from '@/data/restaurantPageData';
 import pageDataFile from '@/content/pageData.json';
 import { useContentDraft } from '@/lib/contentDraft';
 import { CHART_COLORS } from './restaurant/restaurantData';
+import AdminRestaurantSurveyEditor from './restaurant/AdminRestaurantSurveyEditor';
 
 const restaurantDraftFallback = {
   ...pageDataFile,
@@ -20,8 +21,67 @@ const restaurantDraftFallback = {
 const DiagnosticRestaurantContent = () => {
   const pageData = useContentDraft('lfjp-admin-page-data-draft', restaurantDraftFallback);
   const restaurant = pageData.restaurant;
+
+  const isEmbeddedInAdmin = typeof window !== 'undefined' && (
+    window.location.search.includes('embedded=1') ||
+    (window.self !== window.top)
+  );
+  const isEditRequested = typeof window !== 'undefined' && (
+    window.location.search.includes('edit=1') ||
+    window.location.search.includes('draft=1') ||
+    window.location.search.includes('mode=editor') ||
+    window.location.search.includes('admin=1')
+  );
+  const showEditorControls = isEmbeddedInAdmin || isEditRequested;
+
+  const handleRestaurantChange = (updatedRestaurant: typeof restaurantPageData) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        let currentDraft: Record<string, unknown> = {};
+        if (raw) {
+          try {
+            currentDraft = JSON.parse(raw) || {};
+          } catch {
+            currentDraft = {};
+          }
+        }
+        const merged = {
+          ...currentDraft,
+          restaurant: updatedRestaurant,
+        };
+        window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
+        window.dispatchEvent(
+          new CustomEvent('lfjp_page_data_changed', {
+            detail: { restaurant: updatedRestaurant },
+          })
+        );
+        window.dispatchEvent(new Event('storage'));
+
+        if (window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage(
+              { type: 'lfjp_restaurant_data_updated', restaurant: updatedRestaurant },
+              '*'
+            );
+          } catch {
+            // ignore
+          }
+        }
+      } catch (err) {
+        console.error('Failed to save restaurant draft', err);
+      }
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
+      {showEditorControls && (
+        <AdminRestaurantSurveyEditor
+          restaurant={restaurant}
+          onChange={handleRestaurantChange}
+        />
+      )}
       <DiagnosticCard
         title="Synthèse du sondage sur la restauration scolaire – 1er trimestre 2025"
         description="Analyse basée sur le sondage auprès des parents d'élèves – 87 réponses"

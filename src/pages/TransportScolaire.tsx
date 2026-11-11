@@ -201,11 +201,11 @@ const TransportScolaire = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
-                    {activeCommunes.map((item) => (
-                      <tr key={item.ville}>
-                        <td className="px-4 py-2 font-medium capitalize">{item.ville}</td>
-                        <td className="px-4 py-2 text-right">{item.total}</td>
-                        <td className="px-4 py-2 text-right">{item.part}</td>
+                    {activeCommunes.map((item, idx) => (
+                      <tr key={`commune-row-${item?.ville || 'c'}-${idx}`}>
+                        <td className="px-4 py-2 font-medium capitalize">{item?.ville || 'Commune'}</td>
+                        <td className="px-4 py-2 text-right">{item?.total ?? 0}</td>
+                        <td className="px-4 py-2 text-right">{item?.part || '0 %'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -323,19 +323,19 @@ const TransportScolaire = () => {
                     Lignes de ramassage préconisées
                   </h4>
                   <div className="grid gap-4 md:grid-cols-3">
-                    {liveTransport.circuits.map((c, i) => (
-                      <div key={i} className="p-4 rounded-xl border border-sky-100 bg-sky-50/40 space-y-2">
+                    {(liveTransport.circuits || []).map((c, i) => (
+                      <div key={`circuit-${c?.name || i}-${i}`} className="p-4 rounded-xl border border-sky-100 bg-sky-50/40 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-sky-900">{c.name}</span>
+                          <span className="font-bold text-sm text-sky-900">{c?.name || `Ligne ${i + 1}`}</span>
                           <span className="text-xs bg-white text-sky-800 font-semibold px-2 py-0.5 rounded border border-sky-200">
-                            Départ {c.horaireDepart}
+                            Départ {c?.horaireDepart || ''}
                           </span>
                         </div>
                         <p className="text-xs text-slate-600">
-                          <strong>Arrêts :</strong> {c.arrets}
+                          <strong>Arrêts :</strong> {c?.arrets || ''}
                         </p>
                         <p className="text-xs text-sky-800 font-semibold">
-                          Élèves concernés : ~{c.eleves}
+                          Élèves concernés : ~{c?.eleves ?? 0}
                         </p>
                       </div>
                     ))}
@@ -348,13 +348,13 @@ const TransportScolaire = () => {
                       Grille tarifaire par zone kilométrique
                     </h4>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      {liveTransport.tarifs.map((t, i) => (
-                        <div key={i} className="p-3.5 rounded-xl border bg-white space-y-1 text-sm shadow-xs">
-                          <p className="font-bold text-slate-900">{t.zone}</p>
-                          <p className="text-xs text-slate-500">{t.description}</p>
+                      {(liveTransport.tarifs || []).map((t, i) => (
+                        <div key={`tarif-${t?.zone || i}-${i}`} className="p-3.5 rounded-xl border bg-white space-y-1 text-sm shadow-xs">
+                          <p className="font-bold text-slate-900">{t?.zone || `Zone ${i + 1}`}</p>
+                          <p className="text-xs text-slate-500">{t?.description || ''}</p>
                           <div className="pt-2 border-t mt-2 flex items-center justify-between">
-                            <span className="font-bold text-sky-800">{t.mensuel.toLocaleString('fr-FR')} FCFA / mois</span>
-                            <span className="text-xs text-slate-500">({t.annuel.toLocaleString('fr-FR')} FCFA / an)</span>
+                            <span className="font-bold text-sky-800">{(Number(t?.mensuel) || 0).toLocaleString('fr-FR')} FCFA / mois</span>
+                            <span className="text-xs text-slate-500">({(Number(t?.annuel) || 0).toLocaleString('fr-FR')} FCFA / an)</span>
                           </div>
                         </div>
                       ))}

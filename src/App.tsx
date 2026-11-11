@@ -67,6 +67,8 @@ import ManagedPage from "./pages/ManagedPage";
 import PageTextEditor from "./components/PageTextEditor";
 import { RouteTracker } from "./lib/navigation";
 
+import ErrorBoundary from "./components/ErrorBoundary";
+
 // Créer l'instance QueryClient en dehors du composant pour éviter les recréations
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,15 +82,16 @@ const queryClient = new QueryClient({
 const App = () => {
   return (
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <ScrollToTop />
-            <RouteTracker />
-            <PageTextEditor />
-            <div className="flex flex-col min-h-screen">
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <ScrollToTop />
+              <RouteTracker />
+              <PageTextEditor />
+              <div className="flex flex-col min-h-screen">
               <Routes>
                 <Route path="/admin" element={<Navigate to="/espace-direction" replace />} />
                 <Route path="/espace-direction" element={<Admin />} />
@@ -459,6 +462,7 @@ const App = () => {
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
+      </ErrorBoundary>
     </React.StrictMode>
   );
 };
