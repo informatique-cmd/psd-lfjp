@@ -16,36 +16,90 @@ import {
 } from 'lucide-react';
 
 import { defaultTransportData, type TransportData } from '../data/budgetTransportData';
-
-const communes = [
-  { ville: 'Saly', total: 291, part: '49 %' },
-  { ville: 'Ngaparou', total: 120, part: '20 %' },
-  { ville: 'Mbour', total: 99, part: '17 %' },
-  { ville: 'Somone', total: 30, part: '5 %' },
-  { ville: 'Malicounda', total: 23, part: '4 %' },
-  { ville: 'Nguerigne', total: 14, part: '2 %' },
-  { ville: 'Autres (> 30 km)', total: 16, part: '3 %' }
-];
+import pageDataFile from '@/content/pageData.json';
+import { useSmartBack } from '@/lib/navigation';
 
 const TransportScolaire = () => {
   const navigate = useNavigate();
+  const handleBack = useSmartBack('/plan-strategique');
 
-  const liveTransport = React.useMemo(() => {
+  const getInitialTransport = (): TransportData => {
     if (typeof window !== 'undefined') {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed?.transportData) return parsed.transportData as TransportData;
+          if (parsed?.transportData?.communes && parsed.transportData.communes.length > 0) {
+            return parsed.transportData as TransportData;
+          }
         }
       } catch {
-        return defaultTransportData;
+        // fallback
       }
     }
+    const fileTransport = (pageDataFile as { transportData?: TransportData }).transportData;
+    if (fileTransport?.communes && fileTransport.communes.length > 0) {
+      return fileTransport;
+    }
     return defaultTransportData;
+  };
+
+  const [liveTransport, setLiveTransport] = React.useState<TransportData>(getInitialTransport);
+
+  React.useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed?.transportData?.communes) {
+            setLiveTransport(parsed.transportData as TransportData);
+            return;
+          }
+        }
+        const fileTransport = (pageDataFile as { transportData?: TransportData }).transportData;
+        if (fileTransport?.communes && fileTransport.communes.length > 0) {
+          setLiveTransport(fileTransport);
+          return;
+        }
+        setLiveTransport(defaultTransportData);
+      } catch {
+        // ignore
+      }
+    };
+
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent<{ transportData?: TransportData }>;
+      if (customEvent.detail?.transportData?.communes) {
+        setLiveTransport(customEvent.detail.transportData);
+        return;
+      }
+      handleStorage();
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'lfjp-page-data-update' && event.data.data?.transportData) {
+        setLiveTransport(event.data.data.transportData);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('lfjp_page_data_changed', handleSync);
+    window.addEventListener('lfjp_draft_cleared', handleStorage);
+    window.addEventListener('message', handleMessage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('lfjp_page_data_changed', handleSync);
+      window.removeEventListener('lfjp_draft_cleared', handleStorage);
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
-  const activeCommunes = (liveTransport.communes && liveTransport.communes.length > 0) ? liveTransport.communes : communes;
+  const activeCommunes = (liveTransport.communes && liveTransport.communes.length > 0)
+    ? liveTransport.communes
+    : defaultTransportData.communes;
 
   return (
     <div className="min-h-screen flex flex-col font-raleway">
@@ -69,11 +123,11 @@ const TransportScolaire = () => {
       </div>
 
       <div className="container mx-auto px-6 py-4 flex gap-2">
-        <Button variant="outline" onClick={() => navigate('/plan-strategique')}>
+        <Button variant="outline" onClick={handleBack} className="cursor-pointer">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Retour
         </Button>
-        <Button variant="outline" onClick={() => navigate('/')}> 
+        <Button variant="outline" onClick={() => navigate('/')} className="cursor-pointer"> 
           <Home className="mr-2 h-4 w-4" />
           Accueil
         </Button>

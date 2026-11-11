@@ -677,8 +677,14 @@ const Admin = () => {
         if (draftRaw) {
           try {
             const draftParsed = JSON.parse(draftRaw) as Record<string, unknown>;
-            if (draftParsed?.budgetData) {
-              parsed.budgetData = draftParsed.budgetData;
+            if (draftParsed && typeof draftParsed === 'object') {
+              if (draftParsed.budgetData) parsed.budgetData = draftParsed.budgetData;
+              if (draftParsed.transportData) parsed.transportData = draftParsed.transportData;
+              if (draftParsed.restaurant) parsed.restaurant = draftParsed.restaurant;
+              if (draftParsed.keyMetrics) parsed.keyMetrics = draftParsed.keyMetrics;
+              if (draftParsed.bacBlancSchedule) parsed.bacBlancSchedule = draftParsed.bacBlancSchedule;
+              if (draftParsed.filmAnnuelData) parsed.filmAnnuelData = draftParsed.filmAnnuelData;
+              if (draftParsed.rubriques) parsed.rubriques = draftParsed.rubriques;
             }
           } catch {
             // ignore draft parse error
@@ -716,11 +722,9 @@ const Admin = () => {
       setPageDataJson(finalPageDataStr);
       try {
         const parsedFinal = JSON.parse(finalPageDataStr) as Record<string, unknown>;
-        if (parsedFinal?.budgetData) {
-          window.dispatchEvent(
-            new CustomEvent('lfjp_page_data_changed', { detail: { budgetData: parsedFinal.budgetData } })
-          );
-        }
+        window.dispatchEvent(
+          new CustomEvent('lfjp_page_data_changed', { detail: parsedFinal })
+        );
       } catch {
         // ignore
       }
@@ -1393,6 +1397,36 @@ const Admin = () => {
         });
         return;
       }
+      if (event.data?.type === 'lfjp_transport_data_updated' && event.data.transportData) {
+        const nextTransportData = event.data.transportData;
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            parsed.transportData = nextTransportData;
+            const updated = JSON.stringify(parsed, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
+      if (event.data?.type === 'lfjp-page-data-update' && event.data.data) {
+        const nextData = event.data.data;
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            Object.assign(parsed, nextData);
+            const updated = JSON.stringify(parsed, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
       if (event.data?.type !== 'lfjp-cms-select' || !isRecord(event.data.selection)) return;
       if (event.data.page && typeof event.data.page === 'string') {
         setVisualRoute(event.data.page);
@@ -1418,14 +1452,13 @@ const Admin = () => {
       if (event.key === pageTextDraftStorageKey && event.newValue) setPageTextJson(event.newValue);
       if (event.key === pageDataDraftStorageKey && event.newValue) setPageDataJson(event.newValue);
     };
-    const handleBudgetUpdate = (event: Event) => {
-      const custom = event as CustomEvent<{ budgetData?: BudgetData }>;
-      if (custom.detail?.budgetData) {
-        const nextBudget = custom.detail.budgetData;
+    const handlePageDataUpdate = (event: Event) => {
+      const custom = event as CustomEvent<Record<string, unknown>>;
+      if (custom.detail) {
         setPageDataJson((prev) => {
           try {
             const parsed = JSON.parse(prev);
-            parsed.budgetData = nextBudget;
+            Object.assign(parsed, custom.detail);
             return JSON.stringify(parsed, null, 2);
           } catch {
             return prev;
@@ -1434,10 +1467,10 @@ const Admin = () => {
       }
     };
     window.addEventListener('storage', syncVisualDraft);
-    window.addEventListener('lfjp_page_data_changed', handleBudgetUpdate);
+    window.addEventListener('lfjp_page_data_changed', handlePageDataUpdate);
     return () => {
       window.removeEventListener('storage', syncVisualDraft);
-      window.removeEventListener('lfjp_page_data_changed', handleBudgetUpdate);
+      window.removeEventListener('lfjp_page_data_changed', handlePageDataUpdate);
     };
   }, []);
 
@@ -1982,13 +2015,19 @@ const Admin = () => {
   const saveDraft = () => {
     try {
       const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
-      // Read current draft from localStorage first so we NEVER revert recent budgetData modifications
+      // Read current draft from localStorage first so we NEVER revert recent modifications
       const draftRaw = typeof window !== 'undefined' ? window.localStorage.getItem(pageDataDraftStorageKey) : null;
       if (draftRaw) {
         try {
           const draftParsed = JSON.parse(draftRaw) as Record<string, unknown>;
-          if (draftParsed?.budgetData) {
-            parsed.budgetData = draftParsed.budgetData;
+          if (draftParsed && typeof draftParsed === 'object') {
+            if (draftParsed.budgetData) parsed.budgetData = draftParsed.budgetData;
+            if (draftParsed.transportData) parsed.transportData = draftParsed.transportData;
+            if (draftParsed.restaurant) parsed.restaurant = draftParsed.restaurant;
+            if (draftParsed.keyMetrics) parsed.keyMetrics = draftParsed.keyMetrics;
+            if (draftParsed.bacBlancSchedule) parsed.bacBlancSchedule = draftParsed.bacBlancSchedule;
+            if (draftParsed.filmAnnuelData) parsed.filmAnnuelData = draftParsed.filmAnnuelData;
+            if (draftParsed.rubriques) parsed.rubriques = draftParsed.rubriques;
           }
         } catch {
           // ignore draft parse error
@@ -2011,11 +2050,11 @@ const Admin = () => {
       // Synchronize iframe preview
       try {
         previewFrame.current?.contentWindow?.postMessage(
-          { type: 'lfjp_budget_data_updated', budgetData: parsed.budgetData },
+          { type: 'lfjp-page-data-update', data: parsed },
           window.location.origin
         );
         window.dispatchEvent(
-          new CustomEvent('lfjp_page_data_changed', { detail: { budgetData: parsed.budgetData } })
+          new CustomEvent('lfjp_page_data_changed', { detail: parsed })
         );
       } catch {
         // ignore
