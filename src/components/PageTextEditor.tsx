@@ -124,8 +124,32 @@ const PageTextEditor = () => {
     };
   }, [isEditorRoute, isEmbeddedInAdmin, location.pathname, overrides]);
 
-  // When modification mode is active inside the Visual Editor iframe, intercept clicks on links and buttons in capture phase
-  // so that clicking anywhere on the page allows selecting and editing the text/content instead of navigating away!
+const isInteractiveElement = (el: Element | null): boolean => {
+  if (!el) return false;
+  return Boolean(
+    el.closest('input') ||
+    el.closest('textarea') ||
+    el.closest('select') ||
+    el.closest('option') ||
+    el.closest('button') ||
+    el.closest('label') ||
+    el.closest('[role="switch"]') ||
+    el.closest('[role="slider"]') ||
+    el.closest('[role="tab"]') ||
+    el.closest('[role="tablist"]') ||
+    el.closest('[role="button"]') ||
+    el.closest('[data-page-text-editor]') ||
+    el.closest('[data-interactive="true"]') ||
+    el.closest('.admin-dashboard-interactive') ||
+    el.closest('#admin-dashboard-root') ||
+    el.closest('form') ||
+    el.closest('table')
+  );
+};
+
+  // When modification mode is active inside the Visual Editor iframe, only intercept clicks on navigation links
+  // so that clicking on links allows editing the link text instead of navigating away.
+  // We NEVER prevent default on inputs, sliders, buttons, or dashboards!
   useEffect(() => {
     if (!isEmbeddedInAdmin || !isAdmin || !isEditing || isEditorRoute) return;
     const interceptClick = (event: MouseEvent) => {
@@ -135,10 +159,19 @@ const PageTextEditor = () => {
       if (!root || !root.contains(target)) return;
 
       const element = target instanceof Element ? target : target.parentElement;
-      if (element?.closest('[data-page-text-editor]')) return;
+      if (!element) return;
 
-      event.preventDefault();
-      event.stopPropagation();
+      // DO NOT intercept any interactive elements (inputs, buttons, selects, sliders, dashboards)!
+      if (isInteractiveElement(element)) {
+        return;
+      }
+
+      // Only prevent default on navigation links (<a>)
+      const anchor = element.closest('a');
+      if (anchor) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     };
 
     document.addEventListener('click', interceptClick, true);
@@ -154,7 +187,12 @@ const PageTextEditor = () => {
       if (!root || !root.contains(target)) return;
 
       const element = target instanceof Element ? target : target.parentElement;
-      if (!element || element.closest('[data-page-text-editor]')) return;
+      if (!element) return;
+
+      // DO NOT intercept any interactive elements (inputs, buttons, selects, sliders, dashboards)!
+      if (isInteractiveElement(element)) {
+        return;
+      }
 
       const image = element.closest('img');
       const anchor = element.closest('a');

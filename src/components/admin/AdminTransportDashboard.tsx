@@ -165,7 +165,8 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
       setTransport(loadCurrentTransport());
     };
     const handleSync = (e: Event) => {
-      const customEvent = e as CustomEvent<{ transportData?: TransportData }>;
+      const customEvent = e as CustomEvent<{ transportData?: TransportData; source?: string }>;
+      if (customEvent.detail?.source === 'admin_transport_dashboard') return;
       if (customEvent.detail?.transportData) {
         const incoming = customEvent.detail.transportData;
         const balanced = calculateDynamicCommunesPercentages(incoming.communes || []);
@@ -207,20 +208,19 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
           window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
           window.dispatchEvent(
             new CustomEvent('lfjp_page_data_changed', {
-              detail: { transportData: nextTransport },
+              detail: { transportData: nextTransport, source: 'admin_transport_dashboard' },
             })
           );
-          window.dispatchEvent(new Event('storage'));
 
           if (window.parent && window.parent !== window) {
             try {
               window.parent.postMessage(
-                { type: 'lfjp_transport_data_updated', transportData: nextTransport },
+                { type: 'lfjp_transport_data_updated', transportData: nextTransport, source: 'admin_transport_dashboard' },
                 '*'
               );
               window.parent.dispatchEvent(
                 new CustomEvent('lfjp_page_data_changed', {
-                  detail: { transportData: nextTransport },
+                  detail: { transportData: nextTransport, source: 'admin_transport_dashboard' },
                 })
               );
             } catch {
@@ -232,7 +232,7 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
         console.error('Failed to persist transport draft', err);
       }
       onDataChange?.(nextTransport);
-      setTimeout(() => setSaveStatus('saved'), 250);
+      setTimeout(() => setSaveStatus('saved'), 200);
     },
     [onDataChange]
   );
