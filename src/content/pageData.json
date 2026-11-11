@@ -1131,6 +1131,11 @@
         "ville": "Autres (> 30 km)",
         "total": 16,
         "part": "3 %"
+      },
+      {
+        "ville": "Mali",
+        "total": 10,
+        "part": "2 %"
       }
     ],
     "stats": {
