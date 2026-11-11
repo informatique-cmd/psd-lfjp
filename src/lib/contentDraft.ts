@@ -5,9 +5,14 @@ export const isContentDraftPreview = () =>
   typeof window !== 'undefined' && (
     new URLSearchParams(window.location.search).get('draft') === '1' ||
     new URLSearchParams(window.location.search).get('edit') === '1' ||
+    new URLSearchParams(window.location.search).get('mode') === 'editor' ||
     window.location.pathname.startsWith('/espace-direction') ||
+    window.location.pathname.startsWith('/admin') ||
     window.sessionStorage.getItem('lfjp-preview-mode') === '1' ||
-    window.sessionStorage.getItem('lfjp_preview_active') === '1'
+    window.sessionStorage.getItem('lfjp_preview_active') === '1' ||
+    window.sessionStorage.getItem('lfjp_admin_local_session') === '1' ||
+    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
+    window.self !== window.top
   );
 
 export const clearAllDraftStorage = () => {

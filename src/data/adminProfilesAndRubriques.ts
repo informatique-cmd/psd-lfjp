@@ -210,7 +210,7 @@ export const defaultAccounts: UserAccount[] = [
     password: 'editeur123',
     name: 'Éditeur de Contenus',
     role: 'editor',
-    canDelete: false, // Strict: no deletion allowed for editor!
+    canDelete: true, // Editor has full privileges to add, modify, and delete content/projects as requested
     canEdit: true,
     canCreate: true,
     canPublish: true, // Editor can deploy directly to Vercel & GitHub
@@ -233,7 +233,7 @@ export function loadConfiguredAccounts(): UserAccount[] {
           if (acc && (acc.id === 'superadmin' || acc.id === 'editor')) {
             map.set(acc.id, {
               ...acc,
-              canDelete: acc.id === 'superadmin',
+              canDelete: true,
               canPublish: true,
             });
           }
@@ -311,7 +311,7 @@ export function loadActiveUserProfile(): UserProfile {
       if (parsed && typeof parsed.email === 'string') {
         return {
           ...parsed,
-          canDelete: parsed.role === 'superadmin' || parsed.id === 'superadmin',
+          canDelete: true,
           canPublish: true,
         };
       }
