@@ -1162,12 +1162,6 @@
         "eleves": 65,
         "arrets": "Saly Port, Golf Club, Saly Joseph, Malicounda Échangeur, Lycée",
         "horaireDepart": "07h25"
-      },
-      {
-        "name": "Ligne 4 : Nouvelle ligne → LFJP",
-        "eleves": 25,
-        "arrets": "Arrêt 1, Arrêt 2, Lycée",
-        "horaireDepart": "07h20"
       }
     ],
     "tarifs": [
