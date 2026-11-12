@@ -16,18 +16,18 @@ const Diagnostic = () => {
     <div className="min-h-screen flex flex-col font-raleway">
       <Navbar showLogo={true} />
       
-      <div className="bg-gradient-to-r from-french-blue to-blue-700 text-white py-24 md:py-28">
+      <div className="bg-gradient-to-r from-french-blue to-blue-700 text-white py-12 md:py-16">
         <div className="container mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-playfair font-bold mb-4 opacity-0 animate-fade-in">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-playfair font-bold mb-3 opacity-0 animate-fade-in">
             Diagnostic
           </h1>
-          <p className="text-xl md:text-2xl font-raleway font-light max-w-3xl opacity-0 animate-fade-in-delay-1">
+          <p className="text-lg md:text-xl font-raleway font-light max-w-3xl opacity-0 animate-fade-in-delay-1">
             Analyse de la situation actuelle pour orienter le développement
           </p>
         </div>
       </div>
 
-      <section className="py-12 md:py-16 bg-gray-50">
+      <section className="py-8 md:py-10 bg-gray-50 flex-grow">
         <div className="container mx-auto px-6">
           <Tabs defaultValue={initialTab} className="w-full">
             <TabsList className="mb-8 w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 h-auto p-2 bg-white shadow-lg rounded-xl">

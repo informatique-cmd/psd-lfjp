@@ -19,7 +19,10 @@ interface RestaurantPieChartProps {
   colors: string[];
 }
 
-const RestaurantPieChart: React.FC<RestaurantPieChartProps> = ({ title, data, colors }) => {
+const RestaurantPieChart: React.FC<RestaurantPieChartProps> = ({ title, data = [], colors = ['#0055A4', '#EF4135', '#00A86B', '#F59E0B'] }) => {
+  const safeData = Array.isArray(data) ? data : [];
+  const safeColors = Array.isArray(colors) && colors.length > 0 ? colors : ['#0055A4', '#EF4135', '#00A86B', '#F59E0B'];
+
   return (
     <div className="bg-white p-4 rounded-lg border border-french-blue/10 shadow-md">
       <h3 className="text-lg font-medium text-french-blue mb-4">{title}</h3>
@@ -27,7 +30,7 @@ const RestaurantPieChart: React.FC<RestaurantPieChartProps> = ({ title, data, co
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
-              data={data}
+              data={safeData}
               cx="50%"
               cy="50%"
               labelLine={false}
@@ -36,8 +39,8 @@ const RestaurantPieChart: React.FC<RestaurantPieChartProps> = ({ title, data, co
               dataKey="value"
               label={({ name, value }) => `${name}: ${value}%`}
             >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              {safeData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={safeColors[index % safeColors.length]} />
               ))}
             </Pie>
             <Tooltip formatter={(value) => `${value}%`} />

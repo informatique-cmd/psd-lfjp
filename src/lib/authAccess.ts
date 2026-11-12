@@ -62,16 +62,8 @@ export function shouldShowEditorControls(): boolean {
     return false;
   }
 
-  const isEmbeddedInAdmin = window.self !== window.top || window.location.search.includes('embedded=1');
-  const isEditRequested =
-    window.location.search.includes('edit=1') ||
-    window.location.search.includes('mode=editor') ||
-    window.location.search.includes('admin=1');
-  const isEditorPath =
-    window.location.pathname.startsWith('/espace-direction') ||
-    window.location.pathname.startsWith('/admin');
-
-  return isEmbeddedInAdmin || isEditRequested || isEditorPath;
+  // Authenticated Editor or SuperAdmin has full access to editing panels and live sync
+  return true;
 }
 
 /**

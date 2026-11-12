@@ -1,8 +1,11 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import DiagnosticCard from './DiagnosticCard';
 import MetricCard from './MetricCard';
 import DiagnosticSummary from './DiagnosticSummary';
+import AdminElcsSurveyEditor from './AdminElcsSurveyEditor';
 import { useElcsData, sanitizeElcsData, type ElcsDataType } from './ElcsDataContext';
 import { usePrivilegedAccess } from '@/lib/authAccess';
 

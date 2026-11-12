@@ -18,13 +18,14 @@ interface StudentDistributionChartProps {
   }>;
 }
 
-const StudentDistributionChart: React.FC<StudentDistributionChartProps> = ({ data }) => {
+const StudentDistributionChart: React.FC<StudentDistributionChartProps> = ({ data = [] }) => {
+  const safeData = Array.isArray(data) ? data : [];
   return (
     <div className="bg-white p-4 rounded-lg border border-french-blue/10 shadow-md h-full">
       <h3 className="text-lg font-medium text-french-blue mb-4">Répartition des enfants par niveau</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart
-          data={data}
+          data={safeData}
           margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" />

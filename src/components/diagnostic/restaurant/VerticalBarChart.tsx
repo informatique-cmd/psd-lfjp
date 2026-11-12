@@ -21,13 +21,14 @@ interface VerticalBarChartProps {
   data: ChartData[];
 }
 
-const VerticalBarChart: React.FC<VerticalBarChartProps> = ({ title, data }) => {
+const VerticalBarChart: React.FC<VerticalBarChartProps> = ({ title, data = [] }) => {
+  const safeData = Array.isArray(data) ? data : [];
   return (
     <div className="bg-white p-4 rounded-lg border border-french-blue/10 shadow-md">
       <h3 className="text-lg font-medium text-french-blue mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart
-          data={data}
+          data={safeData}
           margin={{ top: 5, right: 20, left: 0, bottom: 80 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
