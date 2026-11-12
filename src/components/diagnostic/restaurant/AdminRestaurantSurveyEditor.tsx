@@ -11,6 +11,7 @@ import {
   Link2,
 } from 'lucide-react';
 import type { RestaurantPageData } from '@/data/restaurantPageData';
+import { usePrivilegedAccess } from '@/lib/authAccess';
 
 export interface AdminRestaurantSurveyEditorProps {
   restaurant: RestaurantPageData;
@@ -21,10 +22,15 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
   restaurant,
   onChange,
 }) => {
+  const { isPrivileged } = usePrivilegedAccess();
   const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<
     'student' | 'interest' | 'lunch' | 'days' | 'meals' | 'prices' | 'metrics'
   >('student');
+
+  if (!isPrivileged) {
+    return null;
+  }
 
   // Helper to re-balance student percentages to 100%
   const rebalanceStudentPercentages = () => {

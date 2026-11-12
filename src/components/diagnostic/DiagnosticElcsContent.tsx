@@ -4,28 +4,18 @@ import DiagnosticCard from './DiagnosticCard';
 import MetricCard from './MetricCard';
 import DiagnosticSummary from './DiagnosticSummary';
 import { useElcsData, sanitizeElcsData, type ElcsDataType } from './ElcsDataContext';
+import { usePrivilegedAccess } from '@/lib/authAccess';
 
 const DiagnosticElcsContent = () => {
   const rawElcsData = useElcsData();
   const elcsData = React.useMemo(() => sanitizeElcsData(rawElcsData), [rawElcsData]);
-
-  const isEmbeddedInAdmin = typeof window !== 'undefined' && (
-    window.location.search.includes('embedded=1') ||
-    (window.self !== window.top)
-  );
-  const isEditRequested = typeof window !== 'undefined' && (
-    window.location.search.includes('edit=1') ||
-    window.location.search.includes('draft=1') ||
-    window.location.search.includes('mode=editor') ||
-    window.location.search.includes('admin=1')
-  );
-  const hasActiveSession = typeof window !== 'undefined' && (
-    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
-    window.sessionStorage.getItem('lfjp_admin_local_session') === '1'
-  );
-  const showEditorControls = isEmbeddedInAdmin || isEditRequested || hasActiveSession;
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
 
   const handleElcsChange = (updatedElcs: ElcsDataType) => {
+    if (!isPrivileged) {
+      console.warn('Action de modification ignorée : utilisateur non authentifié.');
+      return;
+    }
     if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');

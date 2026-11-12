@@ -11,13 +11,15 @@ import pageDataFile from '@/content/pageData.json';
 import { CHART_COLORS } from './restaurant/restaurantData';
 import AdminRestaurantSurveyEditor from './restaurant/AdminRestaurantSurveyEditor';
 
+import { usePrivilegedAccess, isPrivilegedUser } from '@/lib/authAccess';
+
 const restaurantDraftFallback = {
   ...pageDataFile,
   restaurant: (pageDataFile as { restaurant?: typeof restaurantPageData }).restaurant || restaurantPageData,
 };
 
 const getInitialRestaurant = (): typeof restaurantPageData => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && isPrivilegedUser()) {
     try {
       const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
       if (saved) {
@@ -38,6 +40,7 @@ const getInitialRestaurant = (): typeof restaurantPageData => {
 
 const DiagnosticRestaurantContent = () => {
   const [restaurant, setRestaurant] = React.useState<typeof restaurantPageData>(getInitialRestaurant);
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
 
   React.useEffect(() => {
     const handleSync = (e: Event) => {
@@ -67,23 +70,11 @@ const DiagnosticRestaurantContent = () => {
     };
   }, []);
 
-  const isEmbeddedInAdmin = typeof window !== 'undefined' && (
-    window.location.search.includes('embedded=1') ||
-    (window.self !== window.top)
-  );
-  const isEditRequested = typeof window !== 'undefined' && (
-    window.location.search.includes('edit=1') ||
-    window.location.search.includes('draft=1') ||
-    window.location.search.includes('mode=editor') ||
-    window.location.search.includes('admin=1')
-  );
-  const hasActiveSession = typeof window !== 'undefined' && (
-    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
-    window.sessionStorage.getItem('lfjp_admin_local_session') === '1'
-  );
-  const showEditorControls = isEmbeddedInAdmin || isEditRequested || hasActiveSession;
-
   const handleRestaurantChange = (updatedRestaurant: typeof restaurantPageData) => {
+    if (!isPrivileged) {
+      console.warn('Action de modification ignorée : utilisateur non authentifié.');
+      return;
+    }
     setRestaurant(updatedRestaurant);
     if (typeof window !== 'undefined') {
       try {

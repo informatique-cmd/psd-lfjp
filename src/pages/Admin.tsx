@@ -379,11 +379,11 @@ const Admin = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [pullRequest, setPullRequest] = useState<{ number: number; url: string } | null>(null);
 
-  // =========================================================================
-  // USER PROFILES & AUTH ROLES (SuperAdmin, Admin vs Simple Editor)
-  // =========================================================================
   const [configuredAccounts, setConfiguredAccounts] = useState<UserAccount[]>(loadConfiguredAccounts);
-  const [userProfile, setUserProfile] = useState<UserProfile>(loadActiveUserProfile);
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    const loaded = loadActiveUserProfile();
+    return loaded.role === 'guest' ? defaultAccounts[1] : loaded;
+  });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState<'login' | 'manage'>('login');
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);

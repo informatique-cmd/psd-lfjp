@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { applyPageTextOverrides, getNodePath, loadPageTextOverrides, pageTextDraftStorageKey, type PageElementOverride, type PageTextOverrides } from '@/lib/pageOverrides';
 import { isContentDraftPreview } from '@/lib/contentDraft';
 import { loadActiveUserProfile } from '@/data/adminProfilesAndRubriques';
+import { isPrivilegedUser } from '@/lib/authAccess';
 
 const PageTextEditor = () => {
   const location = useLocation();
@@ -20,6 +21,11 @@ const PageTextEditor = () => {
 
   const checkAuth = React.useCallback(() => {
     if (typeof window === 'undefined') return;
+    if (!isPrivilegedUser()) {
+      setIsAdmin(false);
+      setIsEditing(false);
+      return;
+    }
     const hasLocal = window.sessionStorage.getItem('lfjp_admin_local_session') === '1' || window.localStorage.getItem('lfjp_admin_active_session') === '1';
     if (hasLocal) {
       setIsAdmin(true);

@@ -19,6 +19,7 @@ import { defaultTransportData, type TransportData } from '../data/budgetTranspor
 import pageDataFile from '@/content/pageData.json';
 import { useSmartBack } from '@/lib/navigation';
 import { AdminTransportDashboard } from '@/components/admin/AdminTransportDashboard';
+import { usePrivilegedAccess } from '@/lib/authAccess';
 
 const TransportScolaire = () => {
   const navigate = useNavigate();
@@ -98,19 +99,18 @@ const TransportScolaire = () => {
     };
   }, []);
 
-  const isEmbeddedInAdmin = typeof window !== 'undefined' && (
-    window.location.search.includes('embedded=1') ||
-    (window.self !== window.top)
-  );
-  const isEditRequested = typeof window !== 'undefined' && (
-    window.location.search.includes('edit=1') ||
-    window.location.search.includes('draft=1') ||
-    window.location.search.includes('mode=editor') ||
-    window.location.search.includes('admin=1')
-  );
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [isEditorMode, setIsEditorMode] = React.useState<boolean>(
-    () => isEmbeddedInAdmin || isEditRequested
+    () => showEditorControls
   );
+
+  React.useEffect(() => {
+    if (!isPrivileged) {
+      setIsEditorMode(false);
+    } else {
+      setIsEditorMode(showEditorControls);
+    }
+  }, [isPrivileged, showEditorControls]);
 
   const activeCommunes = (liveTransport.communes && liveTransport.communes.length > 0)
     ? liveTransport.communes

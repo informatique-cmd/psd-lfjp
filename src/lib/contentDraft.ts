@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { APP_BUILD_VERSION } from '@/config/buildVersion';
+import { isPrivilegedUser } from '@/lib/authAccess';
 
 export const isContentDraftPreview = () =>
-  typeof window !== 'undefined' && (
+  typeof window !== 'undefined' &&
+  isPrivilegedUser() && (
     new URLSearchParams(window.location.search).get('draft') === '1' ||
     new URLSearchParams(window.location.search).get('edit') === '1' ||
     window.location.pathname.startsWith('/espace-direction') ||

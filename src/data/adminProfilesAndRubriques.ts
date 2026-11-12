@@ -166,7 +166,18 @@ export function saveRubriquesDraft(rubriques: AdminRubrique[]): void {
    USER PROFILES & AUTH ROLES (SuperAdmin, Admin vs Simple Editor)
    ========================================================================= */
 
-export type UserRole = 'superadmin' | 'admin' | 'editor';
+export type UserRole = 'superadmin' | 'admin' | 'editor' | 'guest';
+
+export const publicGuestProfile: UserProfile = {
+  id: 'guest',
+  email: '',
+  name: 'Visiteur Public',
+  role: 'guest',
+  canDelete: false,
+  canEdit: false,
+  canCreate: false,
+  canPublish: false,
+};
 
 export interface UserAccount {
   id: string; // 'admin' | 'editor' | 'superadmin'
@@ -301,14 +312,21 @@ export function authenticateUser(emailInput: string, passwordInput: string): Use
 
 export function loadActiveUserProfile(): UserProfile {
   if (typeof window === 'undefined') {
-    const defaultAdm = defaultAccounts[1];
-    return { ...defaultAdm };
+    return { ...publicGuestProfile };
   }
   try {
+    const hasSession =
+      window.sessionStorage.getItem('lfjp_admin_local_session') === '1' ||
+      window.localStorage.getItem('lfjp_admin_active_session') === '1';
+
+    if (!hasSession) {
+      return { ...publicGuestProfile };
+    }
+
     const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.email === 'string') {
+      if (parsed && typeof parsed.email === 'string' && (parsed.role === 'superadmin' || parsed.role === 'editor')) {
         return {
           ...parsed,
           canDelete: parsed.role === 'superadmin' || parsed.id === 'superadmin',
@@ -319,8 +337,7 @@ export function loadActiveUserProfile(): UserProfile {
   } catch {
     // fallback
   }
-  // Default to SuperAdmin profile
-  return { ...defaultAccounts[0] };
+  return { ...publicGuestProfile };
 }
 
 export function saveActiveUserProfile(profile: UserProfile): void {

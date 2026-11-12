@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { sanitizeElcsData, type ElcsDataType, type ElcsMetric } from './ElcsDataContext';
+import { usePrivilegedAccess } from '@/lib/authAccess';
 
 export interface AdminElcsSurveyEditorProps {
   elcsData: ElcsDataType;
@@ -20,8 +21,13 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
   elcsData,
   onChange,
 }) => {
+  const { isPrivileged } = usePrivilegedAccess();
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<keyof ElcsDataType>('satisfaction');
+
+  if (!isPrivileged) {
+    return null;
+  }
 
   // Defensive sanitization: guarantees all categories and arrays exist
   const safeData = sanitizeElcsData(elcsData);

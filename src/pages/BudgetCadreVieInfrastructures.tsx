@@ -12,24 +12,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import pageDataFile from '@/content/pageData.json';
 import { defaultBudgetData, type BudgetData } from '@/data/budgetTransportData';
 import { useSmartBack } from '@/lib/navigation';
+import { usePrivilegedAccess } from '@/lib/authAccess';
 
 export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const handleBack = useSmartBack('/plan-strategique');
-
-  // Determine if running inside the editor / admin iframe or edit mode requested
-  const isEmbeddedInAdmin = typeof window !== 'undefined' && (
-    window.location.search.includes('embedded=1') ||
-    window.parent !== window
-  );
-  const isEditRequested = typeof window !== 'undefined' && (
-    window.location.search.includes('edit=1') ||
-    window.location.search.includes('draft=1') ||
-    window.location.search.includes('mode=editor') ||
-    window.location.search.includes('admin=1')
-  );
-  const isEditorMode = isEmbeddedInAdmin || isEditRequested;
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
+  const isEditorMode = isPrivileged && showEditorControls;
 
   const [maxYear, setMaxYear] = useState<number>(() => {
     let budget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
