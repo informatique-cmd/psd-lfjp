@@ -20,7 +20,10 @@ interface MetricCardProps {
   inverse?: boolean;
 }
 
-const MetricCard = ({ title, primary, secondary, inverse = false }: MetricCardProps) => {
+const MetricCard = ({ title, primary = [], secondary = [], inverse = false }: MetricCardProps) => {
+  const safePrimary = Array.isArray(primary) ? primary : [];
+  const safeSecondary = Array.isArray(secondary) ? secondary : [];
+
   return (
     <Card className="border-french-blue/10 shadow-md h-full">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b pb-3">
@@ -29,29 +32,31 @@ const MetricCard = ({ title, primary, secondary, inverse = false }: MetricCardPr
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4">
-        {primary.map((item, idx) => (
+        {safePrimary.map((item, idx) => (
           <MetricItem 
             key={`p-${idx}`}
-            name={item.name}
-            value={item.value}
-            label={item.label}
-            average={item.average}
-            trend={item.trend}
+            name={item?.name || ''}
+            value={item?.value ?? 0}
+            label={item?.label}
+            average={item?.average}
+            trend={item?.trend}
             inverse={inverse}
           />
         ))}
         
-        <div className="mt-6 border-t pt-4">
-          <h4 className="text-sm font-medium mb-3">Points d'attention</h4>
-          {secondary.map((item, idx) => (
-            <AlertItem 
-              key={`s-${idx}`}
-              name={item.name}
-              value={item.value}
-              label={item.label}
-            />
-          ))}
-        </div>
+        {safeSecondary.length > 0 && (
+          <div className="mt-6 border-t pt-4">
+            <h4 className="text-sm font-medium mb-3">Points d'attention</h4>
+            {safeSecondary.map((item, idx) => (
+              <AlertItem 
+                key={`s-${idx}`}
+                name={item?.name || ''}
+                value={item?.value ?? ''}
+                label={item?.label}
+              />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

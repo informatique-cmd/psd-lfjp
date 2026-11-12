@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   ChartNoAxesCombined,
   ChevronDown,
   ChevronUp,
   Plus,
   Trash2,
-  TrendingUp,
-  TrendingDown,
 } from 'lucide-react';
-import type { ElcsDataType, ElcsMetric } from './ElcsDataContext';
+import { sanitizeElcsData, type ElcsDataType, type ElcsMetric } from './ElcsDataContext';
 
 export interface AdminElcsSurveyEditorProps {
   elcsData: ElcsDataType;
@@ -24,6 +23,9 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<keyof ElcsDataType>('satisfaction');
 
+  // Defensive sanitization: guarantees all categories and arrays exist
+  const safeData = sanitizeElcsData(elcsData);
+
   const categoriesConfig: { key: keyof ElcsDataType; label: string }[] = [
     { key: 'satisfaction', label: '1. Satisfaction Infrastructures' },
     { key: 'relations', label: '2. Relations Humaines' },
@@ -33,9 +35,9 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
 
   const updateTitle = (catKey: keyof ElcsDataType, title: string) => {
     onChange({
-      ...elcsData,
+      ...safeData,
       [catKey]: {
-        ...elcsData[catKey],
+        ...safeData[catKey],
         title,
       },
     });
@@ -48,7 +50,8 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
     field: keyof ElcsMetric,
     val: string | number
   ) => {
-    const list = [...elcsData[catKey][group]];
+    const list = [...(safeData[catKey]?.[group] || [])];
+    if (!list[index]) return;
     list[index] = {
       ...list[index],
       [field]: field === 'value' || field === 'average'
@@ -56,16 +59,16 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
         : val,
     };
     onChange({
-      ...elcsData,
+      ...safeData,
       [catKey]: {
-        ...elcsData[catKey],
+        ...safeData[catKey],
         [group]: list,
       },
     });
   };
 
   const addMetric = (catKey: keyof ElcsDataType, group: 'primary' | 'secondary') => {
-    const list = [...elcsData[catKey][group]];
+    const list = [...(safeData[catKey]?.[group] || [])];
     list.push({
       name: 'Nouvel indicateur',
       value: 75,
@@ -74,29 +77,32 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
       trend: 'up',
     });
     onChange({
-      ...elcsData,
+      ...safeData,
       [catKey]: {
-        ...elcsData[catKey],
+        ...safeData[catKey],
         [group]: list,
       },
     });
   };
 
   const deleteMetric = (catKey: keyof ElcsDataType, group: 'primary' | 'secondary', index: number) => {
-    const list = elcsData[catKey][group].filter((_, i) => i !== index);
+    const list = (safeData[catKey]?.[group] || []).filter((_, i) => i !== index);
     onChange({
-      ...elcsData,
+      ...safeData,
       [catKey]: {
-        ...elcsData[catKey],
+        ...safeData[catKey],
         [group]: list,
       },
     });
   };
 
-  const currentCat = elcsData[activeCategory];
+  const currentCat = safeData[activeCategory] || safeData.satisfaction;
 
   return (
-    <div className="mb-8 rounded-2xl border border-blue-200 bg-white p-4 sm:p-5 shadow-sm text-slate-800">
+    <div
+      className="mb-8 rounded-2xl border border-blue-200 bg-white p-4 sm:p-5 shadow-sm text-slate-800"
+      data-interactive="true"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 pb-3">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-blue-100 text-french-blue">
@@ -158,13 +164,13 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
 
           <div className="space-y-4">
             <div>
-              <Label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
                 Titre de la catégorie
-              </Label>
+              </label>
               <Input
                 value={currentCat?.title || ''}
                 onChange={(e) => updateTitle(activeCategory, e.target.value)}
-                className="mt-1 h-8 text-xs font-bold text-french-blue bg-white"
+                className="h-8 text-xs font-bold text-french-blue bg-white"
               />
             </div>
 

@@ -73,8 +73,41 @@ export const elcsData: ElcsDataType = {
   }
 };
 
+export const sanitizeElcsData = (raw: unknown): ElcsDataType => {
+  if (!raw || typeof raw !== 'object') return elcsData;
+  const parsed = raw as Partial<ElcsDataType>;
+  const ensureCategory = (catKey: keyof ElcsDataType): ElcsCategoryData => {
+    const defaultCat = elcsData[catKey];
+    const cat = parsed[catKey];
+    if (!cat || typeof cat !== 'object') return defaultCat;
+    return {
+      title: typeof cat.title === 'string' && cat.title.trim() !== '' ? cat.title : defaultCat.title,
+      primary: Array.isArray(cat.primary) ? cat.primary.map((m) => ({
+        name: typeof m?.name === 'string' ? m.name : 'Indicateur',
+        value: m?.value !== undefined ? m.value : 0,
+        label: typeof m?.label === 'string' ? m.label : '',
+        average: typeof m?.average === 'number' ? m.average : undefined,
+        trend: m?.trend === 'down' ? 'down' : 'up',
+      })) : defaultCat.primary,
+      secondary: Array.isArray(cat.secondary) ? cat.secondary.map((m) => ({
+        name: typeof m?.name === 'string' ? m.name : 'Point',
+        value: m?.value !== undefined ? m.value : '',
+        label: typeof m?.label === 'string' ? m.label : '',
+        trend: m?.trend === 'down' ? 'down' : 'up',
+      })) : defaultCat.secondary,
+    };
+  };
+
+  return {
+    satisfaction: ensureCategory('satisfaction'),
+    relations: ensureCategory('relations'),
+    travail: ensureCategory('travail'),
+    securite: ensureCategory('securite'),
+  };
+};
+
 // Create context
-const ElcsDataContext = createContext<ElcsDataType | undefined>(undefined);
+const ElcsDataContext = createContext<ElcsDataType>(elcsData);
 const elcsDraftFallback = {
   ...pageDataFile,
   elcsData: (pageDataFile as { elcsData?: ElcsDataType }).elcsData || elcsData,
@@ -83,20 +116,21 @@ const elcsDraftFallback = {
 // Provider component
 export const ElcsDataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const pageData = useContentDraft('lfjp-admin-page-data-draft', elcsDraftFallback);
+  const safeValue = React.useMemo(() => sanitizeElcsData(pageData?.elcsData), [pageData]);
   return (
-    <ElcsDataContext.Provider value={pageData.elcsData}>
+    <ElcsDataContext.Provider value={safeValue}>
       {children}
     </ElcsDataContext.Provider>
   );
 };
 
 // Custom hook to use the context
-export const useElcsData = () => {
+export const useElcsData = (): ElcsDataType => {
   const context = useContext(ElcsDataContext);
-  if (context === undefined) {
-    throw new Error('useElcsData must be used within an ElcsDataProvider');
+  if (!context) {
+    return elcsData;
   }
-  return context;
+  return sanitizeElcsData(context);
 };
 
 export default ElcsDataContext;

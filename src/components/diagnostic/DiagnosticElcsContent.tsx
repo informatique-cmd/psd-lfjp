@@ -3,14 +3,11 @@ import React from 'react';
 import DiagnosticCard from './DiagnosticCard';
 import MetricCard from './MetricCard';
 import DiagnosticSummary from './DiagnosticSummary';
-import { useElcsData } from './ElcsDataContext';
-import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
-import AdminElcsSurveyEditor from './AdminElcsSurveyEditor';
-import type { ElcsDataType } from './ElcsDataContext';
+import { useElcsData, sanitizeElcsData, type ElcsDataType } from './ElcsDataContext';
 
 const DiagnosticElcsContent = () => {
-  const elcsData = useElcsData();
+  const rawElcsData = useElcsData();
+  const elcsData = React.useMemo(() => sanitizeElcsData(rawElcsData), [rawElcsData]);
 
   const isEmbeddedInAdmin = typeof window !== 'undefined' && (
     window.location.search.includes('embedded=1') ||
@@ -22,7 +19,11 @@ const DiagnosticElcsContent = () => {
     window.location.search.includes('mode=editor') ||
     window.location.search.includes('admin=1')
   );
-  const showEditorControls = isEmbeddedInAdmin || isEditRequested;
+  const hasActiveSession = typeof window !== 'undefined' && (
+    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
+    window.sessionStorage.getItem('lfjp_admin_local_session') === '1'
+  );
+  const showEditorControls = isEmbeddedInAdmin || isEditRequested || hasActiveSession;
 
   const handleElcsChange = (updatedElcs: ElcsDataType) => {
     if (typeof window !== 'undefined') {

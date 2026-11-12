@@ -1413,6 +1413,36 @@ const Admin = () => {
         });
         return;
       }
+      if (event.data?.type === 'lfjp_restaurant_data_updated' && event.data.restaurant) {
+        const nextRestaurant = event.data.restaurant;
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            parsed.restaurant = nextRestaurant;
+            const updated = JSON.stringify(parsed, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
+      if (event.data?.type === 'lfjp_elcs_data_updated' && event.data.elcsData) {
+        const nextElcs = event.data.elcsData;
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            parsed.elcsData = nextElcs;
+            const updated = JSON.stringify(parsed, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
       if (event.data?.type === 'lfjp-page-data-update' && event.data.data) {
         const nextData = event.data.data;
         setPageDataJson((prev) => {
@@ -2025,6 +2055,7 @@ const Admin = () => {
             if (draftParsed.budgetData) parsed.budgetData = draftParsed.budgetData;
             if (draftParsed.transportData) parsed.transportData = draftParsed.transportData;
             if (draftParsed.restaurant) parsed.restaurant = draftParsed.restaurant;
+            if (draftParsed.elcsData) parsed.elcsData = draftParsed.elcsData;
             if (draftParsed.keyMetrics) parsed.keyMetrics = draftParsed.keyMetrics;
             if (draftParsed.bacBlancSchedule) parsed.bacBlancSchedule = draftParsed.bacBlancSchedule;
             if (draftParsed.filmAnnuelData) parsed.filmAnnuelData = draftParsed.filmAnnuelData;
@@ -3695,92 +3726,6 @@ const Admin = () => {
               </div>
             </button>
 
-            {/* Direct Page Navigation Shortcuts for Editor */}
-            <div className="hidden lg:flex items-center gap-1.5 ml-2 border-l border-slate-800 pl-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setVisualRoute('/');
-                  setSelectedVisualElement(null);
-                  if (previewFrame.current) {
-                    previewFrame.current.src = `/?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
-                  }
-                }}
-                className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  visualRoute === '/' ? 'bg-slate-800 text-white font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                }`}
-              >
-                Accueil
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setVisualRoute('/budget-cadre-vie-infrastructures');
-                  setSelectedVisualElement(null);
-                  if (previewFrame.current) {
-                    previewFrame.current.src = `/budget-cadre-vie-infrastructures?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
-                  }
-                }}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  visualRoute === '/budget-cadre-vie-infrastructures' ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 font-bold' : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60'
-                }`}
-                title="Accéder directement à l'Axe 1 Cadre de Vie & Gestion des projets"
-              >
-                <Sliders className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Axe 1 · Cadre de Vie</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setVisualRoute('/transport-scolaire');
-                  setSelectedVisualElement(null);
-                  if (previewFrame.current) {
-                    previewFrame.current.src = `/transport-scolaire?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
-                  }
-                }}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  visualRoute === '/transport-scolaire' ? 'bg-sky-600/30 text-sky-300 border border-sky-500/40 font-bold' : 'text-slate-400 hover:text-sky-300 hover:bg-slate-800/60'
-                }`}
-                title="Accéder directement à l'Axe 1 Transport Scolaire"
-              >
-                <BusFront className="w-3.5 h-3.5 text-sky-400" />
-                <span>Axe 1 · Transport</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setVisualRoute('/diagnostic');
-                  setSelectedVisualElement(null);
-                  if (previewFrame.current) {
-                    previewFrame.current.src = `/diagnostic?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
-                  }
-                }}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  visualRoute === '/diagnostic' ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40 font-bold' : 'text-slate-400 hover:text-purple-300 hover:bg-slate-800/60'
-                }`}
-                title="Accéder directement au Diagnostic, Sondages Restauration et ELCS"
-              >
-                <ChartNoAxesCombined className="w-3.5 h-3.5 text-purple-400" />
-                <span>Diagnostic & Sondages</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setVisualRoute('/plan-strategique');
-                  setSelectedVisualElement(null);
-                  if (previewFrame.current) {
-                    previewFrame.current.src = `/plan-strategique?draft=1&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
-                  }
-                }}
-                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  visualRoute === '/plan-strategique' ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40 font-bold' : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/60'
-                }`}
-                title="Accéder directement au Plan Stratégique"
-              >
-                <Target className="w-3.5 h-3.5 text-amber-400" />
-                <span>Plan Stratégique</span>
-              </button>
-            </div>
           </div>
 
           {/* Right: Harmonized, Non-Overflowing Responsive Actions Toolbar */}

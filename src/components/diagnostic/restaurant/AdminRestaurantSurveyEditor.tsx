@@ -8,6 +8,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Link2,
 } from 'lucide-react';
 import type { RestaurantPageData } from '@/data/restaurantPageData';
 
@@ -35,18 +36,63 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
       const v = Math.max(0, Number(item.value)) || 0;
       return {
         ...item,
-        percentage: Math.round((v / totalEffectif) * 100),
+        percentage: Math.round((v / totalEffectif) * 1000) / 10,
       };
     });
 
     const sumPct = updated.reduce((s, it) => s + it.percentage, 0);
-    if (sumPct !== 100 && updated.length > 0) {
-      const diff = 100 - sumPct;
-      updated[0].percentage += diff;
+    const diff = Math.round((100 - sumPct) * 10) / 10;
+    if (diff !== 0 && updated.length > 0) {
+      updated[0].percentage = Math.round((updated[0].percentage + diff) * 10) / 10;
     }
 
     const next = { ...restaurant, studentDistributionData: updated };
     onChange(next);
+  };
+
+  // Helper to rebalance any PieChart to 100%
+  const rebalancePieChart = (key: 'priceForDishData' | 'priceForMenuData' | 'restaurationInterestData') => {
+    const list = (restaurant[key] as Array<{ name: string; value: number }>) || [];
+    const total = list.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
+    if (total === 0) return;
+
+    const updated = list.map((item) => {
+      const v = Math.max(0, Number(item.value)) || 0;
+      return {
+        ...item,
+        value: Math.round((v / total) * 1000) / 10,
+      };
+    });
+
+    const sumVal = updated.reduce((s, it) => s + it.value, 0);
+    const diff = Math.round((100 - sumVal) * 10) / 10;
+    if (diff !== 0 && updated.length > 0) {
+      updated[0].value = Math.round((updated[0].value + diff) * 10) / 10;
+    }
+
+    const nextRestaurant = { ...restaurant, [key]: updated };
+    // Synchronize correlated metrics
+    if (key === 'restaurationInterestData' && nextRestaurant.keyMetrics && nextRestaurant.keyMetrics[0]) {
+      const metrics = [...nextRestaurant.keyMetrics];
+      metrics[0] = { ...metrics[0], value: updated[0]?.value ?? 92 };
+      nextRestaurant.keyMetrics = metrics;
+    } else if (key === 'priceForDishData' && nextRestaurant.keyMetrics && nextRestaurant.keyMetrics[2]) {
+      const metrics = [...nextRestaurant.keyMetrics];
+      const target = updated.find((it) => it.name.includes('1 500') || it.name.includes('1500')) || updated[1];
+      if (target) {
+        metrics[2] = { ...metrics[2], label: `pour ${target.value}% des parents` };
+        nextRestaurant.keyMetrics = metrics;
+      }
+    } else if (key === 'priceForMenuData' && nextRestaurant.alertPoints && nextRestaurant.alertPoints[2]) {
+      const alerts = [...nextRestaurant.alertPoints];
+      const target = updated.find((it) => it.name.includes('2 000') || it.name.includes('2000')) || updated[2];
+      if (target) {
+        alerts[2] = { ...alerts[2], value: `${target.value}%` };
+        nextRestaurant.alertPoints = alerts;
+      }
+    }
+
+    onChange(nextRestaurant);
   };
 
   // Student row updates: auto-correlate percentage when effectif value changes
@@ -88,6 +134,177 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     onChange({ ...restaurant, studentDistributionData: list });
   };
 
+  // Bidirectional correlation engine between survey tables, metric cards & charts
+  const syncCorrelations = (
+    base: RestaurantPageData,
+    key: keyof RestaurantPageData,
+    index: number,
+    field: string,
+    val: string | number
+  ): RestaurantPageData => {
+    const next: RestaurantPageData = { ...base };
+
+    // 1. Intérêt cantine (PieChart) <---> keyMetrics[0] ("Intérêt global")
+    if (key === 'restaurationInterestData') {
+      const list = [...(next.restaurationInterestData || [])];
+      if (field === 'value' && list.length >= 2) {
+        const num = Math.min(100, Math.max(0, Number(val) || 0));
+        const otherIndex = index === 0 ? 1 : 0;
+        list[index] = { ...list[index], value: num };
+        list[otherIndex] = { ...list[otherIndex], value: Math.round((100 - num) * 10) / 10 };
+        next.restaurationInterestData = list;
+
+        // Synchronize keyMetrics[0]
+        if (next.keyMetrics && next.keyMetrics.length > 0) {
+          const metrics = [...next.keyMetrics];
+          const yesVal = list[0]?.value ?? num;
+          metrics[0] = {
+            ...metrics[0],
+            value: yesVal,
+          };
+          next.keyMetrics = metrics;
+        }
+      }
+    }
+
+    // 2. Types de repas souhaités (BarChart) <---> keyMetrics[1] ("Plats chauds")
+    if (key === 'mealTypePreferenceData') {
+      const list = [...(next.mealTypePreferenceData || [])];
+      const isPlatsChauds = index === 0 || list[index]?.name.toLowerCase().includes('chaud');
+      if (isPlatsChauds && (field === 'percentage' || field === 'value')) {
+        const pct = field === 'percentage' ? Number(val) : Number(list[index]?.percentage ?? val);
+        if (!isNaN(pct) && next.keyMetrics && next.keyMetrics.length > 1) {
+          const metrics = [...next.keyMetrics];
+          metrics[1] = {
+            ...metrics[1],
+            value: Math.round(pct * 10) / 10,
+          };
+          next.keyMetrics = metrics;
+        }
+      }
+    }
+
+    // 3. Budget plat unique (PieChart) <---> keyMetrics[2] ("Budget moyen par plat")
+    if (key === 'priceForDishData') {
+      const list = [...(next.priceForDishData || [])];
+      const isBudget15002000 = index === 1 || list[index]?.name.includes('1 500') || list[index]?.name.includes('1500');
+      if (isBudget15002000 && field === 'value') {
+        const num = Number(val);
+        if (!isNaN(num) && next.keyMetrics && next.keyMetrics.length > 2) {
+          const metrics = [...next.keyMetrics];
+          metrics[2] = {
+            ...metrics[2],
+            label: `pour ${num}% des parents`,
+          };
+          next.keyMetrics = metrics;
+        }
+      }
+    }
+
+    // 4. Intérêt par jour (BarChart) <---> alertPoints[0] ("Mercredi")
+    if (key === 'serviceInterestByDayData') {
+      const list = [...(next.serviceInterestByDayData || [])];
+      const isMercredi = index === 2 || list[index]?.name.toLowerCase().includes('mercredi');
+      if (isMercredi && (field === 'percentage' || field === 'value')) {
+        const pct = field === 'percentage' ? Number(val) : Number(list[index]?.percentage ?? val);
+        if (!isNaN(pct) && next.alertPoints && next.alertPoints.length > 0) {
+          const alerts = [...next.alertPoints];
+          alerts[0] = {
+            ...alerts[0],
+            value: `${Math.round(pct * 10) / 10}%`,
+          };
+          next.alertPoints = alerts;
+        }
+      }
+    }
+
+    // 5. Budget menu complet (PieChart) <---> alertPoints[2] ("Tarification")
+    if (key === 'priceForMenuData') {
+      const list = [...(next.priceForMenuData || [])];
+      const is20003000 = index === 2 || list[index]?.name.includes('2 000') || list[index]?.name.includes('2000');
+      if (is20003000 && field === 'value') {
+        const num = Number(val);
+        if (!isNaN(num) && next.alertPoints && next.alertPoints.length > 2) {
+          const alerts = [...next.alertPoints];
+          alerts[2] = {
+            ...alerts[2],
+            value: `${num}%`,
+          };
+          next.alertPoints = alerts;
+        }
+      }
+    }
+
+    // REVERSE: When keyMetrics are modified directly in Tab 7
+    if (key === 'keyMetrics') {
+      // keyMetrics[0]: Intérêt global -> update restaurationInterestData PieChart
+      if (index === 0 && field === 'value') {
+        const str = String(val).replace('%', '').trim();
+        const num = parseFloat(str);
+        if (!isNaN(num) && num >= 0 && num <= 100 && next.restaurationInterestData && next.restaurationInterestData.length >= 2) {
+          const list = [...next.restaurationInterestData];
+          list[0] = { ...list[0], value: num };
+          list[1] = { ...list[1], value: Math.round((100 - num) * 10) / 10 };
+          next.restaurationInterestData = list;
+        }
+      }
+      // keyMetrics[1]: Plats chauds -> update mealTypePreferenceData BarChart
+      if (index === 1 && field === 'value') {
+        const str = String(val).replace('%', '').trim();
+        const num = parseFloat(str);
+        if (!isNaN(num) && next.mealTypePreferenceData && next.mealTypePreferenceData.length > 0) {
+          const list = [...next.mealTypePreferenceData];
+          const idx = list.findIndex((r) => r.name.toLowerCase().includes('chaud'));
+          const target = idx >= 0 ? idx : 0;
+          list[target] = { ...list[target], percentage: num };
+          next.mealTypePreferenceData = list;
+        }
+      }
+      // keyMetrics[2]: Budget moyen par plat -> update priceForDishData PieChart
+      if (index === 2 && field === 'label') {
+        const match = String(val).match(/(\d+(\.\d+)?)%/);
+        if (match && next.priceForDishData && next.priceForDishData.length > 1) {
+          const num = parseFloat(match[1]);
+          const list = [...next.priceForDishData];
+          const idx = list.findIndex((r) => r.name.includes('1 500') || r.name.includes('1500'));
+          const target = idx >= 0 ? idx : 1;
+          list[target] = { ...list[target], value: num };
+          next.priceForDishData = list;
+        }
+      }
+    }
+
+    // REVERSE: When alertPoints are modified directly in Tab 7
+    if (key === 'alertPoints') {
+      // alertPoints[0]: Mercredi -> update serviceInterestByDayData BarChart
+      if (index === 0 && field === 'value') {
+        const str = String(val).replace('%', '').trim();
+        const num = parseFloat(str);
+        if (!isNaN(num) && next.serviceInterestByDayData && next.serviceInterestByDayData.length > 2) {
+          const list = [...next.serviceInterestByDayData];
+          const idx = list.findIndex((r) => r.name.toLowerCase().includes('mercredi'));
+          const target = idx >= 0 ? idx : 2;
+          list[target] = { ...list[target], percentage: num };
+          next.serviceInterestByDayData = list;
+        }
+      }
+      // alertPoints[2]: Tarification -> update priceForMenuData PieChart
+      if (index === 2 && field === 'value') {
+        const str = String(val).replace('%', '').trim();
+        const num = parseFloat(str);
+        if (!isNaN(num) && next.priceForMenuData && next.priceForMenuData.length > 2) {
+          const list = [...next.priceForMenuData];
+          const idx = list.findIndex((r) => r.name.includes('2 000') || r.name.includes('2000'));
+          const target = idx >= 0 ? idx : 2;
+          list[target] = { ...list[target], value: num };
+          next.priceForMenuData = list;
+        }
+      }
+    }
+
+    return next;
+  };
+
   // Generic updater with dynamic chart auto-correlation
   const updateGenericRow = <K extends keyof RestaurantPageData>(
     key: K,
@@ -99,17 +316,16 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     let parsedVal: string | number = val;
 
     if (key === 'keyMetrics' || key === 'alertPoints') {
-      // In metrics, value can be text like "1500-2000 FCFA" or a number like 92
-      if (typeof val === 'string') {
+      if (field === 'value') {
         const num = Number(val);
-        parsedVal = !isNaN(num) && val.trim() !== '' ? num : val;
+        parsedVal = !isNaN(num) && String(val).trim() !== '' ? num : val;
       }
     } else if (field === 'value' || field === 'percentage') {
       const num = Number(val);
       parsedVal = !isNaN(num) ? num : val;
     }
 
-    let updated = current.map((row, i) =>
+    const updated = current.map((row, i) =>
       i === index
         ? {
             ...row,
@@ -118,26 +334,9 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
         : row
     );
 
-    // Dynamic auto-correlation for Intérêt Restauration (PieChart Oui / Non = 100%)
-    if (key === 'restaurationInterestData' && field === 'value' && updated.length === 2) {
-      const currentVal = Math.min(100, Math.max(0, Number(parsedVal) || 0));
-      const otherIndex = index === 0 ? 1 : 0;
-      updated[index] = { ...updated[index], value: currentVal };
-      updated[otherIndex] = { ...updated[otherIndex], value: 100 - currentVal };
-    }
-
-    // Dynamic auto-correlation for BarCharts (calculate percentage if value changes)
-    if ((key === 'currentLunchData' || key === 'serviceInterestByDayData' || key === 'mealTypePreferenceData') && field === 'value') {
-      const totalResponses = updated.reduce((s, r) => s + (Math.max(0, Number(r.value)) || 0), 0);
-      if (totalResponses > 0) {
-        updated = updated.map((r) => ({
-          ...r,
-          percentage: Math.round(((Math.max(0, Number(r.value)) || 0) / totalResponses) * 1000) / 10,
-        }));
-      }
-    }
-
-    onChange({ ...restaurant, [key]: updated });
+    let nextRestaurant: RestaurantPageData = { ...restaurant, [key]: updated };
+    nextRestaurant = syncCorrelations(nextRestaurant, key, index, field, parsedVal);
+    onChange(nextRestaurant);
   };
 
   const addGenericRow = <K extends keyof RestaurantPageData>(key: K, defaultItem: Record<string, unknown>) => {
@@ -151,7 +350,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
   };
 
   return (
-    <div className="mb-8 rounded-2xl border border-purple-200 bg-white p-4 sm:p-5 shadow-sm text-slate-800" data-interactive="true">
+    <div
+      className="mb-8 rounded-2xl border border-purple-200 bg-white p-4 sm:p-5 shadow-sm text-slate-800"
+      data-interactive="true"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-100 pb-3">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
@@ -167,7 +369,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Modifiez les effectifs, pourcentages et réponses : tous les graphiques ci-dessous se recalculent en temps réel.
+              Modifiez les effectifs, pourcentages et statistiques : tous les graphiques et indicateurs ci-dessous se recalculent en temps réel et en parfaite synchronisation.
             </p>
           </div>
         </div>
@@ -305,23 +507,39 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {/* Tab 2: Intérêt pour la cantine */}
           {activeTab === 'interest' && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Intérêt pour la restauration scolaire (PieChart)
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-light">
-                    Ajustez Oui ou Non : l'autre part se recalcule automatiquement pour totaliser 100%.
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Intérêt pour la restauration scolaire (PieChart)
+                    </span>
+                    <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Link2 className="w-3 h-3" /> Synchronisé avec la Stat Clé
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-light block mt-0.5">
+                    Modifiez « Oui » ou « Non » : l'autre part et la statistique clé s'adaptent instantanément pour totaliser 100%.
                   </span>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => addGenericRow('restaurationInterestData', { name: 'Nouvelle réponse', value: 10 })}
-                  className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  <Plus className="mr-1 h-3 w-3" /> Ajouter une réponse
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => rebalancePieChart('restaurationInterestData')}
+                    className="h-7 text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
+                  >
+                    <Sparkles className="mr-1 h-3 w-3" /> Équilibrer à 100%
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => addGenericRow('restaurationInterestData', { name: 'Nouvelle réponse', value: 10 })}
+                    className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Ajouter une réponse
+                  </Button>
+                </div>
               </div>
 
               <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -379,7 +597,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                     Situation actuelle des repas (HorizontalBarChart)
                   </span>
                   <span className="text-[11px] text-slate-500 font-light">
-                    Les pourcentages s'actualisent automatiquement avec le nombre de réponses.
+                    Les valeurs et pourcentages sont directement modifiables et se mettent à jour sur le graphique.
                   </span>
                 </div>
                 <Button
@@ -450,9 +668,14 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {/* Tab 4: Intérêt par jour */}
           {activeTab === 'days' && (
             <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Intérêt par jour de la semaine (VerticalBarChart)
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Intérêt par jour de la semaine (VerticalBarChart)
+                </span>
+                <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Link2 className="w-3 h-3" /> « Mercredi » synchronisé avec le Point d'attention
+                </span>
+              </div>
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full text-left text-xs divide-y divide-slate-200">
                   <thead className="bg-slate-50 font-semibold text-slate-700">
@@ -499,9 +722,14 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {/* Tab 5: Types de repas */}
           {activeTab === 'meals' && (
             <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Types de repas souhaités (VerticalBarChart)
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Types de repas souhaités (VerticalBarChart)
+                </span>
+                <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Link2 className="w-3 h-3" /> « Plats chauds » synchronisé avec Stat Clé
+                </span>
+              </div>
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full text-left text-xs divide-y divide-slate-200">
                   <thead className="bg-slate-50 font-semibold text-slate-700">
@@ -549,18 +777,34 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {activeTab === 'prices' && (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Budget plat unique (PieChart)
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => addGenericRow('priceForDishData', { name: 'Autre budget', value: 10 })}
-                    className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    <Plus className="mr-1 h-3 w-3" /> Ajouter tranche
-                  </Button>
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Budget plat unique (PieChart)
+                    </span>
+                    <span className="text-[10px] text-purple-700 font-medium flex items-center gap-1">
+                      <Link2 className="w-3 h-3" /> 1 500 - 2 000 FCFA synchronisé avec Stat Clé
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => rebalancePieChart('priceForDishData')}
+                      className="h-6 text-[11px] border-purple-200 text-purple-700 hover:bg-purple-50"
+                    >
+                      <Sparkles className="mr-1 h-3 w-3" /> Équilibrer
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => addGenericRow('priceForDishData', { name: 'Autre budget', value: 10 })}
+                      className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Plus className="mr-1 h-3 w-3" /> Ajouter
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs divide-y divide-slate-200">
@@ -608,18 +852,34 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Budget menu complet (PieChart)
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => addGenericRow('priceForMenuData', { name: 'Autre budget', value: 10 })}
-                    className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    <Plus className="mr-1 h-3 w-3" /> Ajouter tranche
-                  </Button>
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Budget menu complet (PieChart)
+                    </span>
+                    <span className="text-[10px] text-purple-700 font-medium flex items-center gap-1">
+                      <Link2 className="w-3 h-3" /> 2 000 - 3 000 FCFA synchronisé avec Point d'attention
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => rebalancePieChart('priceForMenuData')}
+                      className="h-6 text-[11px] border-purple-200 text-purple-700 hover:bg-purple-50"
+                    >
+                      <Sparkles className="mr-1 h-3 w-3" /> Équilibrer
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => addGenericRow('priceForMenuData', { name: 'Autre budget', value: 10 })}
+                      className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Plus className="mr-1 h-3 w-3" /> Ajouter
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs divide-y divide-slate-200">
@@ -673,13 +933,18 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Statistiques clés (MetricCard)
-                  </span>
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Statistiques clés (MetricCard)
+                    </span>
+                    <span className="text-[10px] text-purple-700 font-medium">
+                      Modifiez ici ou dans les onglets graphiques : la synchronisation est bilatérale.
+                    </span>
+                  </div>
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => addGenericRow('keyMetrics', { name: 'Nouvelle stat clé', value: '80%', label: 'des réponses', trend: 'up' })}
+                    onClick={() => addGenericRow('keyMetrics', { name: 'Nouvelle stat clé', value: 80, label: 'des réponses', trend: 'up' })}
                     className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
                   >
                     <Plus className="mr-1 h-3 w-3" /> Ajouter stat
@@ -687,7 +952,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                 </div>
                 <div className="space-y-2">
                   {(restaurant.keyMetrics || []).map((m, i) => (
-                    <div key={`km-${i}`} className="p-2.5 rounded-lg border bg-slate-50 text-xs space-y-1">
+                    <div key={`km-${i}`} className="p-2.5 rounded-lg border bg-slate-50 text-xs space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <Input
                           value={m.name}
@@ -705,19 +970,40 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                         </Button>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          value={String(m.value)}
-                          onChange={(e) => updateGenericRow('keyMetrics', i, 'value', e.target.value)}
-                          className="h-6.5 text-xs font-bold text-french-blue bg-white"
-                          placeholder="Valeur (ex: 92 ou 1500 FCFA)"
-                        />
-                        <Input
-                          value={m.label || ''}
-                          onChange={(e) => updateGenericRow('keyMetrics', i, 'label', e.target.value)}
-                          className="h-6.5 text-[11px] text-slate-500 bg-white"
-                          placeholder="Précision"
-                        />
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Valeur / %</label>
+                          <Input
+                            value={String(m.value)}
+                            onChange={(e) => updateGenericRow('keyMetrics', i, 'value', e.target.value)}
+                            className="h-6.5 text-xs font-bold text-french-blue bg-white"
+                            placeholder="ex: 92 ou 1500-2000 FCFA"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Précision / Label</label>
+                          <Input
+                            value={m.label || ''}
+                            onChange={(e) => updateGenericRow('keyMetrics', i, 'label', e.target.value)}
+                            className="h-6.5 text-[11px] text-slate-600 bg-white"
+                            placeholder="Précision"
+                          />
+                        </div>
                       </div>
+                      {i === 0 && (
+                        <div className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Intérêt (Oui: {restaurant.restaurationInterestData?.[0]?.value}%)
+                        </div>
+                      )}
+                      {i === 1 && (
+                        <div className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le BarChart Types de repas (Plats chauds: {restaurant.mealTypePreferenceData?.[0]?.percentage}%)
+                        </div>
+                      )}
+                      {i === 2 && (
+                        <div className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Budget 1500-2000 FCFA ({restaurant.priceForDishData?.[1]?.value}%)
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -725,9 +1011,14 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                    Points d’attention (MetricCard)
-                  </span>
+                  <div>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Points d’attention (MetricCard)
+                    </span>
+                    <span className="text-[10px] text-amber-700 font-medium">
+                      Synchronisés avec le calendrier et la tarification.
+                    </span>
+                  </div>
                   <Button
                     type="button"
                     size="sm"
@@ -739,7 +1030,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                 </div>
                 <div className="space-y-2">
                   {(restaurant.alertPoints || []).map((m, i) => (
-                    <div key={`ap-${i}`} className="p-2.5 rounded-lg border bg-amber-50/50 text-xs space-y-1">
+                    <div key={`ap-${i}`} className="p-2.5 rounded-lg border bg-amber-50/50 text-xs space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <Input
                           value={m.name}
@@ -757,19 +1048,35 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                         </Button>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          value={String(m.value)}
-                          onChange={(e) => updateGenericRow('alertPoints', i, 'value', e.target.value)}
-                          className="h-6.5 text-xs font-bold text-amber-900 bg-white"
-                          placeholder="Valeur (ex: 36.3%)"
-                        />
-                        <Input
-                          value={m.label || ''}
-                          onChange={(e) => updateGenericRow('alertPoints', i, 'label', e.target.value)}
-                          className="h-6.5 text-[11px] text-slate-500 bg-white"
-                          placeholder="Précision"
-                        />
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Valeur</label>
+                          <Input
+                            value={String(m.value)}
+                            onChange={(e) => updateGenericRow('alertPoints', i, 'value', e.target.value)}
+                            className="h-6.5 text-xs font-bold text-amber-900 bg-white"
+                            placeholder="ex: 36.3%"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Précision / Label</label>
+                          <Input
+                            value={m.label || ''}
+                            onChange={(e) => updateGenericRow('alertPoints', i, 'label', e.target.value)}
+                            className="h-6.5 text-[11px] text-slate-600 bg-white"
+                            placeholder="Précision"
+                          />
+                        </div>
                       </div>
+                      {i === 0 && (
+                        <div className="text-[10px] text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le BarChart Mercredi ({restaurant.serviceInterestByDayData?.[2]?.percentage}%)
+                        </div>
+                      )}
+                      {i === 2 && (
+                        <div className="text-[10px] text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Menu complet 2000-3000 FCFA ({restaurant.priceForMenuData?.[2]?.value}%)
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
