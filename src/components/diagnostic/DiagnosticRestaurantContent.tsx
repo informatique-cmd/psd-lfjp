@@ -11,7 +11,7 @@ import pageDataFile from '@/content/pageData.json';
 import { CHART_COLORS } from './restaurant/restaurantData';
 import AdminRestaurantSurveyEditor from './restaurant/AdminRestaurantSurveyEditor';
 
-import { usePrivilegedAccess, isPrivilegedUser } from '@/lib/authAccess';
+import { usePrivilegedAccess, isPrivilegedUser, shouldShowEditorControls } from '@/lib/authAccess';
 
 const restaurantDraftFallback = {
   ...pageDataFile,
@@ -19,7 +19,7 @@ const restaurantDraftFallback = {
 };
 
 const getInitialRestaurant = (): typeof restaurantPageData => {
-  if (typeof window !== 'undefined' && isPrivilegedUser()) {
+  if (typeof window !== 'undefined' && isPrivilegedUser() && shouldShowEditorControls()) {
     try {
       const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
       if (saved) {
@@ -71,8 +71,8 @@ const DiagnosticRestaurantContent = () => {
   }, []);
 
   const handleRestaurantChange = (updatedRestaurant: typeof restaurantPageData) => {
-    if (!isPrivileged) {
-      console.warn('Action de modification ignorée : utilisateur non authentifié.');
+    if (!isPrivileged || !showEditorControls) {
+      console.warn('Action de modification ignorée : utilisateur non autorisé ou vue publique.');
       return;
     }
     setRestaurant(updatedRestaurant);

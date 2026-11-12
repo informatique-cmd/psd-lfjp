@@ -22,13 +22,13 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
   restaurant,
   onChange,
 }) => {
-  const { isPrivileged } = usePrivilegedAccess();
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<
     'student' | 'interest' | 'lunch' | 'days' | 'meals' | 'prices' | 'metrics'
   >('student');
 
-  if (!isPrivileged) {
+  if (!isPrivileged || !showEditorControls) {
     return null;
   }
 

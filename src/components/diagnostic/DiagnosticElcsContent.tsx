@@ -15,8 +15,8 @@ const DiagnosticElcsContent = () => {
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
 
   const handleElcsChange = (updatedElcs: ElcsDataType) => {
-    if (!isPrivileged) {
-      console.warn('Action de modification ignorée : utilisateur non authentifié.');
+    if (!isPrivileged || !showEditorControls) {
+      console.warn('Action de modification ignorée : utilisateur non autorisé ou vue publique.');
       return;
     }
     if (typeof window !== 'undefined') {

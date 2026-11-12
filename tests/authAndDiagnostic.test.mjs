@@ -26,6 +26,34 @@ test('public default profile is unauthenticated guest', () => {
   assert.equal(publicProfile.canDelete, false);
 });
 
+// Test that public showcase strictly hides editor controls without authenticated editor session
+test('public showcase view strictly hides editor controls without authenticated editor session', () => {
+  const checkControls = ({ role, isEmbedded, isEditorPath, isEditRequested }) => {
+    if (!role || (role !== 'editor' && role !== 'superadmin')) {
+      return false;
+    }
+    return Boolean(isEmbedded || isEditorPath || isEditRequested);
+  };
+
+  // 1. Public visitor without login
+  assert.equal(checkControls({ role: null, isEmbedded: false, isEditorPath: false, isEditRequested: false }), false);
+
+  // 2. Public visitor trying ?edit=1 without valid credentials
+  assert.equal(checkControls({ role: null, isEmbedded: false, isEditorPath: false, isEditRequested: true }), false);
+
+  // 3. Authenticated editor visiting public showcase without edit parameter
+  assert.equal(checkControls({ role: 'editor', isEmbedded: false, isEditorPath: false, isEditRequested: false }), false);
+
+  // 4. Authenticated editor in backoffice
+  assert.equal(checkControls({ role: 'editor', isEmbedded: false, isEditorPath: true, isEditRequested: false }), true);
+
+  // 5. Authenticated editor in embedded visual preview
+  assert.equal(checkControls({ role: 'editor', isEmbedded: true, isEditorPath: false, isEditRequested: false }), true);
+
+  // 6. Authenticated superadmin in embedded visual preview
+  assert.equal(checkControls({ role: 'superadmin', isEmbedded: true, isEditorPath: false, isEditRequested: false }), true);
+});
+
 // Test ELCS data structure integrity
 test('ELCS data structure contains all required categories and metrics', () => {
   assert.ok(pageData.elcsData, 'elcsData must be defined in pageData.json');

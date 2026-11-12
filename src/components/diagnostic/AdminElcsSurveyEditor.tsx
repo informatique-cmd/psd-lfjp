@@ -21,11 +21,11 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
   elcsData,
   onChange,
 }) => {
-  const { isPrivileged } = usePrivilegedAccess();
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<keyof ElcsDataType>('satisfaction');
 
-  if (!isPrivileged) {
+  if (!isPrivileged || !showEditorControls) {
     return null;
   }
 

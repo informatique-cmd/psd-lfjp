@@ -1,19 +1,11 @@
 import { useEffect, useState } from 'react';
 import { APP_BUILD_VERSION } from '@/config/buildVersion';
-import { isPrivilegedUser } from '@/lib/authAccess';
+import { isPrivilegedUser, shouldShowEditorControls } from '@/lib/authAccess';
 
-export const isContentDraftPreview = () =>
+export const isContentDraftPreview = (): boolean =>
   typeof window !== 'undefined' &&
-  isPrivilegedUser() && (
-    new URLSearchParams(window.location.search).get('draft') === '1' ||
-    new URLSearchParams(window.location.search).get('edit') === '1' ||
-    window.location.pathname.startsWith('/espace-direction') ||
-    window.sessionStorage.getItem('lfjp-preview-mode') === '1' ||
-    window.sessionStorage.getItem('lfjp_preview_active') === '1' ||
-    window.sessionStorage.getItem('lfjp_admin_local_session') === '1' ||
-    window.localStorage.getItem('lfjp_admin_active_session') === '1' ||
-    window.self !== window.top
-  );
+  isPrivilegedUser() &&
+  shouldShowEditorControls();
 
 export const clearAllDraftStorage = () => {
   if (typeof window === 'undefined') return;

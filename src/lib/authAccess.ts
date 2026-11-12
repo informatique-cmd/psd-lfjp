@@ -57,13 +57,25 @@ export function shouldShowEditorControls(): boolean {
   if (typeof window === 'undefined') return false;
 
   const role = getAuthenticatedPrivilegedRole();
-  if (!role) {
+  if (!role || (role !== 'editor' && role !== 'superadmin')) {
     // Unauthenticated public visitors NEVER see editor controls!
     return false;
   }
 
-  // Authenticated Editor or SuperAdmin has full access to editing panels and live sync
-  return true;
+  // Strict Rule: On the public showcase / vitrine site, editor controls are completely hidden.
+  // They only appear in the dedicated Authenticated Editor / SuperAdmin spaces:
+  // 1. In the back-office routes (/espace-direction, /admin)
+  // 2. In the visual preview iframe embedded in the back-office (window.self !== window.top || embedded=1)
+  // 3. When an authenticated editor explicitly requests editing mode (?edit=1 or ?mode=editor)
+  const isEmbeddedInAdmin = window.self !== window.top || window.location.search.includes('embedded=1');
+  const isEditorPath =
+    window.location.pathname.startsWith('/espace-direction') ||
+    window.location.pathname.startsWith('/admin');
+  const isEditRequested =
+    window.location.search.includes('edit=1') ||
+    window.location.search.includes('mode=editor');
+
+  return isEmbeddedInAdmin || isEditorPath || isEditRequested;
 }
 
 /**
