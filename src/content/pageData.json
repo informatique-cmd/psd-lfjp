@@ -307,11 +307,11 @@
     "restaurationInterestData": [
       {
         "name": "Oui",
-        "value": 95
+        "value": 92
       },
       {
         "name": "Non",
-        "value": 5
+        "value": 8
       }
     ],
     "currentLunchData": [
@@ -433,7 +433,7 @@
     "keyMetrics": [
       {
         "name": "Intérêt global pour la restauration scolaire",
-        "value": 95,
+        "value": 92,
         "label": "des parents intéressés",
         "trend": "up"
       },
