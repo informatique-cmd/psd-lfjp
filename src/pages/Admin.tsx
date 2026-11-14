@@ -306,8 +306,8 @@ const Admin = () => {
   const [diagnosticSubTab, setDiagnosticSubTab] = useState<'elcs' | 'restaurant' | 'rapports' | 'subpages'>('elcs');
   const [planStrategiqueSubTab, setPlanStrategiqueSubTab] = useState<'axe1' | 'axe2' | 'axe3' | 'axe4' | 'overview'>('axe1');
   const [axe1SubTab, setAxe1SubTab] = useState<'budget' | 'transport' | 'indicateurs' | 'fiches' | 'jalons'>('budget');
-  const [axe2SubTab, setAxe2SubTab] = useState<'indicateurs' | 'fiches' | 'jalons'>('indicateurs');
-  const [axe3SubTab, setAxe3SubTab] = useState<'indicateurs' | 'fiches' | 'jalons'>('indicateurs');
+  const [axe2SubTab, setAxe2SubTab] = useState<'indicateurs' | 'fiches' | 'jalons'>('fiches');
+  const [axe3SubTab, setAxe3SubTab] = useState<'indicateurs' | 'fiches' | 'jalons'>('fiches');
   const [axe4SubTab, setAxe4SubTab] = useState<'bac-blanc' | 'film-annuel' | 'indicateurs' | 'fiches' | 'jalons'>('bac-blanc');
   const [planOverviewSearch, setPlanOverviewSearch] = useState<string>('');
   const [customRubriqueSubTab, setCustomRubriqueSubTab] = useState<'content' | 'subpages'>('content');

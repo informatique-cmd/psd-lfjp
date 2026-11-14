@@ -301,9 +301,16 @@ test('Admin.tsx synchronizes auth sessions properly and allows Plan Stratégique
   );
 });
 
-test('Plan Stratégique Axes 1-4 support full Add/Edit/Delete and strict read-only vitrine returns null on all visual editors', () => {
+test('Plan Stratégique Axes 1-4 restore original showcase design while keeping Editor/Superadmin CRUD and strict read-only vitrine', () => {
+  const psdSrc = readFileSync(resolve(rootDir, 'src/components/PSD.tsx'), 'utf-8');
+  assert.ok(!psdSrc.includes('Tableau de bord synthétique'), 'PSD.tsx showcase must not inject extra dashboard card');
+  assert.ok(!psdSrc.includes('BarChart'), 'PSD.tsx showcase must not render public Recharts BarChart');
+  assert.ok(psdSrc.includes('isPrivileged && showEditorControls'), 'PSD.tsx must gate AdminPlanStrategiqueEditor behind privileged access');
+
   const planEditor = readFileSync(resolve(rootDir, 'src/components/AdminPlanStrategiqueEditor.tsx'), 'utf-8');
   assert.ok(planEditor.includes('Aucun indicateur défini'), 'AdminPlanStrategiqueEditor must render empty indicator state');
+  assert.ok(planEditor.includes('BarChart'), 'AdminPlanStrategiqueEditor must host synchronized overview BarChart inside privileged drawer');
+  assert.ok(planEditor.includes('PsdAxisIndicatorsSection'), 'AdminPlanStrategiqueEditor must host PsdAxisIndicatorsSection inside privileged drawer');
   assert.ok(
     !planEditor.includes('disabled={axis.indicators.length <= 1}'),
     'AdminPlanStrategiqueEditor must allow deleting last indicator cleanly'
@@ -313,17 +320,22 @@ test('Plan Stratégique Axes 1-4 support full Add/Edit/Delete and strict read-on
     'AdminPlanStrategiqueEditor must allow deleting last jalon cleanly'
   );
 
-  const axeFiles = [
+  const axeWithTimeline = [
     'src/components/PSDAxe1.tsx',
     'src/components/PSDAxe2.tsx',
     'src/components/PSDAxe3.tsx',
-    'src/components/PSDAxe4.tsx',
   ];
-  axeFiles.forEach((relPath) => {
+  axeWithTimeline.forEach((relPath) => {
     const src = readFileSync(resolve(rootDir, relPath), 'utf-8');
     assert.ok(src.includes('usePublishedPageData'), `${relPath} must use usePublishedPageData for live published sync`);
     assert.ok(src.includes('Aucune action programmée'), `${relPath} must render clean empty-state for empty timeline`);
+    assert.ok(!src.includes('PsdAxisIndicatorsSection'), `${relPath} must not alter original showcase with PsdAxisIndicatorsSection`);
   });
+
+  const axe4Src = readFileSync(resolve(rootDir, 'src/components/PSDAxe4.tsx'), 'utf-8');
+  assert.ok(axe4Src.includes('usePublishedPageData'), 'PSDAxe4.tsx must use usePublishedPageData for live published sync');
+  assert.ok(!axe4Src.includes('PsdAxisIndicatorsSection'), 'PSDAxe4.tsx must not render PsdAxisIndicatorsSection');
+  assert.ok(!axe4Src.includes('Frise temporelle'), 'PSDAxe4.tsx must preserve original layout without Frise temporelle');
 
   const editorComponents = [
     'src/components/diagnostic/restaurant/AdminRestaurantSurveyEditor.tsx',

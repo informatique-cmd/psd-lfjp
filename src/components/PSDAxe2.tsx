@@ -6,7 +6,6 @@ import { useContentDraft } from '@/lib/contentDraft';
 import { usePublishedPageData } from '@/lib/publishedDataSync';
 import { ChevronDown, Globe2, Handshake, Palette } from 'lucide-react';
 import PSDAxeLayout from './PSDAxeLayout';
-import { PsdAxisIndicatorsSection } from './PsdAxisIndicatorsSection';
 
 const timelineDraftFallback = {
   ...pageDataFile,
@@ -262,20 +261,33 @@ const PSDAxe2 = () => {
     },
   ];
 
+  const indicatorsModified =
+    JSON.stringify(axisOverview.indicators || []) !==
+    JSON.stringify(defaultPsdAxesData.axe2.indicators);
+
+  const effectiveIndicators = !indicatorsModified
+    ? indicators
+    : (axisOverview.indicators || []).length === 0
+      ? [{ content: <span className="italic text-slate-500">Aucun indicateur défini pour cet axe.</span> }]
+      : (axisOverview.indicators || []).map((ind) => ({
+          content: (
+            <>
+              <strong>{ind.name}</strong> ({ind.currentRate}
+              {ind.unit} / cible {ind.targetRate}
+              {ind.unit} — {ind.status})
+            </>
+          ),
+        }));
+
   return (
     <PSDAxeLayout
       axeId={2}
       title={axisOverview.title}
       subtitle={axisOverview.subtitle}
-      timeline={
-        <div className="space-y-8">
-          <PsdAxisIndicatorsSection axis={axisOverview} />
-          {timelineContent}
-        </div>
-      }
+      timeline={timelineContent}
       objectifs={objectifs}
       actionSections={actionSections}
-      indicators={indicators}
+      indicators={effectiveIndicators}
     />
   );
 };

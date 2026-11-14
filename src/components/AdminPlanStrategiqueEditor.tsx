@@ -1,4 +1,14 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BarChart3, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
@@ -12,6 +22,7 @@ import type { PsdTimelineAction, PsdTimelineKey } from '@/data/psdTimelineData';
 import { usePrivilegedAccess } from '@/lib/authAccess';
 import { LocaleNumberInput } from '@/components/ui/locale-number-input';
 import { sanitizePsdAxesData, sanitizePsdTimelines } from '@/lib/pageDataSanitizer';
+import { PsdAxisIndicatorsSection } from './PsdAxisIndicatorsSection';
 
 export interface PlanStrategiqueMeta {
   title: string;
@@ -46,6 +57,8 @@ const STATUS_OPTIONS: PsdAxisIndicator['status'][] = [
   'Objectif atteint',
 ];
 
+const AXIS_KEYS: PsdAxisKey[] = ['axe1', 'axe2', 'axe3', 'axe4'];
+
 const COLOR_OPTIONS = [
   { value: 'from-french-blue/70 to-french-blue', label: 'Bleu LFJP' },
   { value: 'from-emerald-300/80 to-emerald-500', label: 'Émeraude' },
@@ -66,6 +79,30 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | PsdAxisKey>('overview');
 
+  const summary = useMemo(() => {
+    const progressRates = AXIS_KEYS.map((k) => computeAxisProgressRate(psdAxesData[k]));
+    const globalProgress =
+      Math.round((progressRates.reduce((s, v) => s + v, 0) / AXIS_KEYS.length) * 10) / 10;
+    const totalBudget = AXIS_KEYS.reduce(
+      (s, k) => s + (Number(psdAxesData[k].budgetMillions) || 0),
+      0
+    );
+    const totalActions = AXIS_KEYS.reduce(
+      (s, k) => s + (psdTimelines[k]?.actions?.length || 0),
+      0
+    );
+    const totalIndicators = AXIS_KEYS.reduce(
+      (s, k) => s + (psdAxesData[k]?.indicators?.length || 0),
+      0
+    );
+    const chartData = AXIS_KEYS.map((k, idx) => ({
+      name: `Axe ${idx + 1}`,
+      avancement: computeAxisProgressRate(psdAxesData[k]),
+      budget: Number(psdAxesData[k].budgetMillions) || 0,
+    }));
+    return { globalProgress, totalBudget, totalActions, totalIndicators, chartData };
+  }, [psdAxesData, psdTimelines]);
+
   if (!isPrivileged || !showEditorControls) {
     return null;
   }
@@ -83,8 +120,6 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
       planStrategique: nextMeta,
     });
   };
-
-  const axisKeys: PsdAxisKey[] = ['axe1', 'axe2', 'axe3', 'axe4'];
 
   return (
     <div
@@ -144,7 +179,7 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
             >
               Vue Globale
             </button>
-            {axisKeys.map((k, idx) => (
+            {AXIS_KEYS.map((k, idx) => (
               <button
                 key={k}
                 type="button"
@@ -206,7 +241,7 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {axisKeys.map((k) => {
+                    {AXIS_KEYS.map((k) => {
                       const axis = psdAxesData[k];
                       const timeline = psdTimelines[k];
                       return (
@@ -237,6 +272,70 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                      Avancement global
+                    </span>
+                    <div className="mt-0.5 text-xl font-bold text-french-blue">
+                      {summary.globalProgress}%
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                      Budget consolidé
+                    </span>
+                    <div className="mt-0.5 text-xl font-bold text-emerald-700">
+                      {summary.totalBudget} M FCFA
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                      Actions structurantes
+                    </span>
+                    <div className="mt-0.5 text-xl font-bold text-amber-700">
+                      {summary.totalActions}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-purple-100 bg-purple-50/70 p-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-purple-700">
+                      Indicateurs suivis
+                    </span>
+                    <div className="mt-0.5 text-xl font-bold text-purple-700">
+                      {summary.totalIndicators}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-[220px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={summary.chartData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis yAxisId="left" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Bar
+                        yAxisId="left"
+                        dataKey="avancement"
+                        name="Avancement (%)"
+                        fill="#005BAC"
+                        radius={[6, 6, 0, 0]}
+                      />
+                      <Bar
+                        yAxisId="right"
+                        dataKey="budget"
+                        name="Budget (M FCFA)"
+                        fill="#10b981"
+                        radius={[6, 6, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           )}
@@ -683,6 +782,8 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                     </table>
                   </div>
                 </div>
+
+                <PsdAxisIndicatorsSection axis={axis} />
               </div>
             );
           })()}

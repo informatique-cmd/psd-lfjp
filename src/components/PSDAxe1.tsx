@@ -5,7 +5,6 @@ import { psdTimelineData } from '@/data/psdTimelineData';
 import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
 import { useContentDraft } from '@/lib/contentDraft';
 import { usePublishedPageData } from '@/lib/publishedDataSync';
-import { PsdAxisIndicatorsSection } from './PsdAxisIndicatorsSection';
 import { Link } from 'react-router-dom';
 import {
   BarChart3,
@@ -230,16 +229,18 @@ const PSDAxe1 = () => {
     }
   ];
 
+  const indicatorsModified =
+    JSON.stringify(axisOverview.indicators || []) !==
+    JSON.stringify(defaultPsdAxesData.axe1.indicators);
+
   return (
     <div>
       <h3 className="text-xl font-playfair font-bold text-french-blue mb-4">
         {axisOverview.title}
       </h3>
-      <p className="text-lg font-medium font-raleway text-gray-800 mb-6">
+      <p className="text-lg font-medium font-raleway text-gray-800 mb-8">
         {axisOverview.subtitle}
       </p>
-
-      <PsdAxisIndicatorsSection axis={axisOverview} />
 
       <section className="mt-12 space-y-8">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -400,9 +401,19 @@ const PSDAxe1 = () => {
         >
           <h4 className="mb-3 text-lg font-semibold text-slate-900">Indicateurs détaillés</h4>
           <ul className="list-disc space-y-2 pl-5 text-gray-700 font-raleway">
-            {indicators.map((item, index) => (
-              <li key={index}>{item.content}</li>
-            ))}
+            {!indicatorsModified ? (
+              indicators.map((item, index) => <li key={index}>{item.content}</li>)
+            ) : (axisOverview.indicators || []).length === 0 ? (
+              <li className="italic text-slate-500">Aucun indicateur défini pour cet axe.</li>
+            ) : (
+              (axisOverview.indicators || []).map((ind, index) => (
+                <li key={`${ind.name}-${index}`}>
+                  <strong>{ind.name}</strong> ({ind.currentRate}
+                  {ind.unit} / cible {ind.targetRate}
+                  {ind.unit} — {ind.status})
+                </li>
+              ))
+            )}
           </ul>
         </div>
       </section>
