@@ -10,12 +10,16 @@ import {
 } from "@/components/ui/breadcrumb";
 import routesData from "@/data/breadcrumbRoutes.json";
 import { Home } from 'lucide-react';
-import { getManagedPages } from '@/content/pageTypes';
+import { normalizePageSlug, type ManagedPage } from '@/content/pageTypes';
 import pageDataFile from '@/content/pageData.json';
+import pagesFile from '@/content/pages.json';
+import siteContent from '@/content/siteContent.json';
 import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
 import { resolveActionPage, type ActionPagesMap } from '@/data/actionPageData';
-import { usePublishedPageData } from '@/lib/publishedDataSync';
+import { normalizeNavPath, resolveNavRubriques } from '@/data/navRubriques';
+import { usePublishedPageData, usePublishedPages, usePublishedSiteContent } from '@/lib/publishedDataSync';
 import { useContentDraft } from '@/lib/contentDraft';
+import type { HomeSectionContent } from '@/components/AdminHomeEditor';
 
 const breadcrumbFallback = {
   ...pageDataFile,
@@ -33,7 +37,18 @@ interface RouteMap {
 const routes: RouteMap = routesData;
 
 const BreadcrumbNav = () => {
-  const managedPages = getManagedPages();
+  const publishedPages = usePublishedPages((pagesFile.pages || []) as ManagedPage[]);
+  const draftPagesBundle = useContentDraft('lfjp-admin-pages-draft', {
+    pages: publishedPages,
+  }) as { pages?: ManagedPage[] };
+  const managedPages = Array.isArray(draftPagesBundle?.pages) ? draftPagesBundle.pages : publishedPages;
+
+  const publishedSiteContent = usePublishedSiteContent(siteContent as unknown as Record<string, unknown>);
+  const currentContent = useContentDraft('lfjp-admin-draft', publishedSiteContent) as typeof siteContent & {
+    home?: HomeSectionContent;
+  };
+  const navItems = resolveNavRubriques(currentContent?.home?.navItems);
+
   const publishedData = usePublishedPageData(breadcrumbFallback);
   const pageData = useContentDraft('lfjp-admin-page-data-draft', publishedData);
   const location = useLocation();
@@ -43,10 +58,13 @@ const BreadcrumbNav = () => {
   if (pathnames.length === 0) return null;
   
   const currentPath = '/' + pathnames.join('/');
-  const managedPage = managedPages.find((page) => page.slug === currentPath);
+  const managedPage = managedPages.find((page) => normalizePageSlug(page.slug) === currentPath);
+  const navItem = navItems.find((item) => normalizeNavPath(item.path) === currentPath);
   let currentRoute = routes[currentPath] || (managedPage ? {
     name: managedPage.title,
     parent: managedPage.parent,
+  } : navItem ? {
+    name: navItem.label,
   } : undefined);
 
   if (!currentRoute && (pathnames[0] === 'projets' || pathnames[0] === 'fiche-projet')) {
@@ -79,7 +97,7 @@ const BreadcrumbNav = () => {
 
   while (parentPath && !visitedPaths.has(parentPath)) {
     visitedPaths.add(parentPath);
-    const managedParent = managedPages.find((page) => page.slug === parentPath);
+    const managedParent = managedPages.find((page) => normalizePageSlug(page.slug) === parentPath);
     const parentRoute = routes[parentPath] || (managedParent ? {
       name: managedParent.title,
       parent: managedParent.parent,

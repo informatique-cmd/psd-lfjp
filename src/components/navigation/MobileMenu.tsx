@@ -1,8 +1,13 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 import MobileNavItem from './MobileNavItem';
-import { getManagedPages, type ManagedPage } from '@/content/pageTypes';
+import { normalizePageSlug, type ManagedPage } from '@/content/pageTypes';
+import pagesFile from '@/content/pages.json';
+import siteContent from '@/content/siteContent.json';
+import { useContentDraft } from '@/lib/contentDraft';
+import { usePublishedPages, usePublishedSiteContent } from '@/lib/publishedDataSync';
+import { normalizeNavPath, resolveNavRubriques } from '@/data/navRubriques';
+import type { HomeSectionContent } from '@/components/AdminHomeEditor';
 
 interface MobileMenuProps {
   id?: string;
@@ -12,13 +17,37 @@ interface MobileMenuProps {
 }
 
 const MobileMenu = ({ id, mobileMenuOpen, setMobileMenuOpen, isActive }: MobileMenuProps) => {
-  const draftPages = getManagedPages();
-  const managedNavigation = (draftPages as ManagedPage[])
-    .filter((page) => page.showInNavigation !== false && !page.parent)
+  const publishedSiteContent = usePublishedSiteContent(siteContent as unknown as Record<string, unknown>);
+  const currentContent = useContentDraft('lfjp-admin-draft', publishedSiteContent) as typeof siteContent & {
+    home?: HomeSectionContent;
+  };
+  const navItems = resolveNavRubriques(currentContent?.home?.navItems);
+  const navPathSet = new Set(navItems.map((item) => normalizeNavPath(item.path)));
+
+  const publishedPages = usePublishedPages((pagesFile.pages || []) as ManagedPage[]);
+  const draftPagesBundle = useContentDraft('lfjp-admin-pages-draft', {
+    pages: publishedPages,
+  }) as { pages?: ManagedPage[] };
+  const draftPages = Array.isArray(draftPagesBundle?.pages) ? draftPagesBundle.pages : publishedPages;
+
+  const managedNavigation = draftPages
+    .filter(
+      (page) =>
+        page.showInNavigation !== false &&
+        !page.parent &&
+        !navPathSet.has(normalizePageSlug(page.slug))
+    )
     .sort((a, b) => (a.order || 0) - (b.order || 0));
-  const childNavigation = (draftPages as ManagedPage[])
-    .filter((page) => page.showInNavigation !== false && page.parent)
+
+  const childNavigation = draftPages
+    .filter(
+      (page) =>
+        page.showInNavigation !== false &&
+        Boolean(page.parent) &&
+        !navPathSet.has(normalizePageSlug(page.slug))
+    )
     .sort((a, b) => (a.order || 0) - (b.order || 0));
+
   return (
     <div
       id={id}
@@ -37,45 +66,19 @@ const MobileMenu = ({ id, mobileMenuOpen, setMobileMenuOpen, isActive }: MobileM
           &times;
         </button>
         
-        <MobileNavItem
-          to="/"
-          isActive={isActive('/')}
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          Accueil
-        </MobileNavItem>
-
-        <MobileNavItem
-          to="/methode"
-          isActive={isActive('/methode')}
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          Méthode
-        </MobileNavItem>
-
-        <MobileNavItem
-          to="/vision-missions-valeurs"
-          isActive={isActive('/vision-missions-valeurs')}
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          Vision & Valeurs
-        </MobileNavItem>
-        
-        <MobileNavItem 
-          to="/diagnostic" 
-          isActive={isActive('/diagnostic')} 
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          Diagnostic
-        </MobileNavItem>
-        
-        <MobileNavItem
-          to="/plan-strategique"
-          isActive={isActive('/plan-strategique')}
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          Plan Stratégique
-        </MobileNavItem>
+        {navItems.map((item) => {
+          const path = normalizeNavPath(item.path);
+          return (
+            <MobileNavItem
+              key={`${item.id}-${path}`}
+              to={path}
+              isActive={isActive(path)}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              {item.label}
+            </MobileNavItem>
+          );
+        })}
 
         {managedNavigation.map((page) => (
           <MobileNavItem

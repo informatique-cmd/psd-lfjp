@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import { sanitizePageData } from '@/lib/pageDataSanitizer';
+import type { ManagedPage } from '@/content/pageTypes';
 
 let cachedPublishedPageData: Record<string, unknown> | null = null;
 let cachedPublishedSiteContent: Record<string, unknown> | null = null;
+let cachedPublishedPages: ManagedPage[] | null = null;
 let inFlightPromise: Promise<{
   pageData: Record<string, unknown> | null;
   siteContent: Record<string, unknown> | null;
+  pages: ManagedPage[] | null;
 }> | null = null;
 
 export const invalidatePublishedPageDataCache = () => {
   cachedPublishedPageData = null;
   cachedPublishedSiteContent = null;
+  cachedPublishedPages = null;
   inFlightPromise = null;
 };
 
@@ -36,16 +40,29 @@ export const setPublishedSiteContentCache = (raw: unknown) => {
   }
 };
 
+export const setPublishedPagesCache = (raw: unknown) => {
+  if (Array.isArray(raw)) {
+    cachedPublishedPages = raw as ManagedPage[];
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('lfjp_published_pages_loaded', { detail: cachedPublishedPages })
+      );
+    }
+  }
+};
+
 const fetchAllPublishedBundle = async (
   force = false
 ): Promise<{
   pageData: Record<string, unknown> | null;
   siteContent: Record<string, unknown> | null;
+  pages: ManagedPage[] | null;
 }> => {
-  if (!force && (cachedPublishedPageData || cachedPublishedSiteContent)) {
+  if (!force && (cachedPublishedPageData || cachedPublishedSiteContent || cachedPublishedPages)) {
     return {
       pageData: cachedPublishedPageData,
       siteContent: cachedPublishedSiteContent,
+      pages: cachedPublishedPages,
     };
   }
   if (!force && inFlightPromise) {
@@ -63,11 +80,16 @@ const fetchAllPublishedBundle = async (
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      if (!res.ok) return { pageData: null, siteContent: null };
-      const json = (await res.json()) as { pageData?: unknown; siteContent?: unknown };
+      if (!res.ok) return { pageData: null, siteContent: null, pages: null };
+      const json = (await res.json()) as {
+        pageData?: unknown;
+        siteContent?: unknown;
+        pages?: unknown;
+      };
 
       let nextPageData: Record<string, unknown> | null = null;
       let nextSiteContent: Record<string, unknown> | null = null;
+      let nextPages: ManagedPage[] | null = null;
 
       if (json?.pageData && typeof json.pageData === 'object' && !Array.isArray(json.pageData)) {
         nextPageData = sanitizePageData(json.pageData);
@@ -89,9 +111,19 @@ const fetchAllPublishedBundle = async (
         }
       }
 
-      return { pageData: nextPageData, siteContent: nextSiteContent };
+      if (Array.isArray(json?.pages)) {
+        nextPages = json.pages as ManagedPage[];
+        cachedPublishedPages = nextPages;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('lfjp_published_pages_loaded', { detail: nextPages })
+          );
+        }
+      }
+
+      return { pageData: nextPageData, siteContent: nextSiteContent, pages: nextPages };
     } catch {
-      return { pageData: null, siteContent: null };
+      return { pageData: null, siteContent: null, pages: null };
     } finally {
       inFlightPromise = null;
     }
@@ -112,6 +144,13 @@ export const fetchLatestPublishedSiteContent = async (
 ): Promise<Record<string, unknown> | null> => {
   const bundle = await fetchAllPublishedBundle(force);
   return bundle.siteContent;
+};
+
+export const fetchLatestPublishedPages = async (
+  force = false
+): Promise<ManagedPage[] | null> => {
+  const bundle = await fetchAllPublishedBundle(force);
+  return bundle.pages;
 };
 
 export const usePublishedPageData = <T extends Record<string, unknown>>(fallback: T): T => {
@@ -170,4 +209,30 @@ export const usePublishedSiteContent = <T extends Record<string, unknown>>(fallb
 
   if (!published) return fallback;
   return { ...fallback, ...published } as T;
+};
+
+export const usePublishedPages = (fallback: ManagedPage[]): ManagedPage[] => {
+  const [published, setPublished] = useState<ManagedPage[] | null>(() => cachedPublishedPages);
+
+  useEffect(() => {
+    let active = true;
+    const handleLoaded = (e: Event) => {
+      const detail = (e as CustomEvent<ManagedPage[]>).detail;
+      if (active && Array.isArray(detail)) {
+        setPublished(detail);
+      }
+    };
+    window.addEventListener('lfjp_published_pages_loaded', handleLoaded);
+    fetchLatestPublishedPages().then((data) => {
+      if (active && Array.isArray(data)) {
+        setPublished(data);
+      }
+    });
+    return () => {
+      active = false;
+      window.removeEventListener('lfjp_published_pages_loaded', handleLoaded);
+    };
+  }, []);
+
+  return published || fallback;
 };

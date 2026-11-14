@@ -61,11 +61,13 @@ export const useContentDraft = <T,>(key: string, fallback: T): T => {
     window.addEventListener('storage', refresh);
     window.addEventListener('lfjp_page_data_changed', refresh);
     window.addEventListener('lfjp_site_content_changed', refresh);
+    window.addEventListener('lfjp_pages_changed', refresh);
     window.addEventListener('lfjp_draft_cleared', refresh);
     return () => {
       window.removeEventListener('storage', refresh);
       window.removeEventListener('lfjp_page_data_changed', refresh);
       window.removeEventListener('lfjp_site_content_changed', refresh);
+      window.removeEventListener('lfjp_pages_changed', refresh);
       window.removeEventListener('lfjp_draft_cleared', refresh);
     };
   }, [fallback, key]);

@@ -41,6 +41,7 @@ export interface ManagedPagesFile {
 }
 
 import pagesFile from '@/content/pages.json';
+import { isContentDraftPreview } from '@/lib/contentDraft';
 
 export const normalizePageSlug = (slug: string) => {
   const trimmed = slug.trim();
@@ -48,21 +49,22 @@ export const normalizePageSlug = (slug: string) => {
   return `/${trimmed.replace(/^\/+|\/+$/g, '')}`;
 };
 
-export const getManagedPages = (): ManagedPage[] => {
-  if (typeof window === 'undefined') return pagesFile.pages as ManagedPage[];
+export const getManagedPages = (fallback?: ManagedPage[]): ManagedPage[] => {
+  const basePages = fallback || (pagesFile.pages as ManagedPage[]);
+  if (typeof window === 'undefined' || !isContentDraftPreview()) return basePages;
   try {
     const saved = window.localStorage.getItem('lfjp-admin-pages-draft');
     if (saved) {
       const parsed = JSON.parse(saved) as { pages?: unknown };
       if (Array.isArray(parsed?.pages)) {
         const valid = parsed.pages.filter(isValidManagedPage);
-        if (valid.length > 0) return valid;
+        return valid;
       }
     }
   } catch {
-    // fallback to versioned pages
+    // fallback to published pages
   }
-  return pagesFile.pages as ManagedPage[];
+  return basePages;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;

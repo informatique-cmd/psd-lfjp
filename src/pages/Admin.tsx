@@ -34,7 +34,8 @@ import { parseLocaleNumber, sanitizeDiagnosticData, sanitizeElcsDataset, sanitiz
 import { recalculateStudentDistribution } from '@/components/diagnostic/restaurant/restaurantCorrelations';
 import { defaultMethodeData, type MethodeData } from '@/data/methodeData';
 import type { ActionPagesMap } from '@/data/actionPageData';
-import { invalidatePublishedPageDataCache, setPublishedPageDataCache, setPublishedSiteContentCache } from '@/lib/publishedDataSync';
+import { invalidatePublishedPageDataCache, setPublishedPageDataCache, setPublishedPagesCache, setPublishedSiteContentCache } from '@/lib/publishedDataSync';
+import { buildDefaultRubriquePage, normalizeNavPath, resolveNavRubriques } from '@/data/navRubriques';
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
 import { pageTextDraftStorageKey } from '@/lib/pageOverrides';
@@ -623,6 +624,21 @@ const Admin = () => {
           // ignore invalid siteContent snapshot
         }
       }
+      if (pendingDeployment.draftFiles?.pages) {
+        try {
+          const parsedPagesSnapshot = JSON.parse(pendingDeployment.draftFiles.pages) as { pages?: ManagedPage[] };
+          if (Array.isArray(parsedPagesSnapshot?.pages)) {
+            const validPages = parsedPagesSnapshot.pages.filter(isValidManagedPage);
+            setPages(validPages);
+            setPublishedPagesCache(validPages);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('lfjp_pages_changed', { detail: validPages }));
+            }
+          }
+        } catch {
+          // ignore invalid pages snapshot
+        }
+      }
       if (pendingDeployment.draftFiles?.pageData) {
         try {
           const parsedApproved = sanitizePageData(
@@ -733,10 +749,11 @@ const Admin = () => {
 
       const finalPageDataStr = draftOutcome.pageDataStr;
       const finalSiteContentStr = draftOutcome.siteContentStr;
+      const finalPagesStr = draftOutcome.pagesStr;
 
       const payloadFiles = {
         siteContent: finalSiteContentStr,
-        pages: serializedPages,
+        pages: finalPagesStr,
         pageData: finalPageDataStr,
         pageText: pageTextJson,
       };
@@ -757,6 +774,7 @@ const Admin = () => {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(pageDataDraftStorageKey, finalPageDataStr);
         window.localStorage.setItem(draftStorageKey, finalSiteContentStr);
+        window.localStorage.setItem(pagesDraftStorageKey, finalPagesStr);
       }
       setPageDataJson(finalPageDataStr);
       try {
@@ -766,6 +784,19 @@ const Admin = () => {
         window.dispatchEvent(
           new CustomEvent('lfjp_site_content_changed', { detail: parsedSiteFinal })
         );
+      } catch {
+        // ignore
+      }
+      try {
+        const parsedPagesFinal = JSON.parse(finalPagesStr) as { pages?: ManagedPage[] };
+        if (Array.isArray(parsedPagesFinal?.pages)) {
+          const validPagesFinal = parsedPagesFinal.pages.filter(isValidManagedPage);
+          setPages(validPagesFinal);
+          setPublishedPagesCache(validPagesFinal);
+          window.dispatchEvent(
+            new CustomEvent('lfjp_pages_changed', { detail: validPagesFinal })
+          );
+        }
       } catch {
         // ignore
       }
@@ -1569,6 +1600,16 @@ const Admin = () => {
         });
         return;
       }
+      if (event.data?.type === 'lfjp_pages_updated' && Array.isArray(event.data.pages)) {
+        const nextPages = event.data.pages.filter(isValidManagedPage);
+        setPages(nextPages);
+        try {
+          window.localStorage.setItem(pagesDraftStorageKey, JSON.stringify({ pages: nextPages }, null, 2));
+        } catch {
+          // ignore
+        }
+        return;
+      }
       if (event.data?.type === 'lfjp_psd_survey_data_updated' && event.data.psdSurveyData) {
         setPageDataJson((prev) => {
           try {
@@ -1624,6 +1665,16 @@ const Admin = () => {
     const syncVisualDraft = (event: StorageEvent) => {
       if (event.key === pageTextDraftStorageKey && event.newValue) setPageTextJson(event.newValue);
       if (event.key === pageDataDraftStorageKey && event.newValue) setPageDataJson(event.newValue);
+      if (event.key === pagesDraftStorageKey && event.newValue) {
+        try {
+          const parsed = JSON.parse(event.newValue);
+          if (isRecord(parsed) && Array.isArray(parsed.pages)) {
+            setPages(parsed.pages.filter(isValidManagedPage));
+          }
+        } catch {
+          // ignore
+        }
+      }
       if (event.key === draftStorageKey && event.newValue) {
         try {
           const parsed = JSON.parse(event.newValue);
@@ -1655,13 +1706,21 @@ const Admin = () => {
         setContent((prev) => ({ ...prev, ...custom.detail } as Content));
       }
     };
+    const handlePagesUpdate = (event: Event) => {
+      const custom = event as CustomEvent<ManagedPage[]>;
+      if (Array.isArray(custom.detail)) {
+        setPages(custom.detail.filter(isValidManagedPage));
+      }
+    };
     window.addEventListener('storage', syncVisualDraft);
     window.addEventListener('lfjp_page_data_changed', handlePageDataUpdate);
     window.addEventListener('lfjp_site_content_changed', handleSiteContentUpdate);
+    window.addEventListener('lfjp_pages_changed', handlePagesUpdate);
     return () => {
       window.removeEventListener('storage', syncVisualDraft);
       window.removeEventListener('lfjp_page_data_changed', handlePageDataUpdate);
       window.removeEventListener('lfjp_site_content_changed', handleSiteContentUpdate);
+      window.removeEventListener('lfjp_pages_changed', handlePagesUpdate);
     };
   }, []);
 
@@ -2089,12 +2148,37 @@ const Admin = () => {
     setIsSaving(true);
     setStatus('');
     try {
-      const currentPagesList = [...pages];
+      let currentPagesList: ManagedPage[] = [...pages];
+      const pagesSourceStr =
+        customFiles?.pages ||
+        (typeof window !== 'undefined' ? window.localStorage.getItem(pagesDraftStorageKey) : null);
+      if (pagesSourceStr) {
+        try {
+          const parsedPages = JSON.parse(pagesSourceStr) as { pages?: unknown };
+          if (Array.isArray(parsedPages?.pages)) {
+            currentPagesList = parsedPages.pages.filter(isValidManagedPage);
+          }
+        } catch {
+          // keep currentPagesList
+        }
+      }
+
+      const contentStr = customFiles?.siteContent || window.localStorage.getItem(draftStorageKey) || serializedContent || '{}';
+      let resolvedContent = content;
+      try {
+        const parsedContent = JSON.parse(contentStr) as Content;
+        if (isRecord(parsedContent) && isRecord(parsedContent.home)) {
+          resolvedContent = parsedContent;
+        }
+      } catch {
+        // fallback to content
+      }
+
       const managedPaths = new Set(currentPagesList.map((page) => normalizePageSlug(page.slug)));
       const knownPaths = new Set(Object.keys(breadcrumbRoutes));
 
-      // Auto-ensure any card or rubrique path has a corresponding ManagedPage
-      content.home.cards.forEach((card) => {
+      // Auto-ensure any custom card or top-nav rubrique path has a corresponding ManagedPage
+      (resolvedContent.home.cards || []).forEach((card) => {
         const path = normalizePageSlug(card.path);
         if (path !== '/' && !managedPaths.has(path) && !knownPaths.has(path)) {
           currentPagesList.push({
@@ -2108,6 +2192,14 @@ const Admin = () => {
               { type: 'paragraph', text: card.description || 'Contenu de la rubrique' },
             ],
           });
+          managedPaths.add(path);
+        }
+      });
+
+      resolveNavRubriques((resolvedContent.home as { navItems?: unknown }).navItems).forEach((navItem) => {
+        const path = normalizeNavPath(navItem.path);
+        if (path !== '/' && !managedPaths.has(path) && !knownPaths.has(path)) {
+          currentPagesList.push(buildDefaultRubriquePage(navItem.label, path, currentPagesList.length + 1));
           managedPaths.add(path);
         }
       });
@@ -2139,8 +2231,7 @@ const Admin = () => {
         throw new Error('Les modifications visuelles des pages sont invalides. Vérifiez leur JSON avant de déployer.');
       }
 
-      const contentStr = customFiles?.siteContent || window.localStorage.getItem(draftStorageKey) || serializedContent || '{}';
-      const pagesStr = customFiles?.pages || JSON.stringify({ pages: currentPagesList }, null, 2);
+      const pagesStr = JSON.stringify({ pages: currentPagesList }, null, 2);
 
       const defaultToken = getDefaultDeployToken();
       const activeGithubToken = githubDeployToken || (typeof window !== 'undefined' ? window.localStorage.getItem('lfjp_github_token') : null) || defaultToken;
@@ -2212,7 +2303,7 @@ const Admin = () => {
     }
   };
 
-  const validateAndSaveDraft = (): { ok: true; pageData: Record<string, unknown>; pageDataStr: string; siteContentStr: string } | { ok: false; error: string } => {
+  const validateAndSaveDraft = (): { ok: true; pageData: Record<string, unknown>; pageDataStr: string; siteContentStr: string; pagesStr: string } | { ok: false; error: string } => {
     try {
       const baseParsed = JSON.parse(pageDataJson) as Record<string, unknown>;
       const merged: Record<string, unknown> = { ...defaultPageData, ...baseParsed };
@@ -2259,6 +2350,40 @@ const Admin = () => {
         throw new Error('Les modifications visuelles des pages sont invalides.');
       }
 
+      // Preserve latest siteContent and pages drafts saved inside the iframe
+      let latestSiteContentStr = serializedContent;
+      if (typeof window !== 'undefined') {
+        const storedSiteRaw = window.localStorage.getItem(draftStorageKey);
+        if (storedSiteRaw) {
+          try {
+            const parsedSite = JSON.parse(storedSiteRaw) as Content;
+            if (isRecord(parsedSite) && isRecord(parsedSite.home) && isRecord(parsedSite.visionMissionsValeurs)) {
+              latestSiteContentStr = JSON.stringify(parsedSite, null, 2);
+              setContent(parsedSite);
+            }
+          } catch {
+            // fallback to serializedContent
+          }
+        }
+      }
+
+      let latestPagesList = [...pages];
+      if (typeof window !== 'undefined') {
+        const storedPagesRaw = window.localStorage.getItem(pagesDraftStorageKey);
+        if (storedPagesRaw) {
+          try {
+            const parsedPages = JSON.parse(storedPagesRaw) as { pages?: unknown };
+            if (Array.isArray(parsedPages?.pages)) {
+              latestPagesList = parsedPages.pages.filter(isValidManagedPage);
+              setPages(latestPagesList);
+            }
+          } catch {
+            // fallback to pages
+          }
+        }
+      }
+      const latestPagesStr = JSON.stringify({ pages: latestPagesList }, null, 2);
+
       const updatedPageDataStr = JSON.stringify(sanitized, null, 2);
       setPageDataJson(updatedPageDataStr);
       window.localStorage.setItem(pageDataDraftStorageKey, updatedPageDataStr);
@@ -2275,15 +2400,16 @@ const Admin = () => {
         // ignore
       }
       saveRubriquesDraft(rubriques);
-      window.localStorage.setItem(draftStorageKey, serializedContent);
-      window.localStorage.setItem(pagesDraftStorageKey, serializedPages);
+      window.localStorage.setItem(draftStorageKey, latestSiteContentStr);
+      window.localStorage.setItem(pagesDraftStorageKey, latestPagesStr);
       window.localStorage.setItem(pageTextDraftStorageKey, pageTextJson);
       setStatus('Brouillon enregistré dans ce navigateur. Il n’est pas encore public.');
       return {
         ok: true,
         pageData: sanitized,
         pageDataStr: updatedPageDataStr,
-        siteContentStr: serializedContent,
+        siteContentStr: latestSiteContentStr,
+        pagesStr: latestPagesStr,
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.';
@@ -2293,14 +2419,26 @@ const Admin = () => {
     }
   };
 
-  const saveDraft = (): boolean => validateAndSaveDraft().ok;
+  const saveDraft = (): boolean => {
+    const outcome = validateAndSaveDraft();
+    if (outcome.ok) {
+      toast.success('Brouillon enregistré localement', {
+        description: 'Vos modifications restent privées jusqu’à la publication en ligne.',
+      });
+    } else {
+      toast.error('Erreur lors de la sauvegarde du brouillon', {
+        description: outcome.error,
+      });
+    }
+    return outcome.ok;
+  };
 
   const previewDraft = () => {
-    if (saveDraft()) window.open('/?draft=1', '_blank', 'noopener,noreferrer');
+    if (validateAndSaveDraft().ok) window.open('/?draft=1', '_blank', 'noopener,noreferrer');
   };
 
   const openVisualEditor = () => {
-    if (!saveDraft()) return;
+    if (!validateAndSaveDraft().ok) return;
     setSelectedVisualElement(null);
   };
 
@@ -4160,38 +4298,6 @@ const Admin = () => {
 
           {/* Right: Harmonized, Non-Overflowing Responsive Actions Toolbar */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Toggle Button Activer / Désactiver les modifications */}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const nextState = !editorModeActive;
-                setEditorModeActive(nextState);
-                if (!nextState) setSelectedVisualElement(null);
-                previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-set-edit-mode', active: nextState }, window.location.origin);
-              }}
-              className={`h-8 text-xs font-semibold px-2.5 sm:px-3 shrink-0 transition-colors ${
-                editorModeActive
-                  ? 'border-amber-500 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 ring-1 ring-amber-500/30'
-                  : 'border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200'
-              }`}
-              title={editorModeActive ? "Désactiver la modification (naviguer sur les liens du site)" : "Activer la modification directe des textes et images"}
-            >
-              <Pencil className={`h-3.5 w-3.5 shrink-0 ${editorModeActive ? 'text-amber-400 mr-1 sm:mr-1.5' : 'text-slate-400 mr-1 sm:mr-1.5'}`} />
-              {editorModeActive ? (
-                <>
-                  <span className="hidden md:inline">Édition active</span>
-                  <span className="md:hidden">Actif</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden md:inline">Modifier le site</span>
-                  <span className="md:hidden">Modifier</span>
-                </>
-              )}
-            </Button>
-
             {/* Status indicator: only when pending admin approval */}
             {pendingDeployment?.status === 'pending_admin_approval' && (
               <span
@@ -4207,14 +4313,13 @@ const Admin = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
               onClick={saveDraft}
-              className="h-8 text-xs px-2 sm:px-2.5 border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 shrink-0"
+              className="h-8 bg-french-blue hover:bg-blue-700 text-white text-xs px-2.5 sm:px-3 shadow-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
               title="Enregistrer le brouillon sur cet appareil"
             >
-              <Save className="h-3.5 w-3.5 text-french-blue sm:mr-1.5 shrink-0" />
-              <span className="hidden lg:inline">Enregistrer le brouillon</span>
-              <span className="hidden sm:inline lg:hidden">Brouillon</span>
+              <Save className="h-3.5 w-3.5 text-white shrink-0" />
+              <span className="hidden sm:inline">Enregistrer le brouillon</span>
+              <span className="sm:hidden">Brouillon</span>
             </Button>
 
             {/* Deploy to Vercel / Direct Publish Button */}
@@ -4336,21 +4441,6 @@ const Admin = () => {
                 <X className="h-4 w-4" />
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Clear Helper Banner when Edit Mode is active */}
-        {editorModeActive && (
-          <div className="shrink-0 bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-200 flex items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2">
-              <Pencil className="h-4 w-4 text-amber-400 shrink-0" />
-              <span>
-                <strong>Mode modification activé :</strong> Cliquez sur n'importe quel texte ou image sur la page pour le modifier facilement.
-              </span>
-            </div>
-            <span className="text-[11px] text-amber-300/80 hidden sm:inline">
-              Pour naviguer sur les liens du site, désactivez la modification en haut
-            </span>
           </div>
         )}
 
@@ -4690,7 +4780,8 @@ const Admin = () => {
             title="Enregistrer le brouillon local"
           >
             <Save className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden sm:inline">Enregistrer</span>
+            <span className="hidden sm:inline">Enregistrer le brouillon</span>
+            <span className="sm:hidden">Brouillon</span>
           </Button>
 
           {canPublish && (

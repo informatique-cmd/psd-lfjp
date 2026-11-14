@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BarChart3, ChevronDown, ChevronUp, ExternalLink, Plus, Trash2 } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronUp, ExternalLink, Plus, Save, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   computeAxisProgressRate,
   defaultPsdAxesData,
@@ -151,23 +152,39 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
           </div>
         </div>
 
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => setIsOpen(!isOpen)}
-          className="border-purple-300 text-purple-800 hover:bg-purple-50 text-xs font-semibold cursor-pointer"
-        >
-          {isOpen ? (
-            <>
-              <ChevronUp className="mr-1.5 h-3.5 w-3.5" /> Masquer l’éditeur de données
-            </>
-          ) : (
-            <>
-              <ChevronDown className="mr-1.5 h-3.5 w-3.5" /> Ouvrir l’éditeur de données
-            </>
-          )}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              emit(psdAxesData, psdTimelines, planStrategique, actionPages);
+              toast.success('Brouillon enregistré localement', {
+                description: 'Vos modifications sur le Plan Stratégique restent privées jusqu’à la publication.',
+              });
+            }}
+            className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
+          >
+            <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setIsOpen(!isOpen)}
+            className="border-purple-300 text-purple-800 hover:bg-purple-50 text-xs font-semibold cursor-pointer"
+          >
+            {isOpen ? (
+              <>
+                <ChevronUp className="mr-1.5 h-3.5 w-3.5" /> Masquer l’éditeur de données
+              </>
+            ) : (
+              <>
+                <ChevronDown className="mr-1.5 h-3.5 w-3.5" /> Ouvrir l’éditeur de données
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {isOpen && (

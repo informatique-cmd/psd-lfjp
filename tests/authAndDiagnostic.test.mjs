@@ -181,8 +181,6 @@ test('All Recharts Diagnostic chart components handle empty or zero-sum datasets
     'src/components/diagnostic/restaurant/HorizontalBarChart.tsx',
     'src/components/diagnostic/restaurant/VerticalBarChart.tsx',
     'src/components/diagnostic/restaurant/RestaurantPieChart.tsx',
-    'src/components/diagnostic/DiagnosticPsdElevesContent.tsx',
-    'src/components/diagnostic/DiagnosticPsdParentsContent.tsx',
   ];
 
   chartFiles.forEach((relPath) => {
@@ -442,17 +440,16 @@ test('Dynamic /actions/:slug pages and chronological Accueil, Méthode, Vision &
 
   const homeEditor = readFileSync(resolve(rootDir, 'src/components/AdminHomeEditor.tsx'), 'utf-8');
   assert.ok(
-    homeEditor.indexOf('1. En-tête & Bannière') < homeEditor.indexOf('2. Cartes de présentation') &&
-      homeEditor.indexOf('2. Cartes de présentation') < homeEditor.indexOf('3. Mots officiels') &&
-      homeEditor.indexOf('3. Mots officiels') < homeEditor.indexOf('4. Chiffres clés'),
+    homeEditor.indexOf('1. Rubriques du menu de navigation supérieur') < homeEditor.indexOf('2. En-tête & Bannière') &&
+      homeEditor.indexOf('2. En-tête & Bannière') < homeEditor.indexOf('3. Cartes de présentation') &&
+      homeEditor.indexOf('3. Cartes de présentation') < homeEditor.indexOf('4. Mots officiels'),
     'AdminHomeEditor sections must follow exact page chronological vertical order'
   );
 
   const methodeEditor = readFileSync(resolve(rootDir, 'src/components/AdminMethodeEditor.tsx'), 'utf-8');
   assert.ok(
     methodeEditor.indexOf('1. En-tête de la page Méthode') < methodeEditor.indexOf('2. Étapes de la démarche') &&
-      methodeEditor.indexOf('2. Étapes de la démarche') < methodeEditor.indexOf('3a. Carte Commission PSD') &&
-      methodeEditor.indexOf('3a. Carte Commission PSD') < methodeEditor.indexOf('4. Chiffres clés'),
+      methodeEditor.indexOf('2. Étapes de la démarche') < methodeEditor.indexOf('3a. Carte Commission PSD'),
     'AdminMethodeEditor sections must follow exact page chronological vertical order'
   );
 
@@ -460,13 +457,13 @@ test('Dynamic /actions/:slug pages and chronological Accueil, Méthode, Vision &
   assert.ok(
     vmvEditor.indexOf('1. En-tête Hero') < vmvEditor.indexOf('2. Section « 1. NOTRE VISION »') &&
       vmvEditor.indexOf('2. Section « 1. NOTRE VISION »') < vmvEditor.indexOf('3. Section « 2. NOS MISSIONS »') &&
-      vmvEditor.indexOf('3. Section « 2. NOS MISSIONS »') < vmvEditor.indexOf('4. Section « 3. NOS VALEURS »') &&
-      vmvEditor.indexOf('4. Section « 3. NOS VALEURS »') < vmvEditor.indexOf('5. Chiffres clés'),
+      vmvEditor.indexOf('3. Section « 2. NOS MISSIONS »') < vmvEditor.indexOf('4. Section « 3. NOS VALEURS »'),
     'AdminVisionValeursEditor sections must follow exact page chronological vertical order'
   );
 
   const publishedApiSrc = readFileSync(resolve(rootDir, 'api/content/published.ts'), 'utf-8');
   assert.ok(publishedApiSrc.includes('src/content/siteContent.json'), 'api/content/published.ts must serve siteContent.json too');
+  assert.ok(publishedApiSrc.includes('src/content/pages.json'), 'api/content/published.ts must serve pages.json too');
 
   const sanitizerSrc = readFileSync(resolve(rootDir, 'src/lib/pageDataSanitizer.ts'), 'utf-8');
   assert.ok(sanitizerSrc.includes('sanitizeMethodeData'), 'pageDataSanitizer must export sanitizeMethodeData');
@@ -476,6 +473,58 @@ test('Dynamic /actions/:slug pages and chronological Accueil, Méthode, Vision &
   assert.ok(adminSrc.includes('draftParsed.methodeData'), 'Admin.tsx validateAndSaveDraft must preserve methodeData');
   assert.ok(adminSrc.includes('draftParsed.actionPages'), 'Admin.tsx validateAndSaveDraft must preserve actionPages');
   assert.ok(adminSrc.includes('setPublishedSiteContentCache'), 'Admin.tsx must update setPublishedSiteContentCache on deploy');
+  assert.ok(adminSrc.includes('setPublishedPagesCache'), 'Admin.tsx must update setPublishedPagesCache on deploy');
+});
+
+test('Superfluous bottom BarCharts are removed, top-nav rubriques CRUD works, Modifier le site is removed, and vitrine is strictly read-only', () => {
+  const noBottomChartFiles = [
+    'src/components/diagnostic/DiagnosticPsdElevesContent.tsx',
+    'src/components/diagnostic/DiagnosticPsdParentsContent.tsx',
+    'src/components/AdminHomeEditor.tsx',
+    'src/pages/Index.tsx',
+    'src/components/AdminMethodeEditor.tsx',
+    'src/pages/Methode.tsx',
+    'src/components/AdminVisionValeursEditor.tsx',
+    'src/pages/VisionMissionsValeurs.tsx',
+  ];
+  noBottomChartFiles.forEach((relPath) => {
+    const src = readFileSync(resolve(rootDir, relPath), 'utf-8');
+    assert.ok(!src.includes('<BarChart'), `${relPath} must NOT render superfluous bottom BarChart`);
+    assert.ok(!src.includes('Synthèse graphique par domaine'), `${relPath} must NOT render Synthèse graphique par domaine`);
+    assert.ok(!src.includes('showMetricsOnPage'), `${relPath} must NOT render showMetricsOnPage summary section`);
+  });
+
+  const homeEditorSrc = readFileSync(resolve(rootDir, 'src/components/AdminHomeEditor.tsx'), 'utf-8');
+  assert.ok(homeEditorSrc.includes('Ajouter une rubrique'), 'AdminHomeEditor must allow adding a top-menu rubrique');
+  assert.ok(homeEditorSrc.includes('Protégée (Accueil)'), 'AdminHomeEditor must protect Accueil (/) from deletion');
+  assert.ok(homeEditorSrc.includes('!isAccueil'), 'AdminHomeEditor must hide delete action for Accueil');
+  assert.ok(homeEditorSrc.includes('Enregistrer le brouillon'), 'AdminHomeEditor must include Enregistrer le brouillon button');
+
+  const desktopMenuSrc = readFileSync(resolve(rootDir, 'src/components/navigation/DesktopMenu.tsx'), 'utf-8');
+  const mobileMenuSrc = readFileSync(resolve(rootDir, 'src/components/navigation/MobileMenu.tsx'), 'utf-8');
+  [desktopMenuSrc, mobileMenuSrc].forEach((menuSrc) => {
+    assert.ok(menuSrc.includes('resolveNavRubriques'), 'Navigation menu must render dynamic resolveNavRubriques');
+    assert.ok(menuSrc.includes('usePublishedSiteContent'), 'Navigation menu must sync with live published siteContent');
+    assert.ok(menuSrc.includes('usePublishedPages'), 'Navigation menu must sync with live published pages');
+  });
+
+  const pageTypesSrc = readFileSync(resolve(rootDir, 'src/content/pageTypes.ts'), 'utf-8');
+  assert.ok(
+    pageTypesSrc.includes('!isContentDraftPreview()'),
+    'getManagedPages() must strictly check isContentDraftPreview() so drafts never leak onto public vitrine'
+  );
+
+  const managedEditorSrc = readFileSync(resolve(rootDir, 'src/components/AdminManagedPageEditor.tsx'), 'utf-8');
+  assert.ok(
+    /if\s*\(\s*!isPrivileged\s*\|\|\s*!showEditorControls\s*\)\s*\{\s*return\s+null;\s*\}/.test(managedEditorSrc),
+    'AdminManagedPageEditor must strictly return null for public unauthenticated visitors'
+  );
+  assert.ok(managedEditorSrc.includes('Enregistrer le brouillon'), 'AdminManagedPageEditor must expose Enregistrer le brouillon');
+
+  const adminSrc = readFileSync(resolve(rootDir, 'src/pages/Admin.tsx'), 'utf-8');
+  assert.ok(!adminSrc.includes('Modifier le site'), 'Admin.tsx top bar must NOT contain redundant Modifier le site button');
+  assert.ok(!adminSrc.includes('Mode modification activé'), 'Admin.tsx must NOT render editorModeActive helper banner');
+  assert.ok(adminSrc.includes('Enregistrer le brouillon'), 'Admin.tsx top bar must highlight Enregistrer le brouillon');
 });
 
 

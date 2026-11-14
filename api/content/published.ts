@@ -10,7 +10,7 @@ import {
 
 export const runtime = 'nodejs';
 
-async function fetchJsonFromGithub(token: string, base: string, path: string): Promise<{ data: Record<string, unknown> | null; sha?: string }> {
+async function fetchJsonFromGithub(token: string, base: string, path: string): Promise<{ data: unknown; sha?: string }> {
   try {
     const file = await githubRequest(
       token,
@@ -19,8 +19,8 @@ async function fetchJsonFromGithub(token: string, base: string, path: string): P
     if (file && typeof file.content === 'string') {
       const decoded = Buffer.from(file.content.replace(/\n/g, ''), 'base64').toString('utf8');
       const parsed: unknown = JSON.parse(decoded);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return { data: parsed as Record<string, unknown>, sha: file.sha };
+      if (parsed && typeof parsed === 'object') {
+        return { data: parsed, sha: file.sha };
       }
     }
   } catch {
@@ -42,21 +42,36 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   try {
     if (!token) {
-      return res.status(200).json({ pageData: null, siteContent: null, source: 'bundled' });
+      return res.status(200).json({ pageData: null, siteContent: null, pages: null, source: 'bundled' });
     }
-    const [pageDataRes, siteContentRes] = await Promise.all([
+    const [pageDataRes, siteContentRes, pagesRes] = await Promise.all([
       fetchJsonFromGithub(token, base, 'src/content/pageData.json'),
       fetchJsonFromGithub(token, base, 'src/content/siteContent.json'),
+      fetchJsonFromGithub(token, base, 'src/content/pages.json'),
     ]);
 
+    const pageDataObj =
+      pageDataRes.data && typeof pageDataRes.data === 'object' && !Array.isArray(pageDataRes.data)
+        ? (pageDataRes.data as Record<string, unknown>)
+        : null;
+    const siteContentObj =
+      siteContentRes.data && typeof siteContentRes.data === 'object' && !Array.isArray(siteContentRes.data)
+        ? (siteContentRes.data as Record<string, unknown>)
+        : null;
+    const pagesObj =
+      pagesRes.data && typeof pagesRes.data === 'object' && !Array.isArray(pagesRes.data)
+        ? (pagesRes.data as { pages?: unknown })
+        : null;
+
     return res.status(200).json({
-      pageData: pageDataRes.data,
-      siteContent: siteContentRes.data,
-      source: pageDataRes.data || siteContentRes.data ? 'github' : 'bundled',
+      pageData: pageDataObj,
+      siteContent: siteContentObj,
+      pages: Array.isArray(pagesObj?.pages) ? pagesObj.pages : null,
+      source: pageDataObj || siteContentObj || pagesObj ? 'github' : 'bundled',
       sha: pageDataRes.sha,
     });
   } catch (err) {
     console.warn('[published content] fallback to bundled content:', err);
-    return res.status(200).json({ pageData: null, siteContent: null, source: 'bundled' });
+    return res.status(200).json({ pageData: null, siteContent: null, pages: null, source: 'bundled' });
   }
 }

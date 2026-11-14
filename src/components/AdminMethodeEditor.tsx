@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LocaleNumberInput } from '@/components/ui/locale-number-input';
-import { ArrowDown, ArrowUp, BarChart3, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
-import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, FileEdit, Plus, Save, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { usePrivilegedAccess } from '@/lib/authAccess';
 import type { MethodeData } from '@/data/methodeData';
 import { sanitizeMethodeData } from '@/lib/pageDataSanitizer';
@@ -35,23 +34,13 @@ export const AdminMethodeEditor: React.FC<AdminMethodeEditorProps> = ({ methodeD
     return copy;
   };
 
-  const keyMetrics = methodeData.keyMetrics || [];
-  const chartItems =
-    methodeData.chartItems && methodeData.chartItems.length > 0
-      ? methodeData.chartItems
-      : methodeData.steps.map((s, i) => ({
-          name: s.title.length > 18 ? `Étape ${i + 1}` : s.title,
-          value: 100,
-          target: 100,
-        }));
-
   return (
     <div className="container mx-auto px-6 pt-6" data-interactive="true">
       <div className="rounded-2xl border border-purple-200 bg-white p-4 sm:p-5 shadow-sm text-slate-800">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-100 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
-              <BarChart3 className="w-5 h-5" />
+              <FileEdit className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -63,28 +52,44 @@ export const AdminMethodeEditor: React.FC<AdminMethodeEditorProps> = ({ methodeD
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Modifiez les sections de la page Méthode dans leur ordre exact d&apos;apparition : en-tête, étapes, gouvernance, cycle de validation et indicateurs.
+                Modifiez les sections de la page Méthode dans leur ordre exact d&apos;apparition : en-tête, étapes, gouvernance et cycle de validation.
               </p>
             </div>
           </div>
 
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setIsOpen(!isOpen)}
-            className="border-purple-300 text-purple-800 hover:bg-purple-50 text-xs font-semibold cursor-pointer"
-          >
-            {isOpen ? (
-              <>
-                <ChevronUp className="mr-1.5 h-3.5 w-3.5" /> Masquer l&apos;éditeur de données
-              </>
-            ) : (
-              <>
-                <ChevronDown className="mr-1.5 h-3.5 w-3.5" /> Afficher l&apos;éditeur de données
-              </>
-            )}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                emit(methodeData);
+                toast.success('Brouillon enregistré localement', {
+                  description: 'Vos modifications sur la page Méthode restent privées jusqu’à la publication.',
+                });
+              }}
+              className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
+            >
+              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
+            </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setIsOpen(!isOpen)}
+              className="border-purple-300 text-purple-800 hover:bg-purple-50 text-xs font-semibold cursor-pointer"
+            >
+              {isOpen ? (
+                <>
+                  <ChevronUp className="mr-1.5 h-3.5 w-3.5" /> Masquer l&apos;éditeur de données
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-1.5 h-3.5 w-3.5" /> Afficher l&apos;éditeur de données
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {isOpen && (
@@ -609,166 +614,6 @@ export const AdminMethodeEditor: React.FC<AdminMethodeEditorProps> = ({ methodeD
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* 4. Chiffres clés & Graphique */}
-            <div className="space-y-3 rounded-xl border border-slate-200 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  4. Chiffres clés & Graphique méthodologique ({keyMetrics.length} indicateurs)
-                </span>
-                <label className="text-xs flex items-center gap-1.5 font-medium text-purple-900 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(methodeData.showMetricsOnPage)}
-                    onChange={(e) => emit({ ...methodeData, showMetricsOnPage: e.target.checked })}
-                  />
-                  Afficher cette section sur la page publique
-                </label>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-700">Chiffres clés</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() =>
-                        emit({
-                          ...methodeData,
-                          keyMetrics: [...keyMetrics, { label: 'Indicateur', value: '100 %', note: 'Suivi continu' }],
-                        })
-                      }
-                      className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      <Plus className="mr-1 h-3 w-3" /> Ajouter
-                    </Button>
-                  </div>
-                  {keyMetrics.map((km, idx) => (
-                    <div key={`m-km-${idx}`} className="grid gap-1.5 grid-cols-[1fr_90px_1fr_auto] items-center">
-                      <Input
-                        value={km.label}
-                        onChange={(e) =>
-                          emit({
-                            ...methodeData,
-                            keyMetrics: keyMetrics.map((it, i) => (i === idx ? { ...it, label: e.target.value } : it)),
-                          })
-                        }
-                        className="h-7 text-xs bg-white"
-                      />
-                      <Input
-                        value={km.value}
-                        onChange={(e) =>
-                          emit({
-                            ...methodeData,
-                            keyMetrics: keyMetrics.map((it, i) => (i === idx ? { ...it, value: e.target.value } : it)),
-                          })
-                        }
-                        className="h-7 text-xs bg-white font-bold"
-                      />
-                      <Input
-                        value={km.note || ''}
-                        onChange={(e) =>
-                          emit({
-                            ...methodeData,
-                            keyMetrics: keyMetrics.map((it, i) => (i === idx ? { ...it, note: e.target.value } : it)),
-                          })
-                        }
-                        className="h-7 text-xs bg-white"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          emit({
-                            ...methodeData,
-                            keyMetrics: keyMetrics.filter((_, i) => i !== idx),
-                          })
-                        }
-                        className="h-6 w-6 p-0 text-red-500"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-700">Barres du graphique</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() =>
-                        emit({
-                          ...methodeData,
-                          chartItems: [...chartItems, { name: 'Nouvelle phase', value: 50, target: 100 }],
-                        })
-                      }
-                      className="h-6 text-[11px] bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      <Plus className="mr-1 h-3 w-3" /> Ajouter barre
-                    </Button>
-                  </div>
-                  {chartItems.map((ci, idx) => (
-                    <div key={`m-ci-${idx}`} className="grid gap-1.5 grid-cols-[1fr_80px_auto] items-center">
-                      <Input
-                        value={ci.name}
-                        onChange={(e) =>
-                          emit({
-                            ...methodeData,
-                            chartItems: chartItems.map((it, i) => (i === idx ? { ...it, name: e.target.value } : it)),
-                          })
-                        }
-                        className="h-7 text-xs bg-white"
-                      />
-                      <LocaleNumberInput
-                        min={0}
-                        value={ci.value}
-                        onValueChange={(num) =>
-                          emit({
-                            ...methodeData,
-                            chartItems: chartItems.map((it, i) =>
-                              i === idx ? { ...it, value: Math.max(0, num) } : it
-                            ),
-                          })
-                        }
-                        className="h-7 text-xs bg-white font-bold"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          emit({
-                            ...methodeData,
-                            chartItems: chartItems.filter((_, i) => i !== idx),
-                          })
-                        }
-                        className="h-6 w-6 p-0 text-red-500"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {chartItems.length > 0 && (
-                <div className="h-[180px] w-full rounded-lg border border-slate-100 bg-slate-50/50 p-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartItems} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Bar dataKey="value" name="Avancement (%)" fill="#005BAC" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
             </div>
           </div>
         )}

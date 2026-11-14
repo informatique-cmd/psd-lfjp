@@ -3,10 +3,8 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Footer from '../components/Footer';
 import AdminMethodeEditor from '../components/AdminMethodeEditor';
-import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRightCircle, CheckCircle, RefreshCw, Users } from "lucide-react";
-import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import pageDataFile from '@/content/pageData.json';
 import { defaultMethodeData, type MethodeData } from '@/data/methodeData';
 import { useContentDraft } from '@/lib/contentDraft';
@@ -81,9 +79,6 @@ const Methode = () => {
       console.error('Failed to save Methode draft', err);
     }
   };
-
-  const keyMetrics = Array.isArray(methodeData.keyMetrics) ? methodeData.keyMetrics : [];
-  const chartItems = Array.isArray(methodeData.chartItems) ? methodeData.chartItems : [];
 
   return (
     <div className="min-h-screen flex flex-col font-raleway bg-white">
@@ -193,51 +188,6 @@ const Methode = () => {
             </Card>
           </div>
         </section>
-
-        {methodeData.showMetricsOnPage && (keyMetrics.length > 0 || chartItems.length > 0) && (
-          <ErrorBoundary compact sectionName="Indicateurs Méthode">
-            <section className="py-12 bg-gray-50 border-t border-slate-100">
-              <div className="container mx-auto px-6 space-y-8">
-                <h2 className="text-3xl font-playfair font-bold text-slate-900 text-center">
-                  {methodeData.metricsSectionTitle || 'Indicateurs clés de la démarche'}
-                </h2>
-                {keyMetrics.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {keyMetrics.map((km, idx) => (
-                      <Card key={`meth-pub-km-${idx}`} className="border border-slate-100 shadow-sm">
-                        <CardContent className="p-6">
-                          <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{km.label}</p>
-                          <p className="text-3xl font-playfair font-bold text-french-blue mt-1">{km.value}</p>
-                          {km.note && <p className="text-sm text-gray-600 mt-1">{km.note}</p>}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-                {chartItems.length > 0 && (
-                  <Card className="border border-slate-100 shadow-sm">
-                    <CardContent className="p-6">
-                      {methodeData.chartTitle && (
-                        <h3 className="text-lg font-playfair font-bold text-slate-900 mb-4">{methodeData.chartTitle}</h3>
-                      )}
-                      <div className="h-[260px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={chartItems} margin={{ top: 10, right: 20, left: 0, bottom: 8 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip />
-                            <Bar dataKey="value" name="Avancement (%)" fill="#005BAC" radius={[6, 6, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </section>
-          </ErrorBoundary>
-        )}
       </main>
 
       <Footer />

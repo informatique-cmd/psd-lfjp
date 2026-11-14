@@ -19,11 +19,13 @@ import {
   Home,
   Layers,
   Plus,
+  Save,
   ShieldCheck,
   Sparkles,
   Target,
   Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   BarChart,
   Bar,
@@ -317,23 +319,39 @@ const ActionDetailPage: React.FC<ActionDetailPageProps> = ({ overrideSlug }) => 
                 </div>
               </div>
 
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setIsEditorOpen(!isEditorOpen)}
-                className="border-purple-300 text-purple-800 hover:bg-purple-50 text-xs font-semibold cursor-pointer"
-              >
-                {isEditorOpen ? (
-                  <>
-                    <ChevronUp className="mr-1.5 h-3.5 w-3.5" /> Masquer l’éditeur de données
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="mr-1.5 h-3.5 w-3.5" /> Afficher / Ouvrir l’éditeur de données
-                  </>
-                )}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    saveActionPage(currentPage);
+                    toast.success('Brouillon enregistré localement', {
+                      description: `La fiche action « ${currentPage.title} » est sauvegardée dans votre brouillon privé.`,
+                    });
+                  }}
+                  className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                >
+                  <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
+                </Button>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditorOpen(!isEditorOpen)}
+                  className="border-purple-300 text-purple-800 hover:bg-purple-50 text-xs font-semibold cursor-pointer"
+                >
+                  {isEditorOpen ? (
+                    <>
+                      <ChevronUp className="mr-1.5 h-3.5 w-3.5" /> Masquer l’éditeur de données
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="mr-1.5 h-3.5 w-3.5" /> Afficher / Ouvrir l’éditeur de données
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
 
             {isEditorOpen && (
