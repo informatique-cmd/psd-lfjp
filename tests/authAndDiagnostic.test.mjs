@@ -301,7 +301,7 @@ test('Admin.tsx synchronizes auth sessions properly and allows Plan Stratégique
   );
 });
 
-test('Plan Stratégique Axes 1-4 remove Vue Globale tab, restore original Netlify showcase design, and support full per-axis CRUD with automatic consolidation', () => {
+test('Plan Stratégique Axes 1-4 remove Vue Globale and Synthèse consolidée blocks, order editor sections chronologically, and preserve Netlify design', () => {
   const psdSrc = readFileSync(resolve(rootDir, 'src/components/PSD.tsx'), 'utf-8');
   assert.ok(!psdSrc.includes('Tableau de bord synthétique'), 'PSD.tsx showcase must not inject extra dashboard card');
   assert.ok(!psdSrc.includes('BarChart'), 'PSD.tsx showcase must not render public Recharts BarChart');
@@ -310,16 +310,34 @@ test('Plan Stratégique Axes 1-4 remove Vue Globale tab, restore original Netlif
   const planEditor = readFileSync(resolve(rootDir, 'src/components/AdminPlanStrategiqueEditor.tsx'), 'utf-8');
   assert.ok(!planEditor.includes('Vue Globale'), 'AdminPlanStrategiqueEditor must NOT contain Vue Globale tab');
   assert.ok(!planEditor.includes("'overview'"), 'AdminPlanStrategiqueEditor must NOT have overview tab state');
+  assert.ok(!planEditor.includes('Synthèse consolidée'), 'AdminPlanStrategiqueEditor must NOT contain Synthèse consolidée block');
+  assert.ok(!planEditor.includes('Avancement global'), 'AdminPlanStrategiqueEditor must NOT render Avancement global card');
+  assert.ok(!planEditor.includes('Budget consolidé'), 'AdminPlanStrategiqueEditor must NOT render Budget consolidé card');
+  assert.ok(!/<BarChart\b/.test(planEditor), 'AdminPlanStrategiqueEditor must NOT render consolidated 4-axes BarChart');
   assert.ok(planEditor.includes("useState<PsdAxisKey>('axe1')"), 'AdminPlanStrategiqueEditor must start directly on axe1');
   assert.ok(planEditor.includes('Ajouter un objectif'), 'AdminPlanStrategiqueEditor must allow adding objectives per axis');
   assert.ok(planEditor.includes('Ajouter une rubrique'), 'AdminPlanStrategiqueEditor must allow adding action sections per axis');
   assert.ok(planEditor.includes('Ajouter une action'), 'AdminPlanStrategiqueEditor must allow adding actions per axis');
   assert.ok(planEditor.includes('Ajouter un indicateur'), 'AdminPlanStrategiqueEditor must allow adding indicators per axis');
   assert.ok(planEditor.includes('Ajouter un jalon'), 'AdminPlanStrategiqueEditor must allow adding jalons per axis');
-  assert.ok(planEditor.includes('Synthèse consolidée automatique'), 'AdminPlanStrategiqueEditor must auto-calculate consolidated summary from Axes 1-4');
   assert.ok(planEditor.includes('Aucun indicateur défini'), 'AdminPlanStrategiqueEditor must render empty indicator state');
-  assert.ok(planEditor.includes('BarChart'), 'AdminPlanStrategiqueEditor must host synchronized overview BarChart inside privileged drawer');
   assert.ok(planEditor.includes('PsdAxisIndicatorsSection'), 'AdminPlanStrategiqueEditor must host PsdAxisIndicatorsSection inside privileged drawer');
+
+  // Verify chronological vertical order inside JSX:
+  // En-tête -> Frise temporelle -> Objectifs détaillés -> Rubriques & Actions détaillées -> Indicateurs détaillés
+  const headerIdx = planEditor.indexOf('1. En-tête & Paramètres clés');
+  const timelineIdx = planEditor.indexOf('2. Frise temporelle des actions structurantes');
+  const objectivesIdx = planEditor.indexOf('Objectifs détaillés ({axisObjectives.length})');
+  const actionsIdx = planEditor.indexOf('Rubriques & Actions détaillées ({axisActionSections.length} rubriques)');
+  const indicatorsIdx = planEditor.indexOf('Indicateurs détaillés & Suivi chiffré');
+  assert.ok(
+    headerIdx > 0 &&
+      timelineIdx > headerIdx &&
+      objectivesIdx > timelineIdx &&
+      actionsIdx > objectivesIdx &&
+      indicatorsIdx > actionsIdx,
+    'AdminPlanStrategiqueEditor sections must follow exact page chronological vertical order'
+  );
   assert.ok(
     !planEditor.includes('disabled={axis.indicators.length <= 1}'),
     'AdminPlanStrategiqueEditor must allow deleting last indicator cleanly'

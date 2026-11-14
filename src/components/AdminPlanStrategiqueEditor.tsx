@@ -1,14 +1,4 @@
-import React, { useMemo, useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BarChart3, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
@@ -66,10 +56,19 @@ const COLOR_OPTIONS = [
   { value: 'from-french-blue/70 to-french-blue', label: 'Bleu LFJP' },
   { value: 'from-emerald-300/80 to-emerald-500', label: 'Émeraude' },
   { value: 'from-sky-400/80 to-sky-500', label: 'Bleu Ciel' },
+  { value: 'from-sky-300/80 to-sky-500', label: 'Bleu Ciel clair' },
   { value: 'from-amber-400/80 to-amber-500', label: 'Ambre' },
-  { value: 'from-purple-300/80 to-purple-500', label: 'Violet' },
+  { value: 'from-amber-300/80 to-amber-500', label: 'Ambre doux' },
+  { value: 'from-amber-200/80 to-amber-400', label: 'Or clair' },
+  { value: 'from-orange-300/80 to-orange-500', label: 'Orange' },
+  { value: 'from-purple-400/80 to-purple-500', label: 'Violet' },
+  { value: 'from-purple-300/80 to-purple-500', label: 'Violet clair' },
+  { value: 'from-indigo-400/80 to-indigo-600', label: 'Indigo' },
+  { value: 'from-indigo-400/80 to-indigo-500', label: 'Indigo moyen' },
+  { value: 'from-indigo-300/80 to-indigo-500', label: 'Indigo clair' },
+  { value: 'from-pink-300/80 to-pink-500', label: 'Rose' },
+  { value: 'from-rose-300/80 to-rose-500', label: 'Corail' },
   { value: 'from-cyan-400/80 to-cyan-500', label: 'Cyan' },
-  { value: 'from-indigo-400/80 to-indigo-500', label: 'Indigo' },
 ];
 
 export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProps> = ({
@@ -81,30 +80,6 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<PsdAxisKey>('axe1');
-
-  const summary = useMemo(() => {
-    const progressRates = AXIS_KEYS.map((k) => computeAxisProgressRate(psdAxesData[k]));
-    const globalProgress =
-      Math.round((progressRates.reduce((s, v) => s + v, 0) / AXIS_KEYS.length) * 10) / 10;
-    const totalBudget = AXIS_KEYS.reduce(
-      (s, k) => s + (Number(psdAxesData[k].budgetMillions) || 0),
-      0
-    );
-    const totalActions = AXIS_KEYS.reduce(
-      (s, k) => s + (psdTimelines[k]?.actions?.length || 0),
-      0
-    );
-    const totalIndicators = AXIS_KEYS.reduce(
-      (s, k) => s + (psdAxesData[k]?.indicators?.length || 0),
-      0
-    );
-    const chartData = AXIS_KEYS.map((k, idx) => ({
-      name: `Axe ${idx + 1}`,
-      avancement: computeAxisProgressRate(psdAxesData[k]),
-      budget: Number(psdAxesData[k].budgetMillions) || 0,
-    }));
-    return { globalProgress, totalBudget, totalActions, totalIndicators, chartData };
-  }, [psdAxesData, psdTimelines]);
 
   if (!isPrivileged || !showEditorControls) {
     return null;
@@ -135,6 +110,7 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
     endYear: 2030,
     actions: [],
   };
+  const showTimelineEditor = axisKey !== 'axe4';
 
   return (
     <div
@@ -156,7 +132,7 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Modifiez les objectifs, actions, jalons, budgets et indicateurs par axe : les graphiques par axe et la synthèse consolidée se recalculent automatiquement en direct.
+              Éditez chaque axe dans l&apos;ordre exact d&apos;affichage de la page : en-tête, frise temporelle, objectifs détaillés, rubriques d&apos;actions et indicateurs chiffrés.
             </p>
           </div>
         </div>
@@ -199,18 +175,81 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
             ))}
           </div>
 
-          <div className="space-y-5">
-            {/* Paramètres généraux & Budget de l'axe */}
-            <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-6">
+            {/* 1. En-tête & Paramètres clés de l'Axe */}
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                  1. En-tête & Paramètres clés de l&apos;Axe
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Libellé court
+                  </label>
+                  <Input
+                    value={axis.shortTitle}
+                    onChange={(e) =>
+                      emit(
+                        { ...psdAxesData, [axisKey]: { ...axis, shortTitle: e.target.value } },
+                        psdTimelines,
+                        planStrategique
+                      )
+                    }
+                    className="h-8 text-xs bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Budget alloué (M FCFA)
+                  </label>
+                  <LocaleNumberInput
+                    min={0}
+                    value={axis.budgetMillions}
+                    onValueChange={(num) =>
+                      emit(
+                        { ...psdAxesData, [axisKey]: { ...axis, budgetMillions: Math.max(0, num) } },
+                        psdTimelines,
+                        planStrategique
+                      )
+                    }
+                    className="h-8 text-xs bg-white font-bold text-purple-900"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    Taux d&apos;avancement calculé
+                  </label>
+                  <div className="h-8 px-3 rounded-md border bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center">
+                    {computeAxisProgressRate(axis)}% (moyenne des indicateurs)
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Libellé court
+                  Titre complet de l&apos;axe
                 </label>
                 <Input
-                  value={axis.shortTitle}
+                  value={axis.title}
                   onChange={(e) =>
                     emit(
-                      { ...psdAxesData, [axisKey]: { ...axis, shortTitle: e.target.value } },
+                      { ...psdAxesData, [axisKey]: { ...axis, title: e.target.value } },
+                      psdTimelines,
+                      planStrategique
+                    )
+                  }
+                  className="h-8 text-xs bg-white mb-2"
+                />
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Sous-titre / Cap stratégique
+                </label>
+                <Input
+                  value={axis.subtitle}
+                  onChange={(e) =>
+                    emit(
+                      { ...psdAxesData, [axisKey]: { ...axis, subtitle: e.target.value } },
                       psdTimelines,
                       planStrategique
                     )
@@ -218,69 +257,228 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                   className="h-8 text-xs bg-white"
                 />
               </div>
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Budget alloué (M FCFA)
-                </label>
-                <LocaleNumberInput
-                  min={0}
-                  value={axis.budgetMillions}
-                  onValueChange={(num) =>
-                    emit(
-                      { ...psdAxesData, [axisKey]: { ...axis, budgetMillions: Math.max(0, num) } },
-                      psdTimelines,
-                      planStrategique
-                    )
-                  }
-                  className="h-8 text-xs bg-white font-bold text-purple-900"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                  Taux d&apos;avancement calculé
-                </label>
-                <div className="h-8 px-3 rounded-md border bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center">
-                  {computeAxisProgressRate(axis)}% (moyenne des indicateurs)
+            </div>
+
+            {/* 2. 1ère section chronologique (Axes 1 à 3) : Frise temporelle des actions structurantes */}
+            {showTimelineEditor && (
+              <div className="space-y-2 rounded-xl border border-slate-200 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    2. Frise temporelle des actions structurantes ({timeline.startYear}–{timeline.endYear})
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <LocaleNumberInput
+                      min={2020}
+                      max={2040}
+                      value={timeline.startYear}
+                      onValueChange={(num) => {
+                        const startYear = Math.round(num);
+                        const nextTimeline = {
+                          ...timeline,
+                          startYear,
+                          endYear: Math.max(startYear, timeline.endYear),
+                        };
+                        emit(
+                          psdAxesData,
+                          { ...psdTimelines, [axisKey]: nextTimeline },
+                          planStrategique
+                        );
+                      }}
+                      className="h-7 w-20 text-xs bg-white"
+                    />
+                    <span className="text-xs text-slate-400">→</span>
+                    <LocaleNumberInput
+                      min={2020}
+                      max={2040}
+                      value={timeline.endYear}
+                      onValueChange={(num) => {
+                        const endYear = Math.max(timeline.startYear, Math.round(num));
+                        const nextTimeline = { ...timeline, endYear };
+                        emit(
+                          psdAxesData,
+                          { ...psdTimelines, [axisKey]: nextTimeline },
+                          planStrategique
+                        );
+                      }}
+                      className="h-7 w-20 text-xs bg-white"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        const nextActions: PsdTimelineAction[] = [
+                          ...timeline.actions,
+                          {
+                            title: 'Nouvelle action structurante',
+                            description: 'Description de la phase de déploiement.',
+                            start: timeline.startYear,
+                            end: timeline.endYear,
+                            color: 'from-french-blue/70 to-french-blue',
+                          },
+                        ];
+                        emit(
+                          psdAxesData,
+                          { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
+                          planStrategique
+                        );
+                      }}
+                      className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Plus className="mr-1 h-3 w-3" /> Ajouter un jalon
+                    </Button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-left text-xs divide-y divide-slate-200">
+                    <thead className="bg-slate-50 font-semibold text-slate-700">
+                      <tr>
+                        <th className="p-2">Action / Chantier</th>
+                        <th className="p-2">Description</th>
+                        <th className="p-2 w-20">Début</th>
+                        <th className="p-2 w-20">Fin</th>
+                        <th className="p-2 w-32">Couleur</th>
+                        <th className="p-2 text-right w-12">Suppr.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {timeline.actions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-4 text-center text-xs text-slate-400 italic">
+                            Aucun jalon programmé sur cette frise. Cliquez sur « + Ajouter un jalon » pour en créer un.
+                          </td>
+                        </tr>
+                      ) : timeline.actions.map((act, idx) => {
+                        const hasMatchingColor = COLOR_OPTIONS.some((c) => c.value === act.color);
+                        return (
+                          <tr key={`tl-${idx}`}>
+                            <td className="p-1.5">
+                              <Input
+                                value={act.title}
+                                onChange={(e) => {
+                                  const nextActions = timeline.actions.map((a, i) =>
+                                    i === idx ? { ...a, title: e.target.value } : a
+                                  );
+                                  emit(
+                                    psdAxesData,
+                                    { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
+                                    planStrategique
+                                  );
+                                }}
+                                className="h-7 text-xs bg-white"
+                              />
+                            </td>
+                            <td className="p-1.5">
+                              <Input
+                                value={act.description}
+                                onChange={(e) => {
+                                  const nextActions = timeline.actions.map((a, i) =>
+                                    i === idx ? { ...a, description: e.target.value } : a
+                                  );
+                                  emit(
+                                    psdAxesData,
+                                    { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
+                                    planStrategique
+                                  );
+                                }}
+                                className="h-7 text-xs bg-white"
+                              />
+                            </td>
+                            <td className="p-1.5">
+                              <LocaleNumberInput
+                                min={timeline.startYear}
+                                max={timeline.endYear}
+                                value={act.start}
+                                onValueChange={(num) => {
+                                  const start = Math.min(timeline.endYear, Math.max(timeline.startYear, Math.round(num)));
+                                  const nextActions = timeline.actions.map((a, i) =>
+                                    i === idx ? { ...a, start, end: Math.max(start, a.end) } : a
+                                  );
+                                  emit(
+                                    psdAxesData,
+                                    { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
+                                    planStrategique
+                                  );
+                                }}
+                                className="h-7 text-xs bg-white font-bold"
+                              />
+                            </td>
+                            <td className="p-1.5">
+                              <LocaleNumberInput
+                                min={timeline.startYear}
+                                max={timeline.endYear}
+                                value={act.end}
+                                onValueChange={(num) => {
+                                  const end = Math.min(timeline.endYear, Math.max(act.start, Math.round(num)));
+                                  const nextActions = timeline.actions.map((a, i) =>
+                                    i === idx ? { ...a, end } : a
+                                  );
+                                  emit(
+                                    psdAxesData,
+                                    { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
+                                    planStrategique
+                                  );
+                                }}
+                                className="h-7 text-xs bg-white font-bold"
+                              />
+                            </td>
+                            <td className="p-1.5">
+                              <select
+                                value={act.color}
+                                onChange={(e) => {
+                                  const nextActions = timeline.actions.map((a, i) =>
+                                    i === idx ? { ...a, color: e.target.value } : a
+                                  );
+                                  emit(
+                                    psdAxesData,
+                                    { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
+                                    planStrategique
+                                  );
+                                }}
+                                className="h-7 w-full rounded-md border border-slate-200 bg-white px-1 text-xs"
+                              >
+                                {!hasMatchingColor && act.color && (
+                                  <option value={act.color}>{act.color}</option>
+                                )}
+                                {COLOR_OPTIONS.map((c) => (
+                                  <option key={c.value} value={c.value}>
+                                    {c.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="p-1.5 text-right">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                title="Supprimer ce jalon"
+                                onClick={() => {
+                                  const nextActions = timeline.actions.filter((_, i) => i !== idx);
+                                  emit(
+                                    psdAxesData,
+                                    { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
+                                    planStrategique
+                                  );
+                                }}
+                                className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                Titre complet de l&apos;axe
-              </label>
-              <Input
-                value={axis.title}
-                onChange={(e) =>
-                  emit(
-                    { ...psdAxesData, [axisKey]: { ...axis, title: e.target.value } },
-                    psdTimelines,
-                    planStrategique
-                  )
-                }
-                className="h-8 text-xs bg-white mb-2"
-              />
-              <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                Sous-titre / Cap stratégique
-              </label>
-              <Input
-                value={axis.subtitle}
-                onChange={(e) =>
-                  emit(
-                    { ...psdAxesData, [axisKey]: { ...axis, subtitle: e.target.value } },
-                    psdTimelines,
-                    planStrategique
-                  )
-                }
-                className="h-8 text-xs bg-white"
-              />
-            </div>
-
-            {/* Objectifs détaillés CRUD */}
-            <div className="space-y-2">
+            {/* 3. Section suivante dans l'ordre exact de la page : Objectifs détaillés */}
+            <div className="space-y-2 rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Objectifs détaillés ({axisObjectives.length})
+                  {showTimelineEditor ? '3.' : '2.'} Objectifs détaillés ({axisObjectives.length})
                 </span>
                 <Button
                   type="button"
@@ -383,11 +581,11 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
               </div>
             </div>
 
-            {/* Rubriques & Actions détaillées CRUD */}
-            <div className="space-y-2">
+            {/* 4. Section suivante dans l'ordre exact de la page : Rubriques & Actions détaillées */}
+            <div className="space-y-2 rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Rubriques & Actions détaillées ({axisActionSections.length} rubriques)
+                  {showTimelineEditor ? '4.' : '3.'} Rubriques & Actions détaillées ({axisActionSections.length} rubriques)
                 </span>
                 <Button
                   type="button"
@@ -607,11 +805,11 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
               )}
             </div>
 
-            {/* Indicators Table */}
-            <div className="space-y-2">
+            {/* 5. Dernière section chronologique : Indicateurs détaillés & Suivi chiffré */}
+            <div className="space-y-4 rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Indicateurs chiffrés (synchronisés avec le graphique)
+                  {showTimelineEditor ? '5.' : '4.'} Indicateurs détaillés & Suivi chiffré (synchronisés avec le graphique)
                 </span>
                 <Button
                   type="button"
@@ -755,292 +953,9 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                   </tbody>
                 </table>
               </div>
-            </div>
 
-            {/* Timeline Actions Table */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Frise temporelle ({timeline.startYear}–{timeline.endYear})
-                </span>
-                <div className="flex items-center gap-2">
-                  <LocaleNumberInput
-                    min={2020}
-                    max={2040}
-                    value={timeline.startYear}
-                    onValueChange={(num) => {
-                      const startYear = Math.round(num);
-                      const nextTimeline = {
-                        ...timeline,
-                        startYear,
-                        endYear: Math.max(startYear, timeline.endYear),
-                      };
-                      emit(
-                        psdAxesData,
-                        { ...psdTimelines, [axisKey]: nextTimeline },
-                        planStrategique
-                      );
-                    }}
-                    className="h-7 w-20 text-xs bg-white"
-                  />
-                  <span className="text-xs text-slate-400">→</span>
-                  <LocaleNumberInput
-                    min={2020}
-                    max={2040}
-                    value={timeline.endYear}
-                    onValueChange={(num) => {
-                      const endYear = Math.max(timeline.startYear, Math.round(num));
-                      const nextTimeline = { ...timeline, endYear };
-                      emit(
-                        psdAxesData,
-                        { ...psdTimelines, [axisKey]: nextTimeline },
-                        planStrategique
-                      );
-                    }}
-                    className="h-7 w-20 text-xs bg-white"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      const nextActions: PsdTimelineAction[] = [
-                        ...timeline.actions,
-                        {
-                          title: 'Nouvelle action structurante',
-                          description: 'Description de la phase de déploiement.',
-                          start: timeline.startYear,
-                          end: timeline.endYear,
-                          color: 'from-french-blue/70 to-french-blue',
-                        },
-                      ];
-                      emit(
-                        psdAxesData,
-                        { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
-                        planStrategique
-                      );
-                    }}
-                    className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    <Plus className="mr-1 h-3 w-3" /> Ajouter un jalon
-                  </Button>
-                </div>
-              </div>
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full text-left text-xs divide-y divide-slate-200">
-                  <thead className="bg-slate-50 font-semibold text-slate-700">
-                    <tr>
-                      <th className="p-2">Action</th>
-                      <th className="p-2">Description</th>
-                      <th className="p-2 w-20">Début</th>
-                      <th className="p-2 w-20">Fin</th>
-                      <th className="p-2 w-28">Couleur</th>
-                      <th className="p-2 text-right w-12">Suppr.</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {timeline.actions.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="p-4 text-center text-xs text-slate-400 italic">
-                          Aucun jalon programmé sur cette frise. Cliquez sur « + Ajouter un jalon » pour en créer un.
-                        </td>
-                      </tr>
-                    ) : timeline.actions.map((act, idx) => (
-                      <tr key={`tl-${idx}`}>
-                        <td className="p-1.5">
-                          <Input
-                            value={act.title}
-                            onChange={(e) => {
-                              const nextActions = timeline.actions.map((a, i) =>
-                                i === idx ? { ...a, title: e.target.value } : a
-                              );
-                              emit(
-                                psdAxesData,
-                                { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
-                                planStrategique
-                              );
-                            }}
-                            className="h-7 text-xs bg-white"
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <Input
-                            value={act.description}
-                            onChange={(e) => {
-                              const nextActions = timeline.actions.map((a, i) =>
-                                i === idx ? { ...a, description: e.target.value } : a
-                              );
-                              emit(
-                                psdAxesData,
-                                { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
-                                planStrategique
-                              );
-                            }}
-                            className="h-7 text-xs bg-white"
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <LocaleNumberInput
-                            min={timeline.startYear}
-                            max={timeline.endYear}
-                            value={act.start}
-                            onValueChange={(num) => {
-                              const start = Math.min(timeline.endYear, Math.max(timeline.startYear, Math.round(num)));
-                              const nextActions = timeline.actions.map((a, i) =>
-                                i === idx ? { ...a, start, end: Math.max(start, a.end) } : a
-                              );
-                              emit(
-                                psdAxesData,
-                                { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
-                                planStrategique
-                              );
-                            }}
-                            className="h-7 text-xs bg-white font-bold"
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <LocaleNumberInput
-                            min={timeline.startYear}
-                            max={timeline.endYear}
-                            value={act.end}
-                            onValueChange={(num) => {
-                              const end = Math.min(timeline.endYear, Math.max(act.start, Math.round(num)));
-                              const nextActions = timeline.actions.map((a, i) =>
-                                i === idx ? { ...a, end } : a
-                              );
-                              emit(
-                                psdAxesData,
-                                { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
-                                planStrategique
-                              );
-                            }}
-                            className="h-7 text-xs bg-white font-bold"
-                          />
-                        </td>
-                        <td className="p-1.5">
-                          <select
-                            value={act.color}
-                            onChange={(e) => {
-                              const nextActions = timeline.actions.map((a, i) =>
-                                i === idx ? { ...a, color: e.target.value } : a
-                              );
-                              emit(
-                                psdAxesData,
-                                { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
-                                planStrategique
-                              );
-                            }}
-                            className="h-7 w-full rounded-md border border-slate-200 bg-white px-1 text-xs"
-                          >
-                            {COLOR_OPTIONS.map((c) => (
-                              <option key={c.value} value={c.value}>
-                                {c.label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="p-1.5 text-right">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            title="Supprimer ce jalon"
-                            onClick={() => {
-                              const nextActions = timeline.actions.filter((_, i) => i !== idx);
-                              emit(
-                                psdAxesData,
-                                { ...psdTimelines, [axisKey]: { ...timeline, actions: nextActions } },
-                                planStrategique
-                              );
-                            }}
-                            className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 cursor-pointer"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Graphique & jauge propres à cet axe */}
-            <PsdAxisIndicatorsSection axis={axis} />
-
-            {/* Synthèse consolidée 100 % calculée automatiquement à partir des Axes 1 à 4 */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Synthèse consolidée automatique (Axes 1 à 4)
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Calculée automatiquement en temps réel à partir des données saisies dans les onglets Axe 1 à Axe 4.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
-                    Avancement global
-                  </span>
-                  <div className="mt-0.5 text-xl font-bold text-french-blue">
-                    {summary.globalProgress}%
-                  </div>
-                </div>
-                <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-                    Budget consolidé
-                  </span>
-                  <div className="mt-0.5 text-xl font-bold text-emerald-700">
-                    {summary.totalBudget} M FCFA
-                  </div>
-                </div>
-                <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
-                    Actions structurantes
-                  </span>
-                  <div className="mt-0.5 text-xl font-bold text-amber-700">
-                    {summary.totalActions}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-purple-100 bg-purple-50/70 p-3">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-purple-700">
-                    Indicateurs suivis
-                  </span>
-                  <div className="mt-0.5 text-xl font-bold text-purple-700">
-                    {summary.totalIndicators}
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-[220px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={summary.chartData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis yAxisId="left" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Bar
-                      yAxisId="left"
-                      dataKey="avancement"
-                      name="Avancement (%)"
-                      fill="#005BAC"
-                      radius={[6, 6, 0, 0]}
-                    />
-                    <Bar
-                      yAxisId="right"
-                      dataKey="budget"
-                      name="Budget (M FCFA)"
-                      fill="#10b981"
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {/* Graphique & jauge propres à cet axe */}
+              <PsdAxisIndicatorsSection axis={axis} />
             </div>
           </div>
         </div>
