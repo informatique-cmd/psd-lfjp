@@ -517,13 +517,6 @@
           "start": 2026,
           "end": 2031,
           "color": "from-french-blue/70 to-french-blue"
-        },
-        {
-          "title": "Test",
-          "description": "Description de la phase de déploiement.",
-          "start": 2025,
-          "end": 2029,
-          "color": "from-orange-300/80 to-orange-500"
         }
       ]
     },
@@ -957,7 +950,8 @@
           "title": "Nouvelle rubrique",
           "items": [
             {
-              "label": "Nouvelle action"
+              "label": "Nouvelle action",
+              "link": "/nouvelle-action"
             }
           ]
         }
