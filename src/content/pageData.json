@@ -448,12 +448,6 @@
         "value": "1500-2000 FCFA",
         "label": "pour 55% des parents",
         "trend": "up"
-      },
-      {
-        "name": "Nouvelle stat clé",
-        "value": 80,
-        "label": "des réponses",
-        "trend": "up"
       }
     ],
     "alertPoints": [
@@ -473,12 +467,6 @@
         "name": "Tarification",
         "value": "58.8%",
         "label": "acceptent 2000-3000 FCFA pour un menu complet",
-        "trend": "down"
-      },
-      {
-        "name": "Nouveau point d attention",
-        "value": "40%",
-        "label": "des avis",
         "trend": "down"
       }
     ]
