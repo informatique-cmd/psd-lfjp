@@ -406,10 +406,6 @@
       {
         "name": "Plus de 3 000 FCFA",
         "value": 2.5
-      },
-      {
-        "name": "Autre budget",
-        "value": 10
       }
     ],
     "priceForMenuData": [
@@ -432,10 +428,6 @@
       {
         "name": "Dépend du menu",
         "value": 1.1
-      },
-      {
-        "name": "Autre budget2",
-        "value": 10
       }
     ],
     "keyMetrics": [
