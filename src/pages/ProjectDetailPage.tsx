@@ -40,6 +40,7 @@ import {
   type BudgetProject,
 } from '@/data/budgetTransportData';
 import pageDataFile from '@/content/pageData.json';
+import { isContentDraftPreview } from '@/lib/contentDraft';
 
 const XOF_TO_EUR = 655.957;
 
@@ -87,7 +88,7 @@ export const ProjectDetailPage: React.FC = () => {
 
   // Load current budget data (localStorage draft -> pageDataFile -> default)
   const budgetData = useMemo<BudgetData>(() => {
-    if (typeof window !== 'undefined') {
+    if (isContentDraftPreview()) {
       try {
         const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (draft) {

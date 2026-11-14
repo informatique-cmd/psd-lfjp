@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
 import pageDataFile from '@/content/pageData.json';
 import { psdTimelineData } from '@/data/psdTimelineData';
+import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
 import { useContentDraft } from '@/lib/contentDraft';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
 import { ChevronDown, Globe2, Handshake, Palette } from 'lucide-react';
 import PSDAxeLayout from './PSDAxeLayout';
+import { PsdAxisIndicatorsSection } from './PsdAxisIndicatorsSection';
 
 const timelineDraftFallback = {
   ...pageDataFile,
   psdTimelines: (pageDataFile as { psdTimelines?: typeof psdTimelineData }).psdTimelines || psdTimelineData,
+  psdAxesData: (pageDataFile as { psdAxesData?: PsdAxesData }).psdAxesData || defaultPsdAxesData,
 };
 
 const PSDAxe2 = () => {
   const [isTimelineExpanded, setTimelineExpanded] = useState(false);
-  const pageData = useContentDraft('lfjp-admin-page-data-draft', timelineDraftFallback);
+  const publishedData = usePublishedPageData(timelineDraftFallback);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', publishedData);
   const timeline = pageData?.psdTimelines?.axe2 || psdTimelineData.axe2;
+  const axisOverview = pageData?.psdAxesData?.axe2 || defaultPsdAxesData.axe2;
   const objectifs = [
     {
       content: (
@@ -43,11 +49,11 @@ const PSDAxe2 = () => {
     },
   ];
 
-  const timelineYears = Array.from({ length: timeline.endYear - timeline.startYear + 1 }, (_, index) => timeline.startYear + index);
+  const timelineYears = Array.from({ length: Math.max(1, timeline.endYear - timeline.startYear + 1) }, (_, index) => timeline.startYear + index);
   const startYear = timelineYears[0];
   const totalYears = timelineYears[timelineYears.length - 1] - startYear + 1;
 
-  const timelineActions = timeline.actions;
+  const timelineActions = Array.isArray(timeline.actions) ? timeline.actions : [];
 
   const timelineContent = (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -74,38 +80,44 @@ const PSDAxe2 = () => {
                 isTimelineExpanded ? 'max-h-none' : 'max-h-[320px] overflow-hidden'
               }`}
             >
-              {timelineActions.map((item) => {
-                const offset = ((item.start - startYear) / totalYears) * 100;
-                const width = ((item.end - item.start + 1) / totalYears) * 100;
+              {timelineActions.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-center text-xs text-slate-500 italic">
+                  Aucune action programmée sur cette frise.
+                </div>
+              ) : (
+                timelineActions.map((item) => {
+                  const offset = ((item.start - startYear) / totalYears) * 100;
+                  const width = ((item.end - item.start + 1) / totalYears) * 100;
 
-                return (
-                  <div
-                    key={item.title}
-                    className="grid grid-cols-[200px_1fr] items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
-                  >
-                    <div>
-                      <p className="font-semibold text-slate-900">{item.title}</p>
-                      <p className="text-xs text-slate-600">{item.description}</p>
-                    </div>
-                    <div className="relative h-10 rounded-full bg-white/80">
-                      <div
-                        className={`absolute inset-y-1 rounded-full bg-gradient-to-r ${item.color} shadow-sm`}
-                        style={{
-                          left: `${offset}%`,
-                          width: `${width}%`
-                        }}
-                      />
-                      <div className="absolute inset-0 grid text-[10px] text-slate-400" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
-                        {timelineYears.map((year) => (
-                          <div key={year} className="border-l border-dashed border-slate-200 first:border-l-0" />
-                        ))}
+                  return (
+                    <div
+                      key={item.title}
+                      className="grid grid-cols-[200px_1fr] items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+                    >
+                      <div>
+                        <p className="font-semibold text-slate-900">{item.title}</p>
+                        <p className="text-xs text-slate-600">{item.description}</p>
+                      </div>
+                      <div className="relative h-10 rounded-full bg-white/80">
+                        <div
+                          className={`absolute inset-y-1 rounded-full bg-gradient-to-r ${item.color} shadow-sm`}
+                          style={{
+                            left: `${offset}%`,
+                            width: `${width}%`
+                          }}
+                        />
+                        <div className="absolute inset-0 grid text-[10px] text-slate-400" style={{ gridTemplateColumns: `repeat(${timelineYears.length}, minmax(0, 1fr))` }}>
+                          {timelineYears.map((year) => (
+                            <div key={year} className="border-l border-dashed border-slate-200 first:border-l-0" />
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
-            {!isTimelineExpanded && (
+            {!isTimelineExpanded && timelineActions.length > 3 && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white/80 to-transparent" />
             )}
           </div>
@@ -253,9 +265,14 @@ const PSDAxe2 = () => {
   return (
     <PSDAxeLayout
       axeId={2}
-      title="AXE 2 – PLURILINGUISME, MULTICULTURALITÉ, OUVERTURE INTERNATIONALE ET LOCALE"
-      subtitle="Cultiver la diversité linguistique et culturelle comme levier d'apprentissage et d'ouverture au monde"
-      timeline={timelineContent}
+      title={axisOverview.title}
+      subtitle={axisOverview.subtitle}
+      timeline={
+        <div className="space-y-8">
+          <PsdAxisIndicatorsSection axis={axisOverview} />
+          {timelineContent}
+        </div>
+      }
       objectifs={objectifs}
       actionSections={actionSections}
       indicators={indicators}

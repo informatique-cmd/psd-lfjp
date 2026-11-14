@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { sanitizeElcsData, type ElcsDataType, type ElcsMetric } from './ElcsDataContext';
 import { usePrivilegedAccess } from '@/lib/authAccess';
+import { LocaleNumberInput } from '@/components/ui/locale-number-input';
+import { parseLocaleNumber, sanitizeElcsDataset } from '@/lib/pageDataSanitizer';
 
 export interface AdminElcsSurveyEditorProps {
   elcsData: ElcsDataType;
@@ -54,23 +56,35 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
     group: 'primary' | 'secondary',
     index: number,
     field: keyof ElcsMetric,
-    val: string | number
+    val: string | number | undefined
   ) => {
     const list = [...(safeData[catKey]?.[group] || [])];
     if (!list[index]) return;
-    list[index] = {
-      ...list[index],
-      [field]: field === 'value' || field === 'average'
-        ? (isNaN(Number(val)) ? val : Number(val))
-        : val,
-    };
-    onChange({
+    const nextMetric: ElcsMetric = { ...list[index] };
+    if (field === 'average') {
+      if (val === undefined || String(val).trim() === '') {
+        delete nextMetric.average;
+      } else {
+        const parsedAvg = parseLocaleNumber(val);
+        if (parsedAvg !== null) {
+          nextMetric.average = parsedAvg;
+        }
+      }
+    } else if (field === 'value') {
+      const parsedVal = parseLocaleNumber(val);
+      nextMetric.value = parsedVal !== null ? parsedVal : String(val ?? '');
+    } else {
+      (nextMetric as Record<string, unknown>)[field] = val;
+    }
+    list[index] = nextMetric;
+    const next = {
       ...safeData,
       [catKey]: {
         ...safeData[catKey],
         [group]: list,
       },
-    });
+    };
+    onChange(sanitizeElcsDataset(next) as unknown as ElcsDataType);
   };
 
   const addMetric = (catKey: keyof ElcsDataType, group: 'primary' | 'secondary') => {
@@ -82,24 +96,28 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
       average: 70,
       trend: 'up',
     });
-    onChange({
+    const next = {
       ...safeData,
       [catKey]: {
         ...safeData[catKey],
         [group]: list,
       },
-    });
+    };
+    onChange(sanitizeElcsDataset(next) as unknown as ElcsDataType);
   };
 
   const deleteMetric = (catKey: keyof ElcsDataType, group: 'primary' | 'secondary', index: number) => {
-    const list = (safeData[catKey]?.[group] || []).filter((_, i) => i !== index);
-    onChange({
+    const current = safeData[catKey]?.[group] || [];
+    if (group === 'primary' && current.length <= 1) return;
+    const list = current.filter((_, i) => i !== index);
+    const next = {
       ...safeData,
       [catKey]: {
         ...safeData[catKey],
         [group]: list,
       },
-    });
+    };
+    onChange(sanitizeElcsDataset(next) as unknown as ElcsDataType);
   };
 
   const currentCat = safeData[activeCategory] || safeData.satisfaction;
@@ -226,10 +244,13 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
                           />
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
-                            value={metric.average ?? ''}
-                            onChange={(e) => updateMetric(activeCategory, 'primary', i, 'average', e.target.value)}
+                          <LocaleNumberInput
+                            min={0}
+                            max={100}
+                            value={metric.average}
+                            allowEmptyToUndefined={true}
+                            onValueChange={(nextNum) => updateMetric(activeCategory, 'primary', i, 'average', nextNum)}
+                            onEmptyChange={() => updateMetric(activeCategory, 'primary', i, 'average', undefined)}
                             className="h-7 text-xs text-slate-600 bg-white"
                             placeholder="75"
                           />
@@ -256,8 +277,10 @@ export const AdminElcsSurveyEditor: React.FC<AdminElcsSurveyEditorProps> = ({
                             type="button"
                             size="sm"
                             variant="ghost"
+                            disabled={(currentCat?.primary || []).length <= 1}
+                            title="Au moins un indicateur principal est requis"
                             onClick={() => deleteMetric(activeCategory, 'primary', i)}
-                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>

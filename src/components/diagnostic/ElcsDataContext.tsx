@@ -2,6 +2,8 @@
 import React, { createContext, useContext } from 'react';
 import pageDataFile from '@/content/pageData.json';
 import { useContentDraft } from '@/lib/contentDraft';
+import { parseLocaleNumber } from '@/lib/pageDataSanitizer';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
 
 export interface ElcsMetric {
   name: string;
@@ -73,6 +75,13 @@ export const elcsData: ElcsDataType = {
   }
 };
 
+const normalizeElcsValue = (val: unknown, fallback: number | string): number | string => {
+  const parsed = parseLocaleNumber(val);
+  if (parsed !== null) return parsed;
+  if (typeof val === 'string' && val.trim() !== '') return val;
+  return fallback;
+};
+
 export const sanitizeElcsData = (raw: unknown): ElcsDataType => {
   if (!raw || typeof raw !== 'object') return elcsData;
   const parsed = raw as Partial<ElcsDataType>;
@@ -82,19 +91,30 @@ export const sanitizeElcsData = (raw: unknown): ElcsDataType => {
     if (!cat || typeof cat !== 'object') return defaultCat;
     return {
       title: typeof cat.title === 'string' && cat.title.trim() !== '' ? cat.title : defaultCat.title,
-      primary: Array.isArray(cat.primary) ? cat.primary.map((m) => ({
-        name: typeof m?.name === 'string' ? m.name : 'Indicateur',
-        value: m?.value !== undefined ? m.value : 0,
-        label: typeof m?.label === 'string' ? m.label : '',
-        average: typeof m?.average === 'number' ? m.average : undefined,
-        trend: m?.trend === 'down' ? 'down' : 'up',
-      })) : defaultCat.primary,
-      secondary: Array.isArray(cat.secondary) ? cat.secondary.map((m) => ({
-        name: typeof m?.name === 'string' ? m.name : 'Point',
-        value: m?.value !== undefined ? m.value : '',
-        label: typeof m?.label === 'string' ? m.label : '',
-        trend: m?.trend === 'down' ? 'down' : 'up',
-      })) : defaultCat.secondary,
+      primary: Array.isArray(cat.primary)
+        ? cat.primary
+            .filter((m): m is ElcsMetric => Boolean(m && typeof m === 'object'))
+            .map((m) => {
+              const avgParsed = parseLocaleNumber(m.average);
+              return {
+                name: typeof m.name === 'string' && m.name.trim() !== '' ? m.name : 'Indicateur',
+                value: normalizeElcsValue(m.value, 0),
+                label: typeof m.label === 'string' ? m.label : '',
+                average: avgParsed !== null ? avgParsed : undefined,
+                trend: m.trend === 'down' ? 'down' : 'up',
+              };
+            })
+        : defaultCat.primary,
+      secondary: Array.isArray(cat.secondary)
+        ? cat.secondary
+            .filter((m): m is ElcsMetric => Boolean(m && typeof m === 'object'))
+            .map((m) => ({
+              name: typeof m.name === 'string' && m.name.trim() !== '' ? m.name : 'Point',
+              value: normalizeElcsValue(m.value, ''),
+              label: typeof m.label === 'string' ? m.label : '',
+              trend: m.trend === 'down' ? 'down' : 'up',
+            }))
+        : defaultCat.secondary,
     };
   };
 
@@ -115,7 +135,8 @@ const elcsDraftFallback = {
 
 // Provider component
 export const ElcsDataProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const pageData = useContentDraft('lfjp-admin-page-data-draft', elcsDraftFallback);
+  const publishedBase = usePublishedPageData(elcsDraftFallback);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', publishedBase);
   const safeValue = React.useMemo(() => sanitizeElcsData(pageData?.elcsData), [pageData]);
   return (
     <ElcsDataContext.Provider value={safeValue}>

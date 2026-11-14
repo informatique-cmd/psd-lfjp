@@ -2,11 +2,31 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DiagnosticElcsContent from '../components/diagnostic/DiagnosticElcsContent';
 import DiagnosticPsdContent from '../components/diagnostic/DiagnosticPsdContent';
 import DiagnosticRestaurantContent from '../components/diagnostic/DiagnosticRestaurantContent';
 import { ElcsDataProvider } from '../components/diagnostic/ElcsDataContext';
+
+const clearSectionDraftKey = (sectionKey: 'psdSurveyData' | 'restaurant' | 'elcsData', recoverEvent: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          delete parsed[sectionKey];
+          window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(parsed));
+        }
+      }
+    } catch {
+      window.localStorage.removeItem('lfjp-admin-page-data-draft');
+    }
+    window.dispatchEvent(new Event(recoverEvent));
+    window.dispatchEvent(new Event('storage'));
+  }
+};
 
 const Diagnostic = () => {
   const queryTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
@@ -52,17 +72,35 @@ const Diagnostic = () => {
             </TabsList>
 
             <TabsContent value="psd">
-              <DiagnosticPsdContent />
+              <ErrorBoundary
+                compact
+                sectionName="Diagnostic PSD"
+                onRecoverDefault={() => clearSectionDraftKey('psdSurveyData', 'lfjp_section_recovered_psd')}
+              >
+                <DiagnosticPsdContent />
+              </ErrorBoundary>
             </TabsContent>
 
             <TabsContent value="restaurant">
-              <DiagnosticRestaurantContent />
+              <ErrorBoundary
+                compact
+                sectionName="Restauration Scolaire"
+                onRecoverDefault={() => clearSectionDraftKey('restaurant', 'lfjp_section_recovered_restaurant')}
+              >
+                <DiagnosticRestaurantContent />
+              </ErrorBoundary>
             </TabsContent>
 
             <TabsContent value="elcs">
-              <ElcsDataProvider>
-                <DiagnosticElcsContent />
-              </ElcsDataProvider>
+              <ErrorBoundary
+                compact
+                sectionName="Diagnostic ELCS"
+                onRecoverDefault={() => clearSectionDraftKey('elcsData', 'lfjp_section_recovered_elcs')}
+              >
+                <ElcsDataProvider>
+                  <DiagnosticElcsContent />
+                </ElcsDataProvider>
+              </ErrorBoundary>
             </TabsContent>
           </Tabs>
         </div>

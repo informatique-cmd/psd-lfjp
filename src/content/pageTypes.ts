@@ -123,80 +123,11 @@ export const isValidManagedPage = (value: unknown): value is ManagedPage =>
   Array.isArray(value.blocks) &&
   value.blocks.every(isValidContentBlock);
 
+import { sanitizePageData, validatePageDataDetailed } from '@/lib/pageDataSanitizer';
+export { sanitizePageData, validatePageDataDetailed };
+
 export const isValidPageData = (value: unknown) =>
-  isRecord(value) &&
-  Array.isArray(value.bacBlancSchedule) &&
-  value.bacBlancSchedule.every((day) =>
-    isRecord(day) &&
-    typeof day.date === 'string' &&
-    typeof day.label === 'string' &&
-    typeof day.focus === 'string' &&
-    Array.isArray(day.rooms) &&
-    day.rooms.every((room) =>
-      isRecord(room) &&
-      typeof room.room === 'string' &&
-      typeof room.examTitle === 'string' &&
-      typeof room.examTime === 'string' &&
-      typeof room.leadExaminer === 'string' &&
-      isStringArray(room.surveillanceTeam) &&
-      (room.supportTeam === undefined || (
-        isRecord(room.supportTeam) &&
-        isStringArray(room.supportTeam.names) &&
-        typeof room.supportTeam.mission === 'string' &&
-        (room.supportTeam.presence === undefined || typeof room.supportTeam.presence === 'string')
-      )) &&
-      (room.notes === undefined || typeof room.notes === 'string')
-    ) &&
-    (day.note === undefined || typeof day.note === 'string')
-  ) &&
-  isRecord(value.filmAnnuelData) &&
-  Object.values(value.filmAnnuelData).every((level) =>
-    isRecord(level) &&
-    typeof level.level === 'string' &&
-    typeof level.subtitle === 'string' &&
-    Array.isArray(level.actions) &&
-    level.actions.every((action) =>
-      isRecord(action) &&
-      typeof action.title === 'string' &&
-      typeof action.period === 'string' &&
-      typeof action.description === 'string' &&
-      typeof action.actors === 'string' &&
-      ['Mieux se connaître', 'Plonger dans le monde professionnel', 'Finaliser les projets'].includes(String(action.phase))
-    )
-  ) &&
-  isRecord(value.planStrategique) &&
-  typeof value.planStrategique.title === 'string' &&
-  typeof value.planStrategique.subtitle === 'string' &&
-  isRecord(value.planificationBacBlanc) &&
-  typeof value.planificationBacBlanc.badge === 'string' &&
-  typeof value.planificationBacBlanc.title === 'string' &&
-  typeof value.planificationBacBlanc.description === 'string' &&
-  isRecord(value.restaurant) &&
-  ['studentDistributionData', 'restaurationInterestData', 'currentLunchData', 'serviceInterestByDayData', 'mealTypePreferenceData', 'priceForDishData', 'priceForMenuData', 'keyMetrics', 'alertPoints'].every((key) =>
-    Array.isArray(value.restaurant[key]) && value.restaurant[key].every((row) =>
-      isRecord(row) && typeof row.name === 'string' && (typeof row.value === 'number' || typeof row.value === 'string')
-    )
-  ) &&
-  isRecord(value.psdTimelines) &&
-  Object.entries(value.psdTimelines).every(([key, timeline]) => {
-    return isRecord(timeline) && Number.isInteger(timeline.startYear) && Number.isInteger(timeline.endYear) && Number(timeline.endYear) >= Number(timeline.startYear) && Array.isArray(timeline.actions) && timeline.actions.every((action) =>
-      isRecord(action) && typeof action.title === 'string' && typeof action.description === 'string' && Number.isInteger(action.start) && Number.isInteger(action.end) && Number(action.start) >= Number(timeline.startYear) && Number(action.end) <= Number(timeline.endYear) && Number(action.end) >= Number(action.start) && typeof action.color === 'string'
-    );
-  }) &&
-  isRecord(value.elcsData) &&
-  ['satisfaction', 'relations', 'travail', 'securite'].every((key) => {
-    const category = value.elcsData[key];
-    return isRecord(category) && typeof category.title === 'string' && ['primary', 'secondary'].every((group) =>
-      Array.isArray(category[group]) && category[group].every((metric) =>
-        isRecord(metric) && typeof metric.name === 'string' && (typeof metric.value === 'number' || typeof metric.value === 'string') &&
-        (metric.label === undefined || typeof metric.label === 'string') &&
-        (metric.average === undefined || (typeof metric.average === 'number' && Number.isFinite(metric.average))) &&
-        (metric.trend === undefined || metric.trend === 'up' || metric.trend === 'down')
-      )
-    );
-  }) &&
-  (value.budgetData === undefined || isRecord(value.budgetData)) &&
-  (value.transportData === undefined || isRecord(value.transportData));
+  validatePageDataDetailed(value).valid;
 
 export const validateManagedPages = (pages: ManagedPage[]) => {
   const errors: string[] = [];

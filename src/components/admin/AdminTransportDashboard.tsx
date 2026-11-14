@@ -16,6 +16,8 @@ import {
   type TransportCircuit
 } from '@/data/budgetTransportData';
 import pageDataFile from '@/content/pageData.json';
+import { usePrivilegedAccess } from '@/lib/authAccess';
+import { isContentDraftPreview } from '@/lib/contentDraft';
 
 /**
  * Automatically calculates integer percentages that sum to EXACTLY 100%
@@ -109,9 +111,10 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
   onDataChange,
   onSwitchToVitrine,
 }) => {
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   // Helper to load current transport data prioritizing localStorage draft then pageData.json then defaults
   const loadCurrentTransport = (): TransportData => {
-    if (typeof window !== 'undefined') {
+    if (isContentDraftPreview()) {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
@@ -188,6 +191,7 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
   // Broadcast and persist changes
   const persistChanges = useCallback(
     (nextTransport: TransportData) => {
+      if (!isPrivileged || !showEditorControls) return;
       setTransport(nextTransport);
       setSaveStatus('saving');
       try {
@@ -234,7 +238,7 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
       onDataChange?.(nextTransport);
       setTimeout(() => setSaveStatus('saved'), 200);
     },
-    [onDataChange]
+    [onDataChange, isPrivileged, showEditorControls]
   );
 
   // KPI manual override
@@ -422,6 +426,10 @@ export const AdminTransportDashboard: React.FC<AdminTransportDashboardProps> = (
   const tarifsList = transport.tarifs && transport.tarifs.length > 0 ? transport.tarifs : defaultTransportData.tarifs;
   const totalCommunesEleves = transport.communes.reduce((s, c) => s + (Number(c.total) || 0), 0);
   const totalCommunesPercent = transport.communes.reduce((s, c) => s + (parseInt(c.part, 10) || 0), 0);
+
+  if (!isPrivileged || !showEditorControls) {
+    return null;
+  }
 
   return (
     <div className="space-y-6 text-slate-800">

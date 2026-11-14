@@ -13,6 +13,8 @@ import pageDataFile from '@/content/pageData.json';
 import { defaultBudgetData, type BudgetData } from '@/data/budgetTransportData';
 import { useSmartBack } from '@/lib/navigation';
 import { usePrivilegedAccess } from '@/lib/authAccess';
+import { isContentDraftPreview } from '@/lib/contentDraft';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
 
 export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
   const navigate = useNavigate();
@@ -20,10 +22,11 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
   const handleBack = useSmartBack('/plan-strategique');
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const isEditorMode = isPrivileged && showEditorControls;
+  const publishedData = usePublishedPageData(pageDataFile as Record<string, unknown>);
 
   const [maxYear, setMaxYear] = useState<number>(() => {
-    let budget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
-    if (typeof window !== 'undefined') {
+    let budget = (publishedData as { budgetData?: BudgetData }).budgetData;
+    if (isContentDraftPreview()) {
       try {
         const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (draft) {
@@ -44,8 +47,8 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
 
   const computeMaxYear = useCallback(() => {
     try {
-      let budget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
-      if (typeof window !== 'undefined') {
+      let budget = (publishedData as { budgetData?: BudgetData }).budgetData;
+      if (isContentDraftPreview()) {
         const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (draft) {
           const parsed = JSON.parse(draft);
@@ -62,7 +65,11 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
     } catch {
       // ignore
     }
-  }, []);
+  }, [publishedData]);
+
+  useEffect(() => {
+    computeMaxYear();
+  }, [computeMaxYear]);
 
   useEffect(() => {
     window.addEventListener('storage', computeMaxYear);
@@ -75,6 +82,7 @@ export const BudgetCadreVieInfrastructuresPage: React.FC = () => {
 
   // Handle data updates from AdminBudgetDashboard and sync to localStorage & events
   const handleBudgetChange = (updatedBudgetData: BudgetData) => {
+    if (!isPrivileged || !showEditorControls) return;
     try {
       if (typeof window !== 'undefined') {
         const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');

@@ -12,6 +12,14 @@ import {
 } from 'lucide-react';
 import type { RestaurantPageData } from '@/data/restaurantPageData';
 import { usePrivilegedAccess } from '@/lib/authAccess';
+import { LocaleNumberInput } from '@/components/ui/locale-number-input';
+import { parseLocaleNumber, sanitizeNumberOrFallback, sanitizeRestaurantDataset } from '@/lib/pageDataSanitizer';
+import {
+  computeRestaurantAnalytics,
+  rebalancePieDistribution,
+  recalculateStudentDistribution,
+  toSafeString,
+} from './restaurantCorrelations';
 
 export interface AdminRestaurantSurveyEditorProps {
   restaurant: RestaurantPageData;
@@ -32,112 +40,90 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     return null;
   }
 
+  const emitSanitized = (next: Partial<RestaurantPageData>) => {
+    onChange(sanitizeRestaurantDataset(next) as unknown as RestaurantPageData);
+  };
+
   // Helper to re-balance student percentages to 100%
   const rebalanceStudentPercentages = () => {
-    const list = restaurant.studentDistributionData || [];
-    const totalEffectif = list.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
-    if (totalEffectif === 0) return;
-
-    const updated = list.map((item) => {
-      const v = Math.max(0, Number(item.value)) || 0;
-      return {
-        ...item,
-        percentage: Math.round((v / totalEffectif) * 1000) / 10,
-      };
-    });
-
-    const sumPct = updated.reduce((s, it) => s + it.percentage, 0);
-    const diff = Math.round((100 - sumPct) * 10) / 10;
-    if (diff !== 0 && updated.length > 0) {
-      updated[0].percentage = Math.round((updated[0].percentage + diff) * 10) / 10;
+    const recalculated = recalculateStudentDistribution(restaurant.studentDistributionData || []);
+    const totalPct = recalculated.reduce((s, it) => s + it.percentage, 0);
+    if (totalPct > 0 && recalculated.length > 0) {
+      const diff = Math.round((100 - totalPct) * 10) / 10;
+      if (diff !== 0) {
+        recalculated[0].percentage = Math.max(0, Math.round((recalculated[0].percentage + diff) * 10) / 10);
+      }
     }
-
-    const next = { ...restaurant, studentDistributionData: updated };
-    onChange(next);
+    emitSanitized({ ...restaurant, studentDistributionData: recalculated });
   };
 
   // Helper to rebalance any PieChart to 100%
   const rebalancePieChart = (key: 'priceForDishData' | 'priceForMenuData' | 'restaurationInterestData') => {
-    const list = (restaurant[key] as Array<{ name: string; value: number }>) || [];
-    const total = list.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
-    if (total === 0) return;
+    const list = restaurant[key] || [];
+    const updated = rebalancePieDistribution(list);
+    const nextRestaurant: RestaurantPageData = { ...restaurant, [key]: updated };
 
-    const updated = list.map((item) => {
-      const v = Math.max(0, Number(item.value)) || 0;
-      return {
-        ...item,
-        value: Math.round((v / total) * 1000) / 10,
-      };
-    });
-
-    const sumVal = updated.reduce((s, it) => s + it.value, 0);
-    const diff = Math.round((100 - sumVal) * 10) / 10;
-    if (diff !== 0 && updated.length > 0) {
-      updated[0].value = Math.round((updated[0].value + diff) * 10) / 10;
-    }
-
-    const nextRestaurant = { ...restaurant, [key]: updated };
-    // Synchronize correlated metrics
-    if (key === 'restaurationInterestData' && nextRestaurant.keyMetrics && nextRestaurant.keyMetrics[0]) {
+    // Synchronize correlated metrics cleanly
+    if (key === 'restaurationInterestData' && nextRestaurant.keyMetrics?.[0]) {
+      const oui = updated.find((it) => toSafeString(it.name).trim().toLowerCase() === 'oui') || updated[0];
       const metrics = [...nextRestaurant.keyMetrics];
-      metrics[0] = { ...metrics[0], value: updated[0]?.value ?? 92 };
+      metrics[0] = { ...metrics[0], value: oui?.value ?? 0 };
       nextRestaurant.keyMetrics = metrics;
-    } else if (key === 'priceForDishData' && nextRestaurant.keyMetrics && nextRestaurant.keyMetrics[2]) {
+    } else if (key === 'priceForDishData' && nextRestaurant.keyMetrics?.[2]) {
       const metrics = [...nextRestaurant.keyMetrics];
-      const target = updated.find((it) => it.name.includes('1 500') || it.name.includes('1500')) || updated[1];
+      const target =
+        updated.find((it) => toSafeString(it.name).includes('1 500') || toSafeString(it.name).includes('1500')) ||
+        updated[0];
       if (target) {
         metrics[2] = { ...metrics[2], label: `pour ${target.value}% des parents` };
         nextRestaurant.keyMetrics = metrics;
       }
-    } else if (key === 'priceForMenuData' && nextRestaurant.alertPoints && nextRestaurant.alertPoints[2]) {
+    } else if (key === 'priceForMenuData' && nextRestaurant.alertPoints?.[2]) {
       const alerts = [...nextRestaurant.alertPoints];
-      const target = updated.find((it) => it.name.includes('2 000') || it.name.includes('2000')) || updated[2];
+      const target =
+        updated.find((it) => toSafeString(it.name).includes('2 000') || toSafeString(it.name).includes('2000')) ||
+        updated[0];
       if (target) {
         alerts[2] = { ...alerts[2], value: `${target.value}%` };
         nextRestaurant.alertPoints = alerts;
       }
     }
 
-    onChange(nextRestaurant);
+    emitSanitized(nextRestaurant);
   };
 
   // Student row updates: auto-correlate percentage when effectif value changes
   const updateStudentRow = (index: number, field: string, val: string | number) => {
     const list = [...(restaurant.studentDistributionData || [])];
-    const num = Number(val);
-    const parsedVal = (field === 'value' || field === 'percentage') ? (!isNaN(num) ? num : val) : val;
+    if (!list[index]) return;
+    const parsedNum = parseLocaleNumber(val);
+    const parsedVal =
+      field === 'value' || field === 'percentage'
+        ? parsedNum !== null
+          ? Math.max(0, parsedNum)
+          : 0
+        : val;
 
     list[index] = {
       ...list[index],
       [field]: parsedVal,
     };
 
-    // If effectif (value) is edited, dynamically correlate percentage to the new total
-    if (field === 'value') {
-      const totalStudents = list.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
-      if (totalStudents > 0) {
-        list.forEach((item, i) => {
-          const itemVal = Math.max(0, Number(item.value)) || 0;
-          list[i] = {
-            ...item,
-            percentage: Math.round((itemVal / totalStudents) * 1000) / 10,
-          };
-        });
-      }
-    }
-
-    onChange({ ...restaurant, studentDistributionData: list });
+    const nextList = field === 'value' ? recalculateStudentDistribution(list) : list;
+    emitSanitized({ ...restaurant, studentDistributionData: nextList });
   };
 
   const addStudentRow = () => {
     const list = [...(restaurant.studentDistributionData || [])];
-    list.push({ name: 'Nouveau niveau', value: 15, percentage: 10 });
-    onChange({ ...restaurant, studentDistributionData: list });
+    list.push({ name: 'Nouveau niveau', value: 15, percentage: 0 });
+    emitSanitized({ ...restaurant, studentDistributionData: recalculateStudentDistribution(list) });
   };
 
   const deleteStudentRow = (index: number) => {
-    const list = (restaurant.studentDistributionData || []).filter((_, i) => i !== index);
-    onChange({ ...restaurant, studentDistributionData: list });
+    const list = restaurant.studentDistributionData || [];
+    if (list.length <= 1) return;
+    const filtered = list.filter((_, i) => i !== index);
+    emitSanitized({ ...restaurant, studentDistributionData: recalculateStudentDistribution(filtered) });
   };
 
   // Bidirectional correlation engine between survey tables, metric cards & charts
@@ -154,7 +140,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     if (key === 'restaurationInterestData') {
       const list = [...(next.restaurationInterestData || [])];
       if (field === 'value' && list.length >= 2) {
-        const num = Math.min(100, Math.max(0, Number(val) || 0));
+        const num = Math.min(100, Math.max(0, sanitizeNumberOrFallback(val, 0)));
         const otherIndex = index === 0 ? 1 : 0;
         list[index] = { ...list[index], value: num };
         list[otherIndex] = { ...list[otherIndex], value: Math.round((100 - num) * 10) / 10 };
@@ -176,10 +162,12 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     // 2. Types de repas souhaités (BarChart) <---> keyMetrics[1] ("Plats chauds")
     if (key === 'mealTypePreferenceData') {
       const list = [...(next.mealTypePreferenceData || [])];
-      const isPlatsChauds = index === 0 || list[index]?.name.toLowerCase().includes('chaud');
+      const isPlatsChauds = index === 0 || toSafeString(list[index]?.name).toLowerCase().includes('chaud');
       if (isPlatsChauds && (field === 'percentage' || field === 'value')) {
-        const pct = field === 'percentage' ? Number(val) : Number(list[index]?.percentage ?? val);
-        if (!isNaN(pct) && next.keyMetrics && next.keyMetrics.length > 1) {
+        const pct = field === 'percentage'
+          ? parseLocaleNumber(val)
+          : parseLocaleNumber(list[index]?.percentage ?? val);
+        if (pct !== null && next.keyMetrics && next.keyMetrics.length > 1) {
           const metrics = [...next.keyMetrics];
           metrics[1] = {
             ...metrics[1],
@@ -193,10 +181,11 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     // 3. Budget plat unique (PieChart) <---> keyMetrics[2] ("Budget moyen par plat")
     if (key === 'priceForDishData') {
       const list = [...(next.priceForDishData || [])];
-      const isBudget15002000 = index === 1 || list[index]?.name.includes('1 500') || list[index]?.name.includes('1500');
+      const rowName = toSafeString(list[index]?.name);
+      const isBudget15002000 = index === 1 || rowName.includes('1 500') || rowName.includes('1500');
       if (isBudget15002000 && field === 'value') {
-        const num = Number(val);
-        if (!isNaN(num) && next.keyMetrics && next.keyMetrics.length > 2) {
+        const num = parseLocaleNumber(val);
+        if (num !== null && next.keyMetrics && next.keyMetrics.length > 2) {
           const metrics = [...next.keyMetrics];
           metrics[2] = {
             ...metrics[2],
@@ -210,10 +199,12 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     // 4. Intérêt par jour (BarChart) <---> alertPoints[0] ("Mercredi")
     if (key === 'serviceInterestByDayData') {
       const list = [...(next.serviceInterestByDayData || [])];
-      const isMercredi = index === 2 || list[index]?.name.toLowerCase().includes('mercredi');
+      const isMercredi = index === 2 || toSafeString(list[index]?.name).toLowerCase().includes('mercredi');
       if (isMercredi && (field === 'percentage' || field === 'value')) {
-        const pct = field === 'percentage' ? Number(val) : Number(list[index]?.percentage ?? val);
-        if (!isNaN(pct) && next.alertPoints && next.alertPoints.length > 0) {
+        const pct = field === 'percentage'
+          ? parseLocaleNumber(val)
+          : parseLocaleNumber(list[index]?.percentage ?? val);
+        if (pct !== null && next.alertPoints && next.alertPoints.length > 0) {
           const alerts = [...next.alertPoints];
           alerts[0] = {
             ...alerts[0],
@@ -227,10 +218,11 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     // 5. Budget menu complet (PieChart) <---> alertPoints[2] ("Tarification")
     if (key === 'priceForMenuData') {
       const list = [...(next.priceForMenuData || [])];
-      const is20003000 = index === 2 || list[index]?.name.includes('2 000') || list[index]?.name.includes('2000');
+      const rowName = toSafeString(list[index]?.name);
+      const is20003000 = index === 2 || rowName.includes('2 000') || rowName.includes('2000');
       if (is20003000 && field === 'value') {
-        const num = Number(val);
-        if (!isNaN(num) && next.alertPoints && next.alertPoints.length > 2) {
+        const num = parseLocaleNumber(val);
+        if (num !== null && next.alertPoints && next.alertPoints.length > 2) {
           const alerts = [...next.alertPoints];
           alerts[2] = {
             ...alerts[2],
@@ -245,9 +237,8 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     if (key === 'keyMetrics') {
       // keyMetrics[0]: Intérêt global -> update restaurationInterestData PieChart
       if (index === 0 && field === 'value') {
-        const str = String(val).replace('%', '').trim();
-        const num = parseFloat(str);
-        if (!isNaN(num) && num >= 0 && num <= 100 && next.restaurationInterestData && next.restaurationInterestData.length >= 2) {
+        const num = parseLocaleNumber(String(val).replace('%', '').trim());
+        if (num !== null && num >= 0 && num <= 100 && next.restaurationInterestData && next.restaurationInterestData.length >= 2) {
           const list = [...next.restaurationInterestData];
           list[0] = { ...list[0], value: num };
           list[1] = { ...list[1], value: Math.round((100 - num) * 10) / 10 };
@@ -256,11 +247,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
       }
       // keyMetrics[1]: Plats chauds -> update mealTypePreferenceData BarChart
       if (index === 1 && field === 'value') {
-        const str = String(val).replace('%', '').trim();
-        const num = parseFloat(str);
-        if (!isNaN(num) && next.mealTypePreferenceData && next.mealTypePreferenceData.length > 0) {
+        const num = parseLocaleNumber(String(val).replace('%', '').trim());
+        if (num !== null && next.mealTypePreferenceData && next.mealTypePreferenceData.length > 0) {
           const list = [...next.mealTypePreferenceData];
-          const idx = list.findIndex((r) => r.name.toLowerCase().includes('chaud'));
+          const idx = list.findIndex((r) => toSafeString(r?.name).toLowerCase().includes('chaud'));
           const target = idx >= 0 ? idx : 0;
           list[target] = { ...list[target], percentage: num };
           next.mealTypePreferenceData = list;
@@ -268,12 +258,15 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
       }
       // keyMetrics[2]: Budget moyen par plat -> update priceForDishData PieChart
       if (index === 2 && field === 'label') {
-        const match = String(val).match(/(\d+(\.\d+)?)%/);
-        if (match && next.priceForDishData && next.priceForDishData.length > 1) {
+        const match = String(val).replace(',', '.').match(/(\d+(\.\d+)?)%/);
+        if (match && next.priceForDishData && next.priceForDishData.length > 0) {
           const num = parseFloat(match[1]);
           const list = [...next.priceForDishData];
-          const idx = list.findIndex((r) => r.name.includes('1 500') || r.name.includes('1500'));
-          const target = idx >= 0 ? idx : 1;
+          const idx = list.findIndex((r) => {
+            const n = toSafeString(r?.name);
+            return n.includes('1 500') || n.includes('1500');
+          });
+          const target = idx >= 0 ? idx : Math.min(1, list.length - 1);
           list[target] = { ...list[target], value: num };
           next.priceForDishData = list;
         }
@@ -284,24 +277,25 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
     if (key === 'alertPoints') {
       // alertPoints[0]: Mercredi -> update serviceInterestByDayData BarChart
       if (index === 0 && field === 'value') {
-        const str = String(val).replace('%', '').trim();
-        const num = parseFloat(str);
-        if (!isNaN(num) && next.serviceInterestByDayData && next.serviceInterestByDayData.length > 2) {
+        const num = parseLocaleNumber(String(val).replace('%', '').trim());
+        if (num !== null && next.serviceInterestByDayData && next.serviceInterestByDayData.length > 0) {
           const list = [...next.serviceInterestByDayData];
-          const idx = list.findIndex((r) => r.name.toLowerCase().includes('mercredi'));
-          const target = idx >= 0 ? idx : 2;
+          const idx = list.findIndex((r) => toSafeString(r?.name).toLowerCase().includes('mercredi'));
+          const target = idx >= 0 ? idx : Math.min(2, list.length - 1);
           list[target] = { ...list[target], percentage: num };
           next.serviceInterestByDayData = list;
         }
       }
       // alertPoints[2]: Tarification -> update priceForMenuData PieChart
       if (index === 2 && field === 'value') {
-        const str = String(val).replace('%', '').trim();
-        const num = parseFloat(str);
-        if (!isNaN(num) && next.priceForMenuData && next.priceForMenuData.length > 2) {
+        const num = parseLocaleNumber(String(val).replace('%', '').trim());
+        if (num !== null && next.priceForMenuData && next.priceForMenuData.length > 0) {
           const list = [...next.priceForMenuData];
-          const idx = list.findIndex((r) => r.name.includes('2 000') || r.name.includes('2000'));
-          const target = idx >= 0 ? idx : 2;
+          const idx = list.findIndex((r) => {
+            const n = toSafeString(r?.name);
+            return n.includes('2 000') || n.includes('2000');
+          });
+          const target = idx >= 0 ? idx : Math.min(2, list.length - 1);
           list[target] = { ...list[target], value: num };
           next.priceForMenuData = list;
         }
@@ -323,12 +317,11 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
 
     if (key === 'keyMetrics' || key === 'alertPoints') {
       if (field === 'value') {
-        const num = Number(val);
-        parsedVal = !isNaN(num) && String(val).trim() !== '' ? num : val;
+        const num = parseLocaleNumber(val);
+        parsedVal = num !== null && String(val).trim() !== '' ? num : String(val ?? '');
       }
     } else if (field === 'value' || field === 'percentage') {
-      const num = Number(val);
-      parsedVal = !isNaN(num) ? num : val;
+      parsedVal = sanitizeNumberOrFallback(val, 0);
     }
 
     const updated = current.map((row, i) =>
@@ -342,17 +335,42 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
 
     let nextRestaurant: RestaurantPageData = { ...restaurant, [key]: updated };
     nextRestaurant = syncCorrelations(nextRestaurant, key, index, field, parsedVal);
-    onChange(nextRestaurant);
+    onChange(sanitizeRestaurantDataset(nextRestaurant) as unknown as RestaurantPageData);
   };
 
   const addGenericRow = <K extends keyof RestaurantPageData>(key: K, defaultItem: Record<string, unknown>) => {
     const current = (restaurant[key] as Record<string, unknown>[]) || [];
-    onChange({ ...restaurant, [key]: [...current, defaultItem] });
+    emitSanitized({ ...restaurant, [key]: [...current, defaultItem] });
   };
 
   const deleteGenericRow = <K extends keyof RestaurantPageData>(key: K, index: number) => {
     const current = (restaurant[key] as Record<string, unknown>[]) || [];
-    onChange({ ...restaurant, [key]: current.filter((_, i) => i !== index) });
+    const nextRows = current.filter((_, i) => i !== index);
+    const nextRestaurant: RestaurantPageData = { ...restaurant, [key]: nextRows };
+
+    if (key === 'mealTypePreferenceData' && nextRestaurant.keyMetrics && nextRestaurant.keyMetrics.length > 1) {
+      const analytics = computeRestaurantAnalytics(nextRestaurant);
+      const metrics = [...nextRestaurant.keyMetrics];
+      metrics[1] = {
+        ...metrics[1],
+        value: analytics.platsChaudsPct,
+      };
+      nextRestaurant.keyMetrics = metrics;
+    }
+
+    if (key === 'serviceInterestByDayData' && nextRestaurant.alertPoints && nextRestaurant.alertPoints.length > 0) {
+      const analytics = computeRestaurantAnalytics(nextRestaurant);
+      const alerts = [...nextRestaurant.alertPoints];
+      alerts[0] = {
+        ...alerts[0],
+        name: analytics.weakestDayName,
+        value: `${analytics.weakestDayPct}%`,
+        label: analytics.otherDaysSummaryLabel,
+      };
+      nextRestaurant.alertPoints = alerts;
+    }
+
+    emitSanitized(nextRestaurant);
   };
 
   return (
@@ -476,18 +494,18 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                           />
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
+                          <LocaleNumberInput
+                            min={0}
                             value={row.value}
-                            onChange={(e) => updateStudentRow(i, 'value', e.target.value)}
+                            onValueChange={(nextNum) => updateStudentRow(i, 'value', nextNum)}
                             className="h-7 text-xs font-bold text-sky-900 bg-white"
                           />
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
+                          <LocaleNumberInput
+                            min={0}
                             value={row.percentage}
-                            onChange={(e) => updateStudentRow(i, 'percentage', e.target.value)}
+                            onValueChange={(nextNum) => updateStudentRow(i, 'percentage', nextNum)}
                             className="h-7 text-xs font-semibold text-emerald-700 bg-white"
                           />
                         </td>
@@ -496,8 +514,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                             type="button"
                             size="sm"
                             variant="ghost"
+                            disabled={(restaurant.studentDistributionData || []).length <= 1}
+                            title="Au moins un niveau scolaire est requis"
                             onClick={() => deleteStudentRow(i)}
-                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -568,10 +588,11 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                           />
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
+                          <LocaleNumberInput
+                            min={0}
+                            max={100}
                             value={row.value}
-                            onChange={(e) => updateGenericRow('restaurationInterestData', i, 'value', e.target.value)}
+                            onValueChange={(nextNum) => updateGenericRow('restaurationInterestData', i, 'value', nextNum)}
                             className="h-7 text-xs font-bold text-purple-900 bg-white"
                           />
                         </td>
@@ -580,8 +601,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                             type="button"
                             size="sm"
                             variant="ghost"
+                            disabled={(restaurant.restaurationInterestData || []).length <= 1}
+                            title="Au moins une réponse est requise"
                             onClick={() => deleteGenericRow('restaurationInterestData', i)}
-                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -637,18 +660,18 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                           />
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
+                          <LocaleNumberInput
+                            min={0}
                             value={row.value}
-                            onChange={(e) => updateGenericRow('currentLunchData', i, 'value', e.target.value)}
+                            onValueChange={(nextNum) => updateGenericRow('currentLunchData', i, 'value', nextNum)}
                             className="h-7 text-xs font-bold text-sky-900 bg-white"
                           />
                         </td>
                         <td className="p-2">
-                          <Input
-                            type="number"
+                          <LocaleNumberInput
+                            min={0}
                             value={row.percentage}
-                            onChange={(e) => updateGenericRow('currentLunchData', i, 'percentage', e.target.value)}
+                            onValueChange={(nextNum) => updateGenericRow('currentLunchData', i, 'percentage', nextNum)}
                             className="h-7 text-xs font-semibold text-emerald-700 bg-white"
                           />
                         </td>
@@ -657,8 +680,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                             type="button"
                             size="sm"
                             variant="ghost"
+                            disabled={(restaurant.currentLunchData || []).length <= 1}
+                            title="Au moins une situation est requise"
                             onClick={() => deleteGenericRow('currentLunchData', i)}
-                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -674,13 +699,29 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {/* Tab 4: Intérêt par jour */}
           {activeTab === 'days' && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Intérêt par jour de la semaine (VerticalBarChart)
-                </span>
-                <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <Link2 className="w-3 h-3" /> « Mercredi » synchronisé avec le Point d'attention
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Intérêt par jour de la semaine (VerticalBarChart)
+                  </span>
+                  <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <Link2 className="w-3 h-3" /> « Mercredi » synchronisé avec le Point d'attention
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() =>
+                    addGenericRow('serviceInterestByDayData', {
+                      name: 'Nouveau jour',
+                      value: 0,
+                      percentage: 0,
+                    })
+                  }
+                  className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                >
+                  <Plus className="mr-1 h-3 w-3" /> Ajouter un jour
+                </Button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full text-left text-xs divide-y divide-slate-200">
@@ -689,36 +730,57 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                       <th className="p-2.5">Jour</th>
                       <th className="p-2.5 w-32">Réponses</th>
                       <th className="p-2.5 w-32">Pourcentage (%)</th>
+                      <th className="p-2.5 text-right w-16">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {(restaurant.serviceInterestByDayData || []).map((row, i) => (
-                      <tr key={`day-${i}`}>
-                        <td className="p-2">
-                          <Input
-                            value={row.name}
-                            onChange={(e) => updateGenericRow('serviceInterestByDayData', i, 'name', e.target.value)}
-                            className="h-7 text-xs bg-white"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            value={row.value}
-                            onChange={(e) => updateGenericRow('serviceInterestByDayData', i, 'value', e.target.value)}
-                            className="h-7 text-xs font-bold text-sky-900 bg-white"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            value={row.percentage}
-                            onChange={(e) => updateGenericRow('serviceInterestByDayData', i, 'percentage', e.target.value)}
-                            className="h-7 text-xs font-semibold text-emerald-700 bg-white"
-                          />
+                    {(restaurant.serviceInterestByDayData || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-4 text-center text-xs text-slate-400 italic">
+                          Aucun jour configuré. Cliquez sur « + Ajouter un jour » pour créer une entrée.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      (restaurant.serviceInterestByDayData || []).map((row, i) => (
+                        <tr key={`day-${i}`} className="hover:bg-slate-50/70">
+                          <td className="p-2">
+                            <Input
+                              value={row.name}
+                              onChange={(e) => updateGenericRow('serviceInterestByDayData', i, 'name', e.target.value)}
+                              className="h-7 text-xs bg-white"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <LocaleNumberInput
+                              min={0}
+                              value={row.value}
+                              onValueChange={(nextNum) => updateGenericRow('serviceInterestByDayData', i, 'value', nextNum)}
+                              className="h-7 text-xs font-bold text-sky-900 bg-white"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <LocaleNumberInput
+                              min={0}
+                              value={row.percentage}
+                              onValueChange={(nextNum) => updateGenericRow('serviceInterestByDayData', i, 'percentage', nextNum)}
+                              className="h-7 text-xs font-semibold text-emerald-700 bg-white"
+                            />
+                          </td>
+                          <td className="p-2 text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              title="Supprimer ce jour"
+                              onClick={() => deleteGenericRow('serviceInterestByDayData', i)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -728,13 +790,29 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
           {/* Tab 5: Types de repas */}
           {activeTab === 'meals' && (
             <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Types de repas souhaités (VerticalBarChart)
-                </span>
-                <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <Link2 className="w-3 h-3" /> « Plats chauds » synchronisé avec Stat Clé
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Types de repas souhaités (VerticalBarChart)
+                  </span>
+                  <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                    <Link2 className="w-3 h-3" /> « Plats chauds » synchronisé avec Stat Clé
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() =>
+                    addGenericRow('mealTypePreferenceData', {
+                      name: 'Nouveau type de repas',
+                      value: 0,
+                      percentage: 0,
+                    })
+                  }
+                  className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                >
+                  <Plus className="mr-1 h-3 w-3" /> Ajouter un type de repas
+                </Button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full text-left text-xs divide-y divide-slate-200">
@@ -743,36 +821,57 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                       <th className="p-2.5">Type de repas</th>
                       <th className="p-2.5 w-32">Réponses</th>
                       <th className="p-2.5 w-32">Pourcentage (%)</th>
+                      <th className="p-2.5 text-right w-16">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {(restaurant.mealTypePreferenceData || []).map((row, i) => (
-                      <tr key={`meal-${i}`}>
-                        <td className="p-2">
-                          <Input
-                            value={row.name}
-                            onChange={(e) => updateGenericRow('mealTypePreferenceData', i, 'name', e.target.value)}
-                            className="h-7 text-xs bg-white"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            value={row.value}
-                            onChange={(e) => updateGenericRow('mealTypePreferenceData', i, 'value', e.target.value)}
-                            className="h-7 text-xs font-bold text-sky-900 bg-white"
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            value={row.percentage}
-                            onChange={(e) => updateGenericRow('mealTypePreferenceData', i, 'percentage', e.target.value)}
-                            className="h-7 text-xs font-semibold text-emerald-700 bg-white"
-                          />
+                    {(restaurant.mealTypePreferenceData || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-4 text-center text-xs text-slate-400 italic">
+                          Aucun type de repas configuré. Cliquez sur « + Ajouter un type de repas » pour créer une entrée.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      (restaurant.mealTypePreferenceData || []).map((row, i) => (
+                        <tr key={`meal-${i}`} className="hover:bg-slate-50/70">
+                          <td className="p-2">
+                            <Input
+                              value={row.name}
+                              onChange={(e) => updateGenericRow('mealTypePreferenceData', i, 'name', e.target.value)}
+                              className="h-7 text-xs bg-white"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <LocaleNumberInput
+                              min={0}
+                              value={row.value}
+                              onValueChange={(nextNum) => updateGenericRow('mealTypePreferenceData', i, 'value', nextNum)}
+                              className="h-7 text-xs font-bold text-sky-900 bg-white"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <LocaleNumberInput
+                              min={0}
+                              value={row.percentage}
+                              onValueChange={(nextNum) => updateGenericRow('mealTypePreferenceData', i, 'percentage', nextNum)}
+                              className="h-7 text-xs font-semibold text-emerald-700 bg-white"
+                            />
+                          </td>
+                          <td className="p-2 text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              title="Supprimer ce type de repas"
+                              onClick={() => deleteGenericRow('mealTypePreferenceData', i)}
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -832,10 +931,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                             />
                           </td>
                           <td className="p-1.5">
-                            <Input
-                              type="number"
+                            <LocaleNumberInput
+                              min={0}
                               value={row.value}
-                              onChange={(e) => updateGenericRow('priceForDishData', i, 'value', e.target.value)}
+                              onValueChange={(nextNum) => updateGenericRow('priceForDishData', i, 'value', nextNum)}
                               className="h-7 text-xs font-bold text-purple-900 bg-white"
                             />
                           </td>
@@ -844,8 +943,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                               type="button"
                               size="sm"
                               variant="ghost"
+                              disabled={(restaurant.priceForDishData || []).length <= 1}
+                              title="Au moins une tranche budgétaire est requise"
                               onClick={() => deleteGenericRow('priceForDishData', i)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -907,10 +1008,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                             />
                           </td>
                           <td className="p-1.5">
-                            <Input
-                              type="number"
+                            <LocaleNumberInput
+                              min={0}
                               value={row.value}
-                              onChange={(e) => updateGenericRow('priceForMenuData', i, 'value', e.target.value)}
+                              onValueChange={(nextNum) => updateGenericRow('priceForMenuData', i, 'value', nextNum)}
                               className="h-7 text-xs font-bold text-purple-900 bg-white"
                             />
                           </td>
@@ -919,8 +1020,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                               type="button"
                               size="sm"
                               variant="ghost"
+                              disabled={(restaurant.priceForMenuData || []).length <= 1}
+                              title="Au moins une tranche budgétaire est requise"
                               onClick={() => deleteGenericRow('priceForMenuData', i)}
-                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -969,8 +1072,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                           type="button"
                           size="sm"
                           variant="ghost"
+                          disabled={(restaurant.keyMetrics || []).length <= 1}
+                          title="Au moins une statistique clé est requise"
                           onClick={() => deleteGenericRow('keyMetrics', i)}
-                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 shrink-0"
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 shrink-0 disabled:opacity-30"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -979,7 +1084,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                         <div>
                           <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Valeur / %</label>
                           <Input
-                            value={String(m.value)}
+                            value={String(m?.value ?? '')}
                             onChange={(e) => updateGenericRow('keyMetrics', i, 'value', e.target.value)}
                             className="h-6.5 text-xs font-bold text-french-blue bg-white"
                             placeholder="ex: 92 ou 1500-2000 FCFA"
@@ -988,7 +1093,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                         <div>
                           <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Précision / Label</label>
                           <Input
-                            value={m.label || ''}
+                            value={m?.label || ''}
                             onChange={(e) => updateGenericRow('keyMetrics', i, 'label', e.target.value)}
                             className="h-6.5 text-[11px] text-slate-600 bg-white"
                             placeholder="Précision"
@@ -997,17 +1102,17 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                       </div>
                       {i === 0 && (
                         <div className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Intérêt (Oui: {restaurant.restaurationInterestData?.[0]?.value}%)
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Intérêt (Oui: {(restaurant.restaurationInterestData?.find((d) => toSafeString(d?.name).trim().toLowerCase() === 'oui') || restaurant.restaurationInterestData?.[0])?.value ?? 0}%)
                         </div>
                       )}
                       {i === 1 && (
                         <div className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-                          <Link2 className="w-3 h-3" /> Synchronisé avec le BarChart Types de repas (Plats chauds: {restaurant.mealTypePreferenceData?.[0]?.percentage}%)
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le BarChart Types de repas (Plats chauds: {(restaurant.mealTypePreferenceData?.find((d) => toSafeString(d?.name).toLowerCase().includes('chaud')) || restaurant.mealTypePreferenceData?.[0])?.percentage ?? 0}%)
                         </div>
                       )}
                       {i === 2 && (
                         <div className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Budget 1500-2000 FCFA ({restaurant.priceForDishData?.[1]?.value}%)
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Budget 1500-2000 FCFA ({(restaurant.priceForDishData?.find((d) => toSafeString(d?.name).includes('1 500') || toSafeString(d?.name).includes('1500')) || restaurant.priceForDishData?.[0])?.value ?? 0}%)
                         </div>
                       )}
                     </div>
@@ -1039,7 +1144,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                     <div key={`ap-${i}`} className="p-2.5 rounded-lg border bg-amber-50/50 text-xs space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <Input
-                          value={m.name}
+                          value={m?.name || ''}
                           onChange={(e) => updateGenericRow('alertPoints', i, 'name', e.target.value)}
                           className="h-6.5 text-xs font-semibold bg-white"
                         />
@@ -1047,8 +1152,10 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                           type="button"
                           size="sm"
                           variant="ghost"
+                          disabled={(restaurant.alertPoints || []).length <= 1}
+                          title="Au moins un point d'attention est requis"
                           onClick={() => deleteGenericRow('alertPoints', i)}
-                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 shrink-0"
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 shrink-0 disabled:opacity-30"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -1057,7 +1164,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                         <div>
                           <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Valeur</label>
                           <Input
-                            value={String(m.value)}
+                            value={String(m?.value ?? '')}
                             onChange={(e) => updateGenericRow('alertPoints', i, 'value', e.target.value)}
                             className="h-6.5 text-xs font-bold text-amber-900 bg-white"
                             placeholder="ex: 36.3%"
@@ -1066,7 +1173,7 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                         <div>
                           <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Précision / Label</label>
                           <Input
-                            value={m.label || ''}
+                            value={m?.label || ''}
                             onChange={(e) => updateGenericRow('alertPoints', i, 'label', e.target.value)}
                             className="h-6.5 text-[11px] text-slate-600 bg-white"
                             placeholder="Précision"
@@ -1075,12 +1182,12 @@ export const AdminRestaurantSurveyEditor: React.FC<AdminRestaurantSurveyEditorPr
                       </div>
                       {i === 0 && (
                         <div className="text-[10px] text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-                          <Link2 className="w-3 h-3" /> Synchronisé avec le BarChart Mercredi ({restaurant.serviceInterestByDayData?.[2]?.percentage}%)
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le BarChart Mercredi ({(restaurant.serviceInterestByDayData?.find((d) => toSafeString(d?.name).toLowerCase().includes('mercredi')) || restaurant.serviceInterestByDayData?.[0])?.percentage ?? 0}%)
                         </div>
                       )}
                       {i === 2 && (
                         <div className="text-[10px] text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Menu complet 2000-3000 FCFA ({restaurant.priceForMenuData?.[2]?.value}%)
+                          <Link2 className="w-3 h-3" /> Synchronisé avec le PieChart Menu complet 2000-3000 FCFA ({(restaurant.priceForMenuData?.find((d) => toSafeString(d?.name).includes('2 000') || toSafeString(d?.name).includes('2000')) || restaurant.priceForMenuData?.[0])?.value ?? 0}%)
                         </div>
                       )}
                     </div>

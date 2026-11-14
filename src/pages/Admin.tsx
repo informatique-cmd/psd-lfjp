@@ -24,10 +24,15 @@ import { filmAnnuelData } from '@/data/filmAnnuelData';
 import { restaurantPageData } from '@/data/restaurantPageData';
 import { psdTimelineData } from '@/data/psdTimelineData';
 import { elcsData } from '@/components/diagnostic/ElcsDataContext';
+import { defaultPsdAxesData, computeAxisProgressRate, type PsdAxesData, type PsdAxisIndicator, type PsdAxisKey } from '@/data/psdAxesData';
+import { defaultPsdSurveyData, type PsdSurveyData } from '@/data/psdSurveyData';
 import { defaultBudgetData, defaultTransportData, type BudgetData, type TransportData, type BudgetProject, type TransportCommune, type TransportCircuit, type CashFlowYear, type TuitionSimulation } from '@/data/budgetTransportData';
 import { AdminBudgetDashboard } from '@/components/admin/AdminBudgetDashboard';
 import { AdminTransportDashboard } from '@/components/admin/AdminTransportDashboard';
-import { isValidManagedPage, isValidPageData, normalizePageSlug, validateManagedPages, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
+import { isValidManagedPage, isValidPageData, normalizePageSlug, sanitizePageData, validateManagedPages, validatePageDataDetailed, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
+import { parseLocaleNumber, sanitizeDiagnosticData, sanitizeElcsDataset, sanitizePsdAxesData, sanitizeRestaurantDataset } from '@/lib/pageDataSanitizer';
+import { recalculateStudentDistribution } from '@/components/diagnostic/restaurant/restaurantCorrelations';
+import { invalidatePublishedPageDataCache, setPublishedPageDataCache } from '@/lib/publishedDataSync';
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
 import { pageTextDraftStorageKey } from '@/lib/pageOverrides';
@@ -123,6 +128,8 @@ const defaultPageData = {
     },
   },
   elcsData: (pageDataFile as { elcsData?: typeof elcsData }).elcsData || elcsData,
+  psdAxesData: (pageDataFile as { psdAxesData?: PsdAxesData }).psdAxesData || defaultPsdAxesData,
+  psdSurveyData: (pageDataFile as { psdSurveyData?: PsdSurveyData }).psdSurveyData || defaultPsdSurveyData,
   budgetData: (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData,
   transportData: (pageDataFile as { transportData?: TransportData }).transportData || defaultTransportData,
 };
@@ -149,22 +156,26 @@ const loadPageDataDraft = () => {
     const stored = window.localStorage.getItem('lfjp_app_build_version');
     if (stored !== APP_BUILD_VERSION) {
       window.localStorage.removeItem(pageDataDraftStorageKey);
-      return { ...defaultPageData, ...pageDataFile };
+      return sanitizePageData({ ...defaultPageData, ...pageDataFile });
     }
   }
   const savedData = window.localStorage.getItem(pageDataDraftStorageKey);
-  if (!savedData) return { ...defaultPageData, ...pageDataFile };
+  if (!savedData) return sanitizePageData({ ...defaultPageData, ...pageDataFile });
   try {
     const parsed: unknown = JSON.parse(savedData);
     if (!isRecord(parsed)) {
       throw new Error('Structure des données de pages invalide.');
     }
-    const merged = { ...defaultPageData, ...pageDataFile, ...parsed };
-    if (!isValidPageData(merged)) throw new Error('Structure des données de pages invalide.');
+    const merged = sanitizePageData({ ...defaultPageData, ...pageDataFile, ...parsed });
+    const validation = validatePageDataDetailed(merged);
+    if (!validation.valid) {
+      console.error('[LFJP Draft Validation] Erreurs:', validation.errors);
+      throw new Error(validation.errors[0] || 'Structure des données de pages invalide.');
+    }
     return merged;
   } catch {
     window.localStorage.removeItem(pageDataDraftStorageKey);
-    return { ...defaultPageData, ...pageDataFile };
+    return sanitizePageData({ ...defaultPageData, ...pageDataFile });
   }
 };
 
@@ -294,10 +305,10 @@ const Admin = () => {
   const [visionSubTab, setVisionSubTab] = useState<'vision' | 'missions' | 'valeurs' | 'subpages'>('vision');
   const [diagnosticSubTab, setDiagnosticSubTab] = useState<'elcs' | 'restaurant' | 'rapports' | 'subpages'>('elcs');
   const [planStrategiqueSubTab, setPlanStrategiqueSubTab] = useState<'axe1' | 'axe2' | 'axe3' | 'axe4' | 'overview'>('axe1');
-  const [axe1SubTab, setAxe1SubTab] = useState<'budget' | 'transport' | 'fiches' | 'jalons'>('budget');
-  const [axe2SubTab, setAxe2SubTab] = useState<'fiches' | 'jalons'>('fiches');
-  const [axe3SubTab, setAxe3SubTab] = useState<'fiches' | 'jalons'>('fiches');
-  const [axe4SubTab, setAxe4SubTab] = useState<'bac-blanc' | 'film-annuel' | 'fiches' | 'jalons'>('bac-blanc');
+  const [axe1SubTab, setAxe1SubTab] = useState<'budget' | 'transport' | 'indicateurs' | 'fiches' | 'jalons'>('budget');
+  const [axe2SubTab, setAxe2SubTab] = useState<'indicateurs' | 'fiches' | 'jalons'>('indicateurs');
+  const [axe3SubTab, setAxe3SubTab] = useState<'indicateurs' | 'fiches' | 'jalons'>('indicateurs');
+  const [axe4SubTab, setAxe4SubTab] = useState<'bac-blanc' | 'film-annuel' | 'indicateurs' | 'fiches' | 'jalons'>('bac-blanc');
   const [planOverviewSearch, setPlanOverviewSearch] = useState<string>('');
   const [customRubriqueSubTab, setCustomRubriqueSubTab] = useState<'content' | 'subpages'>('content');
   const [selectedVisualElement, setSelectedVisualElement] = useState<{
@@ -395,12 +406,12 @@ const Admin = () => {
   const editorAccount = configuredAccounts.find((a) => a.id === 'editor') || defaultAccounts[1];
   const adminAccount = superAdminAccount;
 
-  const [loginEmail, setLoginEmail] = useState(editorAccount.email);
-  const [loginPassword, setLoginPassword] = useState(editorAccount.password);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   const [gateTab, setGateTab] = useState<'editor' | 'superadmin'>('editor');
-  const [gateEmail, setGateEmail] = useState(editorAccount.email);
-  const [gatePassword, setGatePassword] = useState(editorAccount.password);
+  const [gateEmail, setGateEmail] = useState('');
+  const [gatePassword, setGatePassword] = useState('');
   const [gateError, setGateError] = useState('');
   const [showGatePassword, setShowGatePassword] = useState(false);
 
@@ -408,8 +419,9 @@ const Admin = () => {
   const canPublish = true;
 
   const assertCanDelete = (actionName = 'cette action'): boolean => {
+    void actionName;
     if (!canDelete) {
-      setStatus(`⚠️ Action bloquée : Le profil « ${userProfile.name} » (${userProfile.email}) permet de consulter et modifier les données, mais la suppression est strictement désactivée. Connectez-vous avec le profil Administrateur (${adminAccount.email}) pour supprimer.`);
+      setStatus(`⚠️ Action bloquée : Le profil « ${userProfile.name} » permet de consulter et modifier les données, mais la suppression est strictement désactivée. Connectez-vous avec le profil SuperAdmin pour supprimer.`);
       return false;
     }
     return true;
@@ -420,19 +432,25 @@ const Admin = () => {
     saveActiveUserProfile(targetProfile);
     setIsProfileModalOpen(false);
     setStatus(`Profil actif : ${targetProfile.name} (${targetProfile.role === 'admin' || targetProfile.role === 'superadmin' ? 'Administrateur – Tous droits' : 'Éditeur Simple – Modification sans suppression'}).`);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('lfjp_auth_changed'));
+    }
   };
 
   const handleUpdateAccountCredentials = (accountId: string, newEmail: string, newPassword: string, newName?: string) => {
-    if (!newEmail.trim()) {
-      setStatus('⚠️ Veuillez spécifier une adresse email valide.');
+    const targetAcc = configuredAccounts.find((a) => a.id === accountId);
+    const resolvedEmail = newEmail.trim() || targetAcc?.email || '';
+    const resolvedPassword = newPassword.trim();
+    if (!resolvedEmail && !resolvedPassword) {
+      setStatus('⚠️ Veuillez saisir un nouvel identifiant ou un nouveau mot de passe.');
       return;
     }
     const updated = configuredAccounts.map((acc) => {
       if (acc.id === accountId) {
         return {
           ...acc,
-          email: newEmail.trim(),
-          password: newPassword.trim() || acc.password,
+          email: resolvedEmail || acc.email,
+          password: resolvedPassword || acc.password,
           name: newName?.trim() || acc.name,
         };
       }
@@ -445,7 +463,7 @@ const Admin = () => {
     if (userProfile.id === accountId || (accountId === 'admin' && userProfile.role === 'admin') || (accountId === 'editor' && userProfile.role === 'editor')) {
       const updatedProfile: UserProfile = {
         ...userProfile,
-        email: newEmail.trim(),
+        email: resolvedEmail || userProfile.email,
         name: newName?.trim() || userProfile.name,
       };
       setUserProfile(updatedProfile);
@@ -453,7 +471,7 @@ const Admin = () => {
     }
 
     setEditingAccountId(null);
-    setStatus(`✅ Identifiants mis à jour : Nouveau email « ${newEmail.trim()} ». Ce profil peut désormais se connecter avec ce nouvel identifiant.`);
+    setStatus(`✅ Identifiants mis à jour avec succès. Ce profil peut désormais se connecter avec ses nouveaux accès.`);
   };
 
   const handleLoginSubmit = (e?: React.FormEvent) => {
@@ -471,9 +489,12 @@ const Admin = () => {
         canPublish: userFound.canPublish,
       };
       switchUserProfile(newProfile);
-      setStatus(`Connexion réussie : Bienvenue ${newProfile.name} (${newProfile.email}).`);
+      setLoginEmail('');
+      setLoginPassword('');
+      setStatus(`Connexion réussie : Bienvenue ${newProfile.name}.`);
     } else {
-      setStatus(`⚠️ Identifiants incorrects pour « ${loginEmail} ». Vérifiez l'adresse email ou le mot de passe.`);
+      setLoginPassword('');
+      setStatus('⚠️ Identifiant ou mot de passe incorrect. Vérifiez vos informations de connexion.');
     }
   };
 
@@ -544,9 +565,15 @@ const Admin = () => {
 
   const handleEditorSubmitForDeploy = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    saveDraft();
+    const outcome = validateAndSaveDraft();
+    if (!outcome.ok) {
+      toast.error('Impossible de transmettre le brouillon', {
+        description: outcome.error,
+      });
+      return;
+    }
     const currentDraftText = window.localStorage.getItem(pageTextDraftStorageKey) || pageTextJson;
-    const currentDraftData = window.localStorage.getItem(pageDataDraftStorageKey) || pageDataJson;
+    const currentDraftData = outcome.pageDataStr;
     const currentDraftContent = window.localStorage.getItem(draftStorageKey) || serializedContent;
     const currentDraftPages = window.localStorage.getItem(pagesDraftStorageKey) || serializedPages;
 
@@ -580,6 +607,26 @@ const Admin = () => {
       approveDeploymentRequest(pendingDeployment.id, userProfile.email);
       setPendingDeployment(loadPendingDeploymentRequest());
       clearAllDraftStorage();
+      if (pendingDeployment.draftFiles?.pageData) {
+        try {
+          const parsedApproved = sanitizePageData(
+            JSON.parse(pendingDeployment.draftFiles.pageData) as Record<string, unknown>
+          );
+          const serializedApproved = JSON.stringify(parsedApproved, null, 2);
+          setPageDataJson(serializedApproved);
+          setPublishedPageDataCache(parsedApproved);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('lfjp_page_data_changed', { detail: parsedApproved }));
+          }
+        } catch {
+          invalidatePublishedPageDataCache();
+        }
+      } else {
+        invalidatePublishedPageDataCache();
+      }
+      if (previewFrame.current) {
+        previewFrame.current.src = `${visualRoute || '/'}?v=${Date.now()}&edit=${editorModeActive ? '1' : '0'}&embedded=1`;
+      }
       setStatus('🚀 Modifications publiées et déploiement Vercel lancé avec succès !');
       setTimeout(() => {
         setStatus((prev) => (prev.includes('Modifications publiées') ? '' : prev));
@@ -653,9 +700,10 @@ const Admin = () => {
         stepMessage: 'Sauvegarde du brouillon et validation des structures de données...',
       }));
 
-      const draftSaved = saveDraft();
-      if (!draftSaved) {
-        throw new Error('Erreur de validation lors de la préparation des fichiers locaux.');
+      const draftOutcome = validateAndSaveDraft();
+      if (!draftOutcome.ok) {
+        console.error('[LFJP Déploiement 35%] Échec validation JSON :', draftOutcome.error);
+        throw new Error(draftOutcome.error);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 400));
@@ -667,35 +715,7 @@ const Admin = () => {
         stepMessage: 'Envoi des modifications vers GitHub (branche principale main)...',
       }));
 
-      const sanitizedRubriquesList = rubriques
-        .filter((r) => r.id !== 'contact' && r.path !== '/contact')
-        .map((r, i) => ({ ...r, order: i + 1 }));
-
-      let finalPageDataStr = pageDataJson;
-      try {
-        const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
-        const draftRaw = typeof window !== 'undefined' ? window.localStorage.getItem(pageDataDraftStorageKey) : null;
-        if (draftRaw) {
-          try {
-            const draftParsed = JSON.parse(draftRaw) as Record<string, unknown>;
-            if (draftParsed && typeof draftParsed === 'object') {
-              if (draftParsed.budgetData) parsed.budgetData = draftParsed.budgetData;
-              if (draftParsed.transportData) parsed.transportData = draftParsed.transportData;
-              if (draftParsed.restaurant) parsed.restaurant = draftParsed.restaurant;
-              if (draftParsed.keyMetrics) parsed.keyMetrics = draftParsed.keyMetrics;
-              if (draftParsed.bacBlancSchedule) parsed.bacBlancSchedule = draftParsed.bacBlancSchedule;
-              if (draftParsed.filmAnnuelData) parsed.filmAnnuelData = draftParsed.filmAnnuelData;
-              if (draftParsed.rubriques) parsed.rubriques = draftParsed.rubriques;
-            }
-          } catch {
-            // ignore draft parse error
-          }
-        }
-        parsed.rubriques = sanitizedRubriquesList;
-        finalPageDataStr = JSON.stringify(parsed, null, 2);
-      } catch {
-        // keep current pageDataJson if parse fails
-      }
+      const finalPageDataStr = draftOutcome.pageDataStr;
 
       const payloadFiles = {
         siteContent: serializedContent,
@@ -723,11 +743,12 @@ const Admin = () => {
       setPageDataJson(finalPageDataStr);
       try {
         const parsedFinal = JSON.parse(finalPageDataStr) as Record<string, unknown>;
+        setPublishedPageDataCache(parsedFinal);
         window.dispatchEvent(
           new CustomEvent('lfjp_page_data_changed', { detail: parsedFinal })
         );
       } catch {
-        // ignore
+        invalidatePublishedPageDataCache();
       }
       if (pendingDeployment) {
         approveDeploymentRequest(pendingDeployment.id, userProfile.email);
@@ -1272,7 +1293,10 @@ const Admin = () => {
 
   const enterLocalAdminSession = (specificRole?: 'admin' | 'editor' | 'superadmin') => {
     const role = specificRole || 'admin';
-    const matchingAccount = configuredAccounts.find((a) => a.role === role) || (role === 'editor' ? defaultAccounts[2] : defaultAccounts[1]);
+    const matchingAccount =
+      configuredAccounts.find((a) => a.role === role) ||
+      defaultAccounts.find((a) => a.role === role) ||
+      defaultAccounts[1];
     const targetProfile: UserProfile = {
       id: matchingAccount.id,
       email: matchingAccount.email,
@@ -1319,12 +1343,15 @@ const Admin = () => {
       window.sessionStorage.setItem('lfjp_admin_local_session', '1');
       window.localStorage.setItem('lfjp_admin_active_session', '1');
       setGateError('');
+      setGateEmail('');
+      setGatePassword('');
       setVisualRoute('/');
       setEditorModeActive(false);
-      setStatus(`Connexion réussie : Bienvenue ${newProfile.name} (${newProfile.email}).`);
+      setStatus(`Connexion réussie : Bienvenue ${newProfile.name}.`);
       window.dispatchEvent(new Event('lfjp_auth_changed'));
     } else {
-      setGateError(`Identifiant ou mot de passe incorrect pour « ${gateEmail} ». Vérifiez l'adresse ou le mot de passe.`);
+      setGatePassword('');
+      setGateError('Identifiant ou mot de passe incorrect. Vérifiez votre saisie.');
     }
   };
 
@@ -1340,11 +1367,32 @@ const Admin = () => {
     }
     setUser(null);
     setUserProfile(defaultAccounts[0]);
+    setGateEmail('');
+    setGatePassword('');
+    setLoginEmail('');
+    setLoginPassword('');
+    setGateError('');
     setVisualRoute('/');
     setEditorModeActive(false);
     setStatus('Vous êtes déconnecté de l’espace d’administration.');
     window.dispatchEvent(new Event('lfjp_auth_changed'));
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (user && userProfile.role !== 'guest') {
+      if (loadActiveUserProfile().role === 'guest') {
+        saveActiveUserProfile(userProfile);
+      }
+      if (window.sessionStorage.getItem('lfjp_admin_local_session') !== '1') {
+        window.sessionStorage.setItem('lfjp_admin_local_session', '1');
+      }
+      if (window.localStorage.getItem('lfjp_admin_active_session') !== '1') {
+        window.localStorage.setItem('lfjp_admin_active_session', '1');
+      }
+      window.dispatchEvent(new Event('lfjp_auth_changed'));
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -1366,6 +1414,9 @@ const Admin = () => {
           };
           setUserProfile(superAdminProfile);
           saveActiveUserProfile(superAdminProfile);
+          window.sessionStorage.setItem('lfjp_admin_local_session', '1');
+          window.localStorage.setItem('lfjp_admin_active_session', '1');
+          window.dispatchEvent(new Event('lfjp_auth_changed'));
           setVisualRoute('/');
           setEditorModeActive(false);
         }
@@ -1414,12 +1465,13 @@ const Admin = () => {
         return;
       }
       if (event.data?.type === 'lfjp_restaurant_data_updated' && event.data.restaurant) {
-        const nextRestaurant = event.data.restaurant;
+        const nextRestaurant = sanitizeRestaurantDataset(event.data.restaurant);
         setPageDataJson((prev) => {
           try {
             const parsed = JSON.parse(prev);
             parsed.restaurant = nextRestaurant;
-            const updated = JSON.stringify(parsed, null, 2);
+            const sanitized = sanitizePageData(parsed);
+            const updated = JSON.stringify(sanitized, null, 2);
             window.localStorage.setItem(pageDataDraftStorageKey, updated);
             return updated;
           } catch {
@@ -1434,7 +1486,40 @@ const Admin = () => {
           try {
             const parsed = JSON.parse(prev);
             parsed.elcsData = nextElcs;
-            const updated = JSON.stringify(parsed, null, 2);
+            const sanitized = sanitizePageData(parsed);
+            const updated = JSON.stringify(sanitized, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
+      if (event.data?.type === 'lfjp_psd_axes_updated') {
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            if (event.data.psdAxesData) parsed.psdAxesData = event.data.psdAxesData;
+            if (event.data.psdTimelines) parsed.psdTimelines = event.data.psdTimelines;
+            if (event.data.planStrategique) parsed.planStrategique = event.data.planStrategique;
+            const sanitized = sanitizePageData(parsed);
+            const updated = JSON.stringify(sanitized, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
+      if (event.data?.type === 'lfjp_psd_survey_data_updated' && event.data.psdSurveyData) {
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            parsed.psdSurveyData = event.data.psdSurveyData;
+            const sanitized = sanitizePageData(parsed);
+            const updated = JSON.stringify(sanitized, null, 2);
             window.localStorage.setItem(pageDataDraftStorageKey, updated);
             return updated;
           } catch {
@@ -1449,7 +1534,8 @@ const Admin = () => {
           try {
             const parsed = JSON.parse(prev);
             Object.assign(parsed, nextData);
-            const updated = JSON.stringify(parsed, null, 2);
+            const sanitized = sanitizePageData(parsed);
+            const updated = JSON.stringify(sanitized, null, 2);
             window.localStorage.setItem(pageDataDraftStorageKey, updated);
             return updated;
           } catch {
@@ -1526,13 +1612,14 @@ const Admin = () => {
   const serializedContent = useMemo(() => JSON.stringify(content, null, 2), [content]);
   const serializedPages = useMemo(() => JSON.stringify({ pages }, null, 2), [pages]);
   const persistPageData = (next: Record<string, unknown>) => {
-    const serialized = JSON.stringify(next, null, 2);
+    const sanitized = sanitizePageData(next);
+    const serialized = JSON.stringify(sanitized, null, 2);
     setPageDataJson(serialized);
     window.localStorage.setItem(pageDataDraftStorageKey, serialized);
     try {
-      previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-page-data-update', data: next }, window.location.origin);
+      previewFrame.current?.contentWindow?.postMessage({ type: 'lfjp-page-data-update', data: sanitized }, window.location.origin);
       window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('lfjp_page_data_changed', { detail: next }));
+      window.dispatchEvent(new CustomEvent('lfjp_page_data_changed', { detail: sanitized }));
     } catch {
       // ignore
     }
@@ -1955,9 +2042,17 @@ const Admin = () => {
       if (validationErrors.length) throw new Error(`Corrigez les erreurs CMS :\n${validationErrors.join('\n')}`);
 
       const pageDataStr = customFiles?.pageData || window.localStorage.getItem(pageDataDraftStorageKey) || pageDataJson || '{}';
-      const parsedPageData = JSON.parse(pageDataStr) as Record<string, unknown>;
-      if (!isValidPageData(parsedPageData)) {
-        throw new Error('Les données de planning ou de film annuel sont invalides. Vérifiez leur JSON avant de déployer.');
+      const rawParsedPageData = JSON.parse(pageDataStr) as Record<string, unknown>;
+      const mergedPageData = {
+        ...defaultPageData,
+        ...rawParsedPageData,
+        ...sanitizeDiagnosticData(rawParsedPageData),
+      };
+      const parsedPageData = sanitizePageData(mergedPageData);
+      const pageDataValidation = validatePageDataDetailed(parsedPageData);
+      if (!pageDataValidation.valid) {
+        console.error('[LFJP createPullRequest Validation] Clés en échec :', pageDataValidation.errors, parsedPageData);
+        throw new Error(`Erreur de validation JSON (${pageDataValidation.errors[0]}).`);
       }
       const sanitizedRubriquesList = rubriques
         .filter((r) => r.id !== 'contact' && r.path !== '/contact')
@@ -2043,65 +2138,81 @@ const Admin = () => {
     }
   };
 
-  const saveDraft = () => {
+  const validateAndSaveDraft = (): { ok: true; pageData: Record<string, unknown>; pageDataStr: string } | { ok: false; error: string } => {
     try {
-      const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+      const baseParsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+      const merged: Record<string, unknown> = { ...defaultPageData, ...baseParsed };
       // Read current draft from localStorage first so we NEVER revert recent modifications
       const draftRaw = typeof window !== 'undefined' ? window.localStorage.getItem(pageDataDraftStorageKey) : null;
       if (draftRaw) {
         try {
           const draftParsed = JSON.parse(draftRaw) as Record<string, unknown>;
           if (draftParsed && typeof draftParsed === 'object') {
-            if (draftParsed.budgetData) parsed.budgetData = draftParsed.budgetData;
-            if (draftParsed.transportData) parsed.transportData = draftParsed.transportData;
-            if (draftParsed.restaurant) parsed.restaurant = draftParsed.restaurant;
-            if (draftParsed.elcsData) parsed.elcsData = draftParsed.elcsData;
-            if (draftParsed.keyMetrics) parsed.keyMetrics = draftParsed.keyMetrics;
-            if (draftParsed.bacBlancSchedule) parsed.bacBlancSchedule = draftParsed.bacBlancSchedule;
-            if (draftParsed.filmAnnuelData) parsed.filmAnnuelData = draftParsed.filmAnnuelData;
-            if (draftParsed.rubriques) parsed.rubriques = draftParsed.rubriques;
+            if (draftParsed.budgetData) merged.budgetData = draftParsed.budgetData;
+            if (draftParsed.transportData) merged.transportData = draftParsed.transportData;
+            if (draftParsed.restaurant) merged.restaurant = draftParsed.restaurant;
+            if (draftParsed.elcsData) merged.elcsData = draftParsed.elcsData;
+            if (draftParsed.psdTimelines) merged.psdTimelines = draftParsed.psdTimelines;
+            if (draftParsed.psdAxesData) merged.psdAxesData = draftParsed.psdAxesData;
+            if (draftParsed.psdSurveyData) merged.psdSurveyData = draftParsed.psdSurveyData;
+            if (draftParsed.planStrategique) merged.planStrategique = draftParsed.planStrategique;
+            if (draftParsed.planificationBacBlanc) merged.planificationBacBlanc = draftParsed.planificationBacBlanc;
+            if (draftParsed.keyMetrics) merged.keyMetrics = draftParsed.keyMetrics;
+            if (draftParsed.bacBlancSchedule) merged.bacBlancSchedule = draftParsed.bacBlancSchedule;
+            if (draftParsed.filmAnnuelData) merged.filmAnnuelData = draftParsed.filmAnnuelData;
+            if (draftParsed.rubriques) merged.rubriques = draftParsed.rubriques;
           }
-        } catch {
-          // ignore draft parse error
+        } catch (draftErr) {
+          console.warn('[LFJP saveDraft] Brouillon local ignoré car illisible :', draftErr);
         }
-      }
-      if (!isValidPageData(parsed)) {
-        throw new Error('Les données de planning ou de film annuel sont invalides.');
-      }
-      const visualOverrides: unknown = JSON.parse(pageTextJson);
-      if (!isValidPageTextOverrides(visualOverrides)) {
-        throw new Error('Les modifications visuelles des pages sont invalides.');
       }
       const sanitizedRubriques = rubriques
         .filter((r) => r.id !== 'contact' && r.path !== '/contact')
         .map((r, i) => ({ ...r, order: i + 1 }));
-      parsed.rubriques = sanitizedRubriques;
-      const updatedPageDataStr = JSON.stringify(parsed, null, 2);
+      merged.rubriques = sanitizedRubriques;
+
+      const sanitized = sanitizePageData(merged);
+      const validation = validatePageDataDetailed(sanitized);
+      if (!validation.valid) {
+        console.error('[LFJP Validation pageData] Clés invalides :', validation.errors, sanitized);
+        throw new Error(`Validation JSON échouée (${validation.errors[0]})`);
+      }
+
+      const visualOverrides: unknown = JSON.parse(pageTextJson);
+      if (!isValidPageTextOverrides(visualOverrides)) {
+        throw new Error('Les modifications visuelles des pages sont invalides.');
+      }
+
+      const updatedPageDataStr = JSON.stringify(sanitized, null, 2);
       setPageDataJson(updatedPageDataStr);
       window.localStorage.setItem(pageDataDraftStorageKey, updatedPageDataStr);
       // Synchronize iframe preview
       try {
         previewFrame.current?.contentWindow?.postMessage(
-          { type: 'lfjp-page-data-update', data: parsed },
+          { type: 'lfjp-page-data-update', data: sanitized },
           window.location.origin
         );
         window.dispatchEvent(
-          new CustomEvent('lfjp_page_data_changed', { detail: parsed })
+          new CustomEvent('lfjp_page_data_changed', { detail: sanitized })
         );
       } catch {
         // ignore
       }
+      saveRubriquesDraft(rubriques);
+      window.localStorage.setItem(draftStorageKey, serializedContent);
+      window.localStorage.setItem(pagesDraftStorageKey, serializedPages);
+      window.localStorage.setItem(pageTextDraftStorageKey, pageTextJson);
+      setStatus('Brouillon enregistré dans ce navigateur. Il n’est pas encore public.');
+      return { ok: true, pageData: sanitized, pageDataStr: updatedPageDataStr };
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.');
-      return false;
+      const errorMsg = error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.';
+      console.error('[LFJP saveDraft Error]', errorMsg, error);
+      setStatus(errorMsg);
+      return { ok: false, error: errorMsg };
     }
-    saveRubriquesDraft(rubriques);
-    window.localStorage.setItem(draftStorageKey, serializedContent);
-    window.localStorage.setItem(pagesDraftStorageKey, serializedPages);
-    window.localStorage.setItem(pageTextDraftStorageKey, pageTextJson);
-    setStatus('Brouillon enregistré dans ce navigateur. Il n’est pas encore public.');
-    return true;
   };
+
+  const saveDraft = (): boolean => validateAndSaveDraft().ok;
 
   const previewDraft = () => {
     if (saveDraft()) window.open('/?draft=1', '_blank', 'noopener,noreferrer');
@@ -2534,33 +2645,83 @@ const Admin = () => {
   const updateRestaurantRow = (dataset: keyof typeof restaurantPageData, rowIndex: number, field: string, value: string) => {
     try {
       const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
-      const restaurant = parsed.restaurant as Record<string, unknown>;
-      const rows = restaurant[dataset] as Record<string, unknown>[];
+      const restaurant = isRecord(parsed.restaurant) ? { ...parsed.restaurant } : {};
+      const rows = Array.isArray(restaurant[dataset]) ? (restaurant[dataset] as Record<string, unknown>[]) : [];
       const currentRow = rows[rowIndex];
+      if (!currentRow) return;
       const currentValue = currentRow[field];
-      const nextValue = typeof currentValue === 'number' ? (value.trim() === '' ? 0 : Number(value)) : value;
-      if (typeof nextValue === 'number' && !Number.isFinite(nextValue)) return;
-      const nextRows = rows.map((row, index) => index === rowIndex ? { ...row, [field]: nextValue } : row);
-      persistPageData({ ...parsed, restaurant: { ...restaurant, [dataset]: nextRows } });
+      let nextValue: string | number = value;
+      if (typeof currentValue === 'number') {
+        const parsedNum = parseLocaleNumber(value);
+        if (value.trim() === '') {
+          nextValue = 0;
+        } else if (parsedNum !== null) {
+          nextValue = Math.max(0, parsedNum);
+        } else {
+          return;
+        }
+      }
+      let nextRows = rows.map((row, index) => (index === rowIndex ? { ...row, [field]: nextValue } : row));
+      if (dataset === 'studentDistributionData' && field === 'value') {
+        nextRows = recalculateStudentDistribution(
+          nextRows as Array<{ name: string; value: number; percentage: number }>
+        ) as unknown as Record<string, unknown>[];
+      }
+      persistPageData({ ...parsed, restaurant: sanitizeRestaurantDataset({ ...restaurant, [dataset]: nextRows }) });
     } catch {
       setStatus('Impossible de mettre à jour cette donnée. Réinitialisez le brouillon de données.');
     }
   };
 
   const addRestaurantRow = (dataset: keyof typeof restaurantPageData) => {
-    const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
-    const restaurant = parsed.restaurant as Record<string, unknown>;
-    const rows = restaurant[dataset] as Record<string, unknown>[];
-    const template = rows[0] || { name: '', value: 0 };
-    const row = Object.fromEntries(Object.entries(template).map(([field, value]) => [field, field === 'name' ? 'Nouvel élément' : field === 'value' || field === 'percentage' || field === 'average' ? 0 : value]));
-    persistPageData({ ...parsed, restaurant: { ...restaurant, [dataset]: [...rows, row] } });
+    try {
+      const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+      const restaurant = isRecord(parsed.restaurant) ? { ...parsed.restaurant } : {};
+      const rows = Array.isArray(restaurant[dataset]) ? (restaurant[dataset] as Record<string, unknown>[]) : [];
+      const template = rows[0] || { name: '', value: 0 };
+      const row = Object.fromEntries(
+        Object.entries(template).map(([field, value]) => [
+          field,
+          field === 'name'
+            ? 'Nouvel élément'
+            : field === 'value' || field === 'percentage' || field === 'average'
+              ? 0
+              : value,
+        ])
+      );
+      let nextRows = [...rows, row];
+      if (dataset === 'studentDistributionData') {
+        nextRows = recalculateStudentDistribution(
+          nextRows as Array<{ name: string; value: number; percentage: number }>
+        ) as unknown as Record<string, unknown>[];
+      }
+      persistPageData({ ...parsed, restaurant: sanitizeRestaurantDataset({ ...restaurant, [dataset]: nextRows }) });
+    } catch {
+      setStatus('Impossible d’ajouter une ligne. Réinitialisez le brouillon de données.');
+    }
   };
 
   const removeRestaurantRow = (dataset: keyof typeof restaurantPageData, rowIndex: number) => {
-    const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
-    const restaurant = parsed.restaurant as Record<string, unknown>;
-    const rows = restaurant[dataset] as Record<string, unknown>[];
-    persistPageData({ ...parsed, restaurant: { ...restaurant, [dataset]: rows.filter((_, index) => index !== rowIndex) } });
+    try {
+      const parsed = JSON.parse(pageDataJson) as Record<string, unknown>;
+      const restaurant = isRecord(parsed.restaurant) ? { ...parsed.restaurant } : {};
+      const rows = Array.isArray(restaurant[dataset]) ? (restaurant[dataset] as Record<string, unknown>[]) : [];
+      if (dataset !== 'serviceInterestByDayData' && dataset !== 'mealTypePreferenceData') {
+        if (rows.length <= 1) {
+          toast.info('Au moins une ligne doit rester dans ce jeu de données.');
+          return;
+        }
+      }
+      let nextRows = rows.filter((_, index) => index !== rowIndex);
+      if (dataset === 'studentDistributionData') {
+        nextRows = recalculateStudentDistribution(
+          nextRows as Array<{ name: string; value: number; percentage: number }>
+        ) as unknown as Record<string, unknown>[];
+      }
+      persistPageData({ ...parsed, restaurant: sanitizeRestaurantDataset({ ...restaurant, [dataset]: nextRows }) });
+    } catch {
+      setStatus('Impossible de supprimer cette ligne. Réinitialisez le brouillon de données.');
+    }
   };
 
   const getRestaurantRows = (dataset: keyof typeof restaurantPageData): Record<string, unknown>[] => {
@@ -2707,8 +2868,94 @@ const Admin = () => {
     return { ...data, psdTimelines: { ...timelines, [axis]: { ...timeline, actions: [...actions, { title: 'Nouvelle action', description: '', start: startYear, end: startYear, color: 'from-sky-400/80 to-sky-500' }] } } };
   });
 
+  const getEditablePsdAxesData = (): PsdAxesData => {
+    const raw = getEditablePageData().psdAxesData;
+    const sanitized = sanitizePsdAxesData(raw || defaultPsdAxesData);
+    return (sanitized || defaultPsdAxesData) as PsdAxesData;
+  };
+
+  const updatePsdAxisField = (
+    axisKey: PsdAxisKey,
+    field: 'shortTitle' | 'title' | 'subtitle' | 'budgetMillions',
+    value: string | number
+  ) => updateEditablePageData((data) => {
+    const axes = (sanitizePsdAxesData(data.psdAxesData || defaultPsdAxesData) || defaultPsdAxesData) as PsdAxesData;
+    const currentAxis = axes[axisKey] || defaultPsdAxesData[axisKey];
+    const nextAxis = {
+      ...currentAxis,
+      [field]: field === 'budgetMillions' ? Math.max(0, Number(parseLocaleNumber(value) ?? 0)) : String(value),
+    };
+    return {
+      ...data,
+      psdAxesData: sanitizePsdAxesData({ ...axes, [axisKey]: nextAxis }) as PsdAxesData,
+    };
+  });
+
+  const addPsdAxisIndicator = (axisKey: PsdAxisKey) => updateEditablePageData((data) => {
+    const axes = (sanitizePsdAxesData(data.psdAxesData || defaultPsdAxesData) || defaultPsdAxesData) as PsdAxesData;
+    const currentAxis = axes[axisKey] || defaultPsdAxesData[axisKey];
+    const nextIndicators: PsdAxisIndicator[] = [
+      ...(currentAxis.indicators || []),
+      {
+        name: 'Nouvel indicateur',
+        currentRate: 25,
+        targetRate: 100,
+        unit: '%',
+        status: 'En cours',
+      },
+    ];
+    return {
+      ...data,
+      psdAxesData: sanitizePsdAxesData({
+        ...axes,
+        [axisKey]: { ...currentAxis, indicators: nextIndicators },
+      }) as PsdAxesData,
+    };
+  });
+
+  const updatePsdAxisIndicator = (
+    axisKey: PsdAxisKey,
+    indicatorIndex: number,
+    field: keyof PsdAxisIndicator,
+    value: string | number
+  ) => updateEditablePageData((data) => {
+    const axes = (sanitizePsdAxesData(data.psdAxesData || defaultPsdAxesData) || defaultPsdAxesData) as PsdAxesData;
+    const currentAxis = axes[axisKey] || defaultPsdAxesData[axisKey];
+    const nextIndicators = (currentAxis.indicators || []).map((ind, idx) => {
+      if (idx !== indicatorIndex) return ind;
+      if (field === 'currentRate') {
+        return { ...ind, currentRate: Math.max(0, Number(parseLocaleNumber(value) ?? 0)) };
+      }
+      if (field === 'targetRate') {
+        return { ...ind, targetRate: Math.max(1, Number(parseLocaleNumber(value) ?? 100)) };
+      }
+      return { ...ind, [field]: value };
+    });
+    return {
+      ...data,
+      psdAxesData: sanitizePsdAxesData({
+        ...axes,
+        [axisKey]: { ...currentAxis, indicators: nextIndicators },
+      }) as PsdAxesData,
+    };
+  });
+
+  const removePsdAxisIndicator = (axisKey: PsdAxisKey, indicatorIndex: number) => updateEditablePageData((data) => {
+    const axes = (sanitizePsdAxesData(data.psdAxesData || defaultPsdAxesData) || defaultPsdAxesData) as PsdAxesData;
+    const currentAxis = axes[axisKey] || defaultPsdAxesData[axisKey];
+    return {
+      ...data,
+      psdAxesData: sanitizePsdAxesData({
+        ...axes,
+        [axisKey]: {
+          ...currentAxis,
+          indicators: (currentAxis.indicators || []).filter((_, idx) => idx !== indicatorIndex),
+        },
+      }) as PsdAxesData,
+    };
+  });
+
   const removeTimelineAction = (axis: string, actionIndex: number) => {
-    if (!assertCanDelete('la suppression d’une action de jalon')) return;
     updateEditablePageData((data) => {
       const timelines = data.psdTimelines as Record<string, Record<string, unknown>>;
       const timeline = timelines[axis];
@@ -2717,35 +2964,111 @@ const Admin = () => {
   };
 
   const updateElcsMetric = (categoryKey: string, group: 'primary' | 'secondary', rowIndex: number, field: string, value: string) => updateEditablePageData((data) => {
-    const categories = data.elcsData as Record<string, Record<string, unknown>>;
-    const category = categories[categoryKey];
-    const metrics = category[group] as Record<string, unknown>[];
-    const current = metrics[rowIndex][field];
-    const nextValue = typeof current === 'number' ? (value.trim() === '' ? 0 : Number(value)) : value;
-    if (typeof nextValue === 'number' && !Number.isFinite(nextValue)) return data;
-    return { ...data, elcsData: { ...categories, [categoryKey]: { ...category, [group]: metrics.map((metric, index) => index === rowIndex ? { ...metric, [field]: nextValue } : metric) } } };
+    const categories = isRecord(data.elcsData) ? { ...(data.elcsData as Record<string, Record<string, unknown>>) } : {};
+    const category = isRecord(categories[categoryKey]) ? { ...categories[categoryKey] } : {};
+    const metrics = Array.isArray(category[group]) ? (category[group] as Record<string, unknown>[]) : [];
+    const currentRow = metrics[rowIndex];
+    if (!currentRow) return data;
+    const current = currentRow[field];
+    let nextValue: string | number | undefined = value;
+    if (field === 'average') {
+      if (value.trim() === '') {
+        nextValue = undefined;
+      } else {
+        const parsedAvg = parseLocaleNumber(value);
+        if (parsedAvg === null) return data;
+        nextValue = parsedAvg;
+      }
+    } else if (field === 'value') {
+      const parsedNum = parseLocaleNumber(value);
+      if (parsedNum !== null) {
+        nextValue = parsedNum;
+      } else if (typeof current === 'number' && value.trim() === '') {
+        nextValue = 0;
+      } else {
+        nextValue = value;
+      }
+    } else if (typeof current === 'number') {
+      const parsedNum = parseLocaleNumber(value);
+      if (value.trim() === '') {
+        nextValue = 0;
+      } else if (parsedNum !== null) {
+        nextValue = parsedNum;
+      } else {
+        return data;
+      }
+    }
+    const updatedMetrics = metrics.map((metric, index) => {
+      if (index !== rowIndex) return metric;
+      const copy = { ...metric };
+      if (nextValue === undefined) {
+        delete copy[field];
+      } else {
+        copy[field] = nextValue;
+      }
+      return copy;
+    });
+    return {
+      ...data,
+      elcsData: sanitizeElcsDataset({
+        ...categories,
+        [categoryKey]: { ...category, [group]: updatedMetrics },
+      }),
+    };
   });
 
   const updateElcsTitle = (categoryKey: string, title: string) => updateEditablePageData((data) => {
-    const categories = data.elcsData as Record<string, Record<string, unknown>>;
-    return { ...data, elcsData: { ...categories, [categoryKey]: { ...categories[categoryKey], title } } };
+    const categories = isRecord(data.elcsData) ? { ...(data.elcsData as Record<string, Record<string, unknown>>) } : {};
+    return {
+      ...data,
+      elcsData: sanitizeElcsDataset({
+        ...categories,
+        [categoryKey]: { ...(categories[categoryKey] || {}), title },
+      }),
+    };
   });
 
   const addElcsMetric = (categoryKey: string, group: 'primary' | 'secondary') => updateEditablePageData((data) => {
-    const categories = data.elcsData as Record<string, Record<string, unknown>>;
-    const category = categories[categoryKey];
-    const metrics = category[group] as Record<string, unknown>[];
+    const categories = isRecord(data.elcsData) ? { ...(data.elcsData as Record<string, Record<string, unknown>>) } : {};
+    const category = isRecord(categories[categoryKey]) ? { ...categories[categoryKey] } : {};
+    const metrics = Array.isArray(category[group]) ? (category[group] as Record<string, unknown>[]) : [];
     const template = metrics[0] || { name: '', value: 0, label: '' };
-    const row = Object.fromEntries(Object.entries(template).map(([field, value]) => [field, field === 'name' || field === 'label' ? `Nouvel indicateur` : field === 'value' || field === 'average' ? 0 : value]));
-    return { ...data, elcsData: { ...categories, [categoryKey]: { ...category, [group]: [...metrics, row] } } };
+    const row = Object.fromEntries(
+      Object.entries(template).map(([field, value]) => [
+        field,
+        field === 'name' || field === 'label'
+          ? 'Nouvel indicateur'
+          : field === 'value' || field === 'average'
+            ? 0
+            : value,
+      ])
+    );
+    return {
+      ...data,
+      elcsData: sanitizeElcsDataset({
+        ...categories,
+        [categoryKey]: { ...category, [group]: [...metrics, row] },
+      }),
+    };
   });
 
   const removeElcsMetric = (categoryKey: string, group: 'primary' | 'secondary', rowIndex: number) => {
     if (!assertCanDelete('la suppression d’un indicateur ELCS')) return;
     updateEditablePageData((data) => {
-      const categories = data.elcsData as Record<string, Record<string, unknown>>;
-      const category = categories[categoryKey];
-      return { ...data, elcsData: { ...categories, [categoryKey]: { ...category, [group]: (category[group] as Record<string, unknown>[]).filter((_, index) => index !== rowIndex) } } };
+      const categories = isRecord(data.elcsData) ? { ...(data.elcsData as Record<string, Record<string, unknown>>) } : {};
+      const category = isRecord(categories[categoryKey]) ? { ...categories[categoryKey] } : {};
+      const metrics = Array.isArray(category[group]) ? (category[group] as Record<string, unknown>[]) : [];
+      if (group === 'primary' && metrics.length <= 1) {
+        toast.info('Au moins un indicateur principal doit rester dans cette catégorie.');
+        return data;
+      }
+      return {
+        ...data,
+        elcsData: sanitizeElcsDataset({
+          ...categories,
+          [categoryKey]: { ...category, [group]: metrics.filter((_, index) => index !== rowIndex) },
+        }),
+      };
     });
   };
 
@@ -2843,7 +3166,6 @@ const Admin = () => {
   };
 
   const removeBudgetProject = (index: number) => {
-    if (!assertCanDelete('la suppression d’un projet d’investissement')) return;
     updateEditablePageData((data) => {
       const budget = (data.budgetData as BudgetData) || defaultBudgetData;
       const updatedProjects = budget.projects.filter((_, i) => i !== index);
@@ -3563,8 +3885,8 @@ const Admin = () => {
                 onClick={() => {
                   setGateTab('editor');
                   setGateError('');
-                  setGateEmail(editorAccount.email);
-                  setGatePassword(editorAccount.password);
+                  setGateEmail('');
+                  setGatePassword('');
                 }}
                 className={`py-2.5 px-3 rounded-lg text-center transition-all flex items-center justify-center gap-2 ${
                   gateTab === 'editor'
@@ -3580,8 +3902,8 @@ const Admin = () => {
                 onClick={() => {
                   setGateTab('superadmin');
                   setGateError('');
-                  setGateEmail(superAdminAccount.email);
-                  setGatePassword(superAdminAccount.password || 'admin');
+                  setGateEmail('');
+                  setGatePassword('');
                 }}
                 className={`py-2.5 px-3 rounded-lg text-center transition-all flex items-center justify-center gap-2 ${
                   gateTab === 'superadmin'
@@ -3621,9 +3943,10 @@ const Admin = () => {
                     <Input
                       type="email"
                       required
+                      autoComplete="off"
                       value={gateEmail}
                       onChange={(e) => setGateEmail(e.target.value)}
-                      placeholder="editeur@lfjpsaly.org"
+                      placeholder="Entrez votre identifiant"
                       className="pl-9 text-xs h-10"
                     />
                   </div>
@@ -3645,9 +3968,10 @@ const Admin = () => {
                     <Input
                       type={showGatePassword ? 'text' : 'password'}
                       required
+                      autoComplete="current-password"
                       value={gatePassword}
                       onChange={(e) => setGatePassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder="Entrez votre mot de passe"
                       className="pl-9 pr-9 text-xs h-10 font-mono"
                     />
                   </div>
@@ -5751,18 +6075,22 @@ const Admin = () => {
                     </div>
                   </div>
 
-                  {Object.entries(getEditablePageData().elcsData as Record<string, Record<string, unknown>>).map(([categoryKey, category]) => (
+                  {Object.entries((getEditablePageData().elcsData as Record<string, Record<string, unknown>>) || {}).map(([categoryKey, category]) => (
                     <div key={categoryKey} className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
                       <div className="grid gap-1.5 border-b pb-3">
                         <Label className="font-bold text-sm text-slate-800">Titre de la catégorie</Label>
                         <Input
-                          value={String(category.title || '')}
+                          value={String(category?.title || '')}
                           onChange={(event) => updateElcsTitle(categoryKey, event.target.value)}
                           className="font-semibold text-french-blue"
                         />
                       </div>
 
-                      {(['primary', 'secondary'] as const).map((group) => (
+                      {(['primary', 'secondary'] as const).map((group) => {
+                        const groupList = Array.isArray(category?.[group])
+                          ? (category[group] as Record<string, unknown>[])
+                          : [];
+                        return (
                         <div key={group} className="space-y-3 pt-2">
                           <div className="flex items-center justify-between">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
@@ -5773,27 +6101,27 @@ const Admin = () => {
                             </Button>
                           </div>
 
-                          {(category[group] as Record<string, unknown>[]).map((metric, rowIndex) => (
+                          {groupList.map((metric, rowIndex) => (
                             <div key={`${group}-${rowIndex}`} className="space-y-2 rounded-lg border bg-slate-50 p-3">
                               <div className="overflow-x-auto pb-1">
                                 <div className="min-w-[540px] grid gap-2 grid-cols-[1.5fr_95px_1fr_85px_105px_auto] items-center">
                                   <Input
                                     aria-label="Nom de l’indicateur"
-                                    value={String(metric.name || '')}
+                                    value={String(metric?.name || '')}
                                     onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'name', event.target.value)}
                                     placeholder="Indicateur"
                                     className="bg-white text-xs h-8"
                                   />
                                   <Input
                                     aria-label="Valeur de l’indicateur"
-                                    value={String(metric.value ?? '')}
+                                    value={String(metric?.value ?? '')}
                                     onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'value', event.target.value)}
                                     placeholder="Valeur %"
                                     className="bg-white text-xs h-8"
                                   />
                                   <Input
                                     aria-label="Précision de l’indicateur"
-                                    value={String(metric.label || '')}
+                                    value={String(metric?.label || '')}
                                     onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'label', event.target.value)}
                                     placeholder="Précision"
                                     className="bg-white text-xs h-8"
@@ -5802,7 +6130,7 @@ const Admin = () => {
                                     aria-label="Moyenne comparée"
                                     type="number"
                                     step="any"
-                                    value={metric.average === undefined ? '' : Number(metric.average)}
+                                    value={metric?.average === undefined || !Number.isFinite(Number(metric.average)) ? '' : Number(metric.average)}
                                     onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'average', event.target.value)}
                                     placeholder="Moyenne"
                                     className="bg-white text-xs h-8"
@@ -5810,7 +6138,7 @@ const Admin = () => {
                                   <select
                                     className="h-8 rounded-md border bg-white px-2 text-xs"
                                     aria-label="Tendance"
-                                    value={String(metric.trend || 'up')}
+                                    value={String(metric?.trend || 'up')}
                                     onChange={(event) => updateElcsMetric(categoryKey, group, rowIndex, 'trend', event.target.value)}
                                   >
                                     <option value="up">Progression ↑</option>
@@ -5820,9 +6148,10 @@ const Admin = () => {
                                     type="button"
                                     size="icon"
                                     variant="ghost"
+                                    disabled={group === 'primary' && groupList.length <= 1}
                                     onClick={() => removeElcsMetric(categoryKey, group, rowIndex)}
                                     aria-label="Supprimer l’indicateur"
-                                    className="h-8 w-8 text-red-500 hover:text-red-700"
+                                    className="h-8 w-8 text-red-500 hover:text-red-700 disabled:opacity-40"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
@@ -5830,7 +6159,7 @@ const Admin = () => {
                               </div>
 
                               {/* Live Graphical Preview Bar */}
-                              {metric.value !== undefined && Number(metric.value) > 0 && (
+                              {metric?.value !== undefined && Number.isFinite(Number(metric.value)) && Number(metric.value) > 0 && (
                                 <div className="flex items-center gap-2 pt-1">
                                   <span className="text-[10px] font-semibold text-slate-500">Jauge en direct :</span>
                                   <div className="h-2 flex-1 rounded-full bg-slate-200 overflow-hidden">
@@ -5840,7 +6169,7 @@ const Admin = () => {
                                     />
                                   </div>
                                   <span className="text-[11px] font-bold text-emerald-700">{Number(metric.value)}%</span>
-                                  {metric.average !== undefined && (
+                                  {metric.average !== undefined && Number.isFinite(Number(metric.average)) && (
                                     <span className="text-[10px] text-slate-500">(Moyenne : {Number(metric.average)}%)</span>
                                   )}
                                 </div>
@@ -5848,7 +6177,8 @@ const Admin = () => {
                             </div>
                           ))}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
@@ -5880,7 +6210,12 @@ const Admin = () => {
                                 {dataset.label} ({rows.length} lignes)
                               </h4>
                               <Button type="button" size="sm" variant="outline" onClick={() => addRestaurantRow(dataset.key)} className="text-xs h-8">
-                                <Plus className="mr-1 h-3 w-3" /> Ajouter une ligne
+                                <Plus className="mr-1 h-3 w-3" />{' '}
+                                {dataset.key === 'serviceInterestByDayData'
+                                  ? 'Ajouter un jour'
+                                  : dataset.key === 'mealTypePreferenceData'
+                                    ? 'Ajouter un type de repas'
+                                    : 'Ajouter une ligne'}
                               </Button>
                             </div>
                             <div className="overflow-x-auto rounded-lg border">
@@ -5897,57 +6232,66 @@ const Admin = () => {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                  {rows.map((row, rowIndex) => {
-                                    const percentVal = typeof row.percentage === 'number'
-                                      ? Number(row.percentage)
-                                      : typeof row.value === 'number'
-                                      ? Number(row.value)
-                                      : null;
+                                  {rows.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={dataset.fields.length + 2} className="px-3 py-4 text-center text-xs text-slate-400 italic">
+                                        Aucune ligne dans ce jeu de données. Cliquez sur « + Ajouter » ci-dessus pour en créer une.
+                                      </td>
+                                    </tr>
+                                  ) : (
+                                    rows.map((row, rowIndex) => {
+                                      const percentVal = typeof row.percentage === 'number'
+                                        ? Number(row.percentage)
+                                        : typeof row.value === 'number'
+                                        ? Number(row.value)
+                                        : null;
 
-                                    return (
-                                      <tr key={`${dataset.key}-${rowIndex}`} className="hover:bg-slate-50/70 transition-colors">
-                                        {dataset.fields.map((field) => (
-                                          <td key={field.key} className="px-2 py-2">
-                                            <Input
-                                              aria-label={`${dataset.label}, ${field.label}, ligne ${rowIndex + 1}`}
-                                              type={field.type || 'text'}
-                                              step={field.type === 'number' ? 'any' : undefined}
-                                              value={String(row[field.key] ?? '')}
-                                              onChange={(event) => updateRestaurantRow(dataset.key, rowIndex, field.key, event.target.value)}
-                                              className="h-8 min-w-24 bg-white text-xs"
-                                            />
-                                          </td>
-                                        ))}
-                                        <td className="px-3 py-2">
-                                          {percentVal !== null && percentVal >= 0 && (
-                                            <div className="flex items-center gap-2">
-                                              <div className="h-2 flex-1 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
-                                                <div
-                                                  className="h-full rounded-full bg-french-blue transition-all duration-300"
-                                                  style={{ width: `${Math.min(100, Math.max(0, percentVal))}%` }}
-                                                />
+                                      return (
+                                        <tr key={`${dataset.key}-${rowIndex}`} className="hover:bg-slate-50/70 transition-colors">
+                                          {dataset.fields.map((field) => (
+                                            <td key={field.key} className="px-2 py-2">
+                                              <Input
+                                                aria-label={`${dataset.label}, ${field.label}, ligne ${rowIndex + 1}`}
+                                                type={field.type || 'text'}
+                                                step={field.type === 'number' ? 'any' : undefined}
+                                                value={String(row[field.key] ?? '')}
+                                                onChange={(event) => updateRestaurantRow(dataset.key, rowIndex, field.key, event.target.value)}
+                                                className="h-8 min-w-24 bg-white text-xs"
+                                              />
+                                            </td>
+                                          ))}
+                                          <td className="px-3 py-2">
+                                            {percentVal !== null && percentVal >= 0 && (
+                                              <div className="flex items-center gap-2">
+                                                <div className="h-2 flex-1 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
+                                                  <div
+                                                    className="h-full rounded-full bg-french-blue transition-all duration-300"
+                                                    style={{ width: `${Math.min(100, Math.max(0, percentVal))}%` }}
+                                                  />
+                                                </div>
+                                                <span className="text-[10px] font-bold text-french-blue w-8 text-right">
+                                                  {percentVal}%
+                                                </span>
                                               </div>
-                                              <span className="text-[10px] font-bold text-french-blue w-8 text-right">
-                                                {percentVal}%
-                                              </span>
-                                            </div>
-                                          )}
-                                        </td>
-                                        <td className="px-2 py-2 text-right">
-                                          <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => removeRestaurantRow(dataset.key, rowIndex)}
-                                            aria-label={`Supprimer ${dataset.label}, ligne ${rowIndex + 1}`}
-                                            className="h-8 text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
+                                            )}
+                                          </td>
+                                          <td className="px-2 py-2 text-right">
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="ghost"
+                                              disabled={dataset.key !== 'serviceInterestByDayData' && dataset.key !== 'mealTypePreferenceData' && rows.length <= 1}
+                                              onClick={() => removeRestaurantRow(dataset.key, rowIndex)}
+                                              aria-label={`Supprimer ${dataset.label}, ligne ${rowIndex + 1}`}
+                                              className="h-8 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-40"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })
+                                  )}
                                 </tbody>
                               </table>
                             </div>
@@ -6636,6 +6980,158 @@ const Admin = () => {
                   );
                 };
 
+                // Helper to render axis indicators & budget editor (synced with PsdAxisIndicatorsSection & PlanStrategique)
+                const renderAxisIndicatorsEditor = (axisKey: PsdAxisKey) => {
+                  const axes = getEditablePsdAxesData();
+                  const axis = axes[axisKey] || defaultPsdAxesData[axisKey];
+                  const progressRate = computeAxisProgressRate(axis);
+
+                  return (
+                    <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="grid gap-1">
+                          <Label className="text-xs font-semibold">Libellé court de l’axe</Label>
+                          <Input
+                            value={axis.shortTitle}
+                            onChange={(e) => updatePsdAxisField(axisKey, 'shortTitle', e.target.value)}
+                            className="h-8 text-xs bg-white"
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs font-semibold">Budget alloué (M FCFA)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={axis.budgetMillions}
+                            onChange={(e) => updatePsdAxisField(axisKey, 'budgetMillions', e.target.value)}
+                            className="h-8 text-xs font-bold text-purple-900 bg-white"
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs font-semibold">Taux d’avancement calculé</Label>
+                          <div className="h-8 px-3 rounded-md border bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center">
+                            {progressRate}% (moyenne des indicateurs)
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-1">
+                          <Label className="text-xs font-semibold">Titre complet de l’axe</Label>
+                          <Input
+                            value={axis.title}
+                            onChange={(e) => updatePsdAxisField(axisKey, 'title', e.target.value)}
+                            className="h-8 text-xs bg-white"
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label className="text-xs font-semibold">Sous-titre / Cap stratégique</Label>
+                          <Input
+                            value={axis.subtitle}
+                            onChange={(e) => updatePsdAxisField(axisKey, 'subtitle', e.target.value)}
+                            className="h-8 text-xs bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 pt-2 border-t">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Indicateurs chiffrés & Graphiques ({(axis.indicators || []).length})
+                          </h4>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => addPsdAxisIndicator(axisKey)}
+                            className="h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un indicateur
+                          </Button>
+                        </div>
+                        <div className="overflow-x-auto rounded-lg border border-slate-200">
+                          <table className="w-full min-w-[600px] text-left text-xs divide-y divide-slate-200">
+                            <thead className="bg-slate-50 font-semibold text-slate-700">
+                              <tr>
+                                <th className="p-2.5">Indicateur</th>
+                                <th className="p-2.5 w-24">Actuel (%)</th>
+                                <th className="p-2.5 w-24">Cible (%)</th>
+                                <th className="p-2.5 w-36">Statut</th>
+                                <th className="p-2.5 text-right w-16">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {(axis.indicators || []).length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="p-4 text-center text-xs text-slate-400 italic">
+                                    Aucun indicateur défini. Cliquez sur « + Ajouter un indicateur » pour créer un indicateur.
+                                  </td>
+                                </tr>
+                              ) : (
+                                (axis.indicators || []).map((ind, indIndex) => (
+                                  <tr key={`psd-ind-${axisKey}-${indIndex}`} className="hover:bg-slate-50/70">
+                                    <td className="p-2">
+                                      <Input
+                                        value={ind.name}
+                                        onChange={(e) => updatePsdAxisIndicator(axisKey, indIndex, 'name', e.target.value)}
+                                        className="h-7 text-xs bg-white"
+                                      />
+                                    </td>
+                                    <td className="p-2">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        step="any"
+                                        value={ind.currentRate}
+                                        onChange={(e) => updatePsdAxisIndicator(axisKey, indIndex, 'currentRate', e.target.value)}
+                                        className="h-7 text-xs font-bold text-french-blue bg-white"
+                                      />
+                                    </td>
+                                    <td className="p-2">
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        step="any"
+                                        value={ind.targetRate}
+                                        onChange={(e) => updatePsdAxisIndicator(axisKey, indIndex, 'targetRate', e.target.value)}
+                                        className="h-7 text-xs font-semibold text-emerald-700 bg-white"
+                                      />
+                                    </td>
+                                    <td className="p-2">
+                                      <select
+                                        value={ind.status}
+                                        onChange={(e) => updatePsdAxisIndicator(axisKey, indIndex, 'status', e.target.value)}
+                                        className="h-7 w-full rounded-md border bg-white px-2 text-xs"
+                                      >
+                                        <option value="Planifié">Planifié</option>
+                                        <option value="En cours">En cours</option>
+                                        <option value="Avancé">Avancé</option>
+                                        <option value="Objectif atteint">Objectif atteint</option>
+                                      </select>
+                                    </td>
+                                    <td className="p-2 text-right">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        title="Supprimer cet indicateur"
+                                        onClick={() => removePsdAxisIndicator(axisKey, indIndex)}
+                                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                };
+
                 return (
                   <>
                     {/* ==================== ONGLET AXE 1 ==================== */}
@@ -6675,6 +7171,7 @@ const Admin = () => {
                           {[
                             { id: 'budget' as const, label: '💰 Budget & Investissements (775 M FCFA)', badge: 'Interactif' },
                             { id: 'transport' as const, label: '🚌 Transport Scolaire & Familles', badge: 'Circuits' },
+                            { id: 'indicateurs' as const, label: '📊 Indicateurs & Budget de l’Axe 1', badge: 'Graphiques' },
                             { id: 'fiches' as const, label: '📁 Fiches Projets & Sous-pages', badge: '15 fiches' },
                             { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
                           ].map((sub) => (
@@ -6733,10 +7230,13 @@ const Admin = () => {
                           </div>
                         )}
 
-                        {/* View 3: Categorized Subpages */}
+                        {/* View 3: Indicateurs Axe 1 */}
+                        {axe1SubTab === 'indicateurs' && renderAxisIndicatorsEditor('axe1')}
+
+                        {/* View 4: Categorized Subpages */}
                         {axe1SubTab === 'fiches' && renderAxisCategorizedFiches('axe-1', 'Axe 1', AXE1_CATEGORIES)}
 
-                        {/* View 4: Timeline actions */}
+                        {/* View 5: Timeline actions */}
                         {axe1SubTab === 'jalons' && renderAxisTimelineEditor('axe1', 'Axe 1 : Bien-être, Cadre de vie & Infrastructures')}
                       </div>
                     )}
@@ -6771,6 +7271,7 @@ const Admin = () => {
                         {/* Axe 2 Internal Sub-view selector */}
                         <div className="flex flex-wrap gap-2 border-b pb-3">
                           {[
+                            { id: 'indicateurs' as const, label: '📊 Indicateurs & Budget de l’Axe 2', badge: 'Graphiques' },
                             { id: 'fiches' as const, label: '📁 Fiches Projets & Cursus de l’Axe 2', badge: '8 fiches' },
                             { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
                           ].map((sub) => (
@@ -6796,10 +7297,13 @@ const Admin = () => {
                           ))}
                         </div>
 
-                        {/* View: Categorized Subpages */}
+                        {/* View 1: Indicateurs Axe 2 */}
+                        {axe2SubTab === 'indicateurs' && renderAxisIndicatorsEditor('axe2')}
+
+                        {/* View 2: Categorized Subpages */}
                         {axe2SubTab === 'fiches' && renderAxisCategorizedFiches('axe-2', 'Axe 2', AXE2_CATEGORIES)}
 
-                        {/* View: Timeline actions */}
+                        {/* View 3: Timeline actions */}
                         {axe2SubTab === 'jalons' && renderAxisTimelineEditor('axe2', 'Axe 2 : Langues, Interculturalité & Ouverture internationale')}
                       </div>
                     )}
@@ -6834,6 +7338,7 @@ const Admin = () => {
                         {/* Axe 3 Internal Sub-view selector */}
                         <div className="flex flex-wrap gap-2 border-b pb-3">
                           {[
+                            { id: 'indicateurs' as const, label: '📊 Indicateurs & Budget de l’Axe 3', badge: 'Graphiques' },
                             { id: 'fiches' as const, label: '📁 Fiches Projets & Équipements de l’Axe 3', badge: '10 fiches' },
                             { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
                           ].map((sub) => (
@@ -6859,10 +7364,13 @@ const Admin = () => {
                           ))}
                         </div>
 
-                        {/* View: Categorized Subpages */}
+                        {/* View 1: Indicateurs Axe 3 */}
+                        {axe3SubTab === 'indicateurs' && renderAxisIndicatorsEditor('axe3')}
+
+                        {/* View 2: Categorized Subpages */}
                         {axe3SubTab === 'fiches' && renderAxisCategorizedFiches('axe-3', 'Axe 3', AXE3_CATEGORIES)}
 
-                        {/* View: Timeline actions */}
+                        {/* View 3: Timeline actions */}
                         {axe3SubTab === 'jalons' && renderAxisTimelineEditor('axe3', 'Axe 3 : Innovation, Numérique & Pédagogie active')}
                       </div>
                     )}
@@ -6899,6 +7407,7 @@ const Admin = () => {
                           {[
                             { id: 'bac-blanc' as const, label: '🎓 Organisation du Bac Blanc', badge: 'Planning' },
                             { id: 'film-annuel' as const, label: '📅 Films Annuels par Cycle', badge: 'Cycles 3e-Term' },
+                            { id: 'indicateurs' as const, label: '📊 Indicateurs & Budget de l’Axe 4', badge: 'Graphiques' },
                             { id: 'fiches' as const, label: '📁 Fiches Projets & Orientation', badge: '12 fiches' },
                             { id: 'jalons' as const, label: '⏱️ Jalons & Calendrier 2026–2030', badge: 'Jalons' },
                           ].map((sub) => (
@@ -7140,10 +7649,13 @@ const Admin = () => {
                           </div>
                         )}
 
-                        {/* View 3: Categorized Subpages */}
+                        {/* View 3: Indicateurs Axe 4 */}
+                        {axe4SubTab === 'indicateurs' && renderAxisIndicatorsEditor('axe4')}
+
+                        {/* View 4: Categorized Subpages */}
                         {axe4SubTab === 'fiches' && renderAxisCategorizedFiches('axe-4', 'Axe 4', AXE4_CATEGORIES)}
 
-                        {/* View 4: Timeline actions */}
+                        {/* View 5: Timeline actions */}
                         {axe4SubTab === 'jalons' && renderAxisTimelineEditor('axe4', 'Axe 4 : Façonner les réussites, Citoyenneté & Orientation')}
                       </div>
                     )}
@@ -7182,6 +7694,34 @@ const Admin = () => {
                             </div>
                           </div>
                         </div>
+
+                        {/* Overview General Plan Title & Subtitle */}
+                        {(() => {
+                          const planMeta = (getEditablePageData().planStrategique as { title?: string; subtitle?: string }) || {
+                            title: 'PLAN STRATÉGIQUE DE DÉVELOPPEMENT',
+                            subtitle: '2026 – 2030',
+                          };
+                          return (
+                            <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 shadow-xs">
+                              <div className="grid gap-1">
+                                <Label className="text-xs font-semibold text-slate-700">Titre principal du Plan Stratégique</Label>
+                                <Input
+                                  value={String(planMeta.title || '')}
+                                  onChange={(e) => updatePlanStrategiqueGeneral('title', e.target.value)}
+                                  className="h-8 text-xs font-bold bg-white"
+                                />
+                              </div>
+                              <div className="grid gap-1">
+                                <Label className="text-xs font-semibold text-slate-700">Sous-titre / Horizon</Label>
+                                <Input
+                                  value={String(planMeta.subtitle || '')}
+                                  onChange={(e) => updatePlanStrategiqueGeneral('subtitle', e.target.value)}
+                                  className="h-8 text-xs bg-white"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Search bar across all axes */}
                         <div className="relative">
@@ -9298,13 +9838,14 @@ const Admin = () => {
                       </p>
                       <div className="grid gap-2">
                         <div className="grid gap-1">
-                          <Label className="text-[11px] font-semibold text-slate-700">Adresse email Éditeur</Label>
+                          <Label className="text-[11px] font-semibold text-slate-700">Identifiant Éditeur</Label>
                           <Input
                             type="email"
                             required
+                            autoComplete="off"
                             value={loginEmail}
                             onChange={(e) => setLoginEmail(e.target.value)}
-                            placeholder="editeur@lfjpsaly.org"
+                            placeholder="Entrez votre identifiant"
                             className="text-xs h-8 bg-white font-mono"
                           />
                         </div>
@@ -9313,9 +9854,10 @@ const Admin = () => {
                           <Input
                             type="password"
                             required
+                            autoComplete="current-password"
                             value={loginPassword}
                             onChange={(e) => setLoginPassword(e.target.value)}
-                            placeholder="••••••••"
+                            placeholder="Entrez votre mot de passe"
                             className="text-xs h-8 bg-white font-mono"
                           />
                         </div>
@@ -9407,21 +9949,25 @@ const Admin = () => {
                       </div>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div>
-                          <Label className="text-[11px] font-semibold text-slate-700">Email Éditeur</Label>
+                          <Label className="text-[11px] font-semibold text-slate-700">Nouvel identifiant Éditeur</Label>
                           <Input
                             id="editor-email-field"
-                            defaultValue={editorAccount.email}
+                            type="email"
+                            autoComplete="off"
+                            defaultValue=""
                             className="text-xs h-8 mt-1 font-mono bg-white"
-                            placeholder="editeur@lfjpsaly.org"
+                            placeholder="Entrez le nouvel identifiant"
                           />
                         </div>
                         <div>
-                          <Label className="text-[11px] font-semibold text-slate-700">Mot de passe Éditeur</Label>
+                          <Label className="text-[11px] font-semibold text-slate-700">Nouveau mot de passe Éditeur</Label>
                           <Input
                             id="editor-pass-field"
-                            defaultValue={editorAccount.password}
+                            type="password"
+                            autoComplete="new-password"
+                            defaultValue=""
                             className="text-xs h-8 mt-1 font-mono bg-white"
-                            placeholder="••••••••"
+                            placeholder="Entrez le nouveau mot de passe"
                           />
                         </div>
                       </div>
@@ -9434,6 +9980,8 @@ const Admin = () => {
                             const passEl = document.getElementById('editor-pass-field') as HTMLInputElement;
                             if (emailEl && passEl) {
                               handleUpdateAccountCredentials('editor', emailEl.value, passEl.value);
+                              emailEl.value = '';
+                              passEl.value = '';
                             }
                           }}
                           className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold"

@@ -1,23 +1,24 @@
-
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import PSD from '../components/PSD';
 import pageDataFile from '@/content/pageData.json';
-import { readContentDraft } from '@/lib/contentDraft';
+import { useContentDraft } from '@/lib/contentDraft';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
 
-const PlanStrategique = () => {
-  const pageData = readContentDraft('lfjp-admin-page-data-draft', {
-    ...pageDataFile,
-    planStrategique: (pageDataFile as { planStrategique?: { title: string; subtitle: string } }).planStrategique || {
-      title: 'PLAN STRATÉGIQUE DE DÉVELOPPEMENT',
-      subtitle: 'Lycée Français Jacques Prévert (2026-2030)',
-    },
-  });
-  const planStrategique = pageData?.planStrategique || {
+const planStrategiqueFallback = {
+  ...pageDataFile,
+  planStrategique: (pageDataFile as { planStrategique?: { title: string; subtitle: string } }).planStrategique || {
     title: 'PLAN STRATÉGIQUE DE DÉVELOPPEMENT',
     subtitle: 'Lycée Français Jacques Prévert (2026-2030)',
-  };
+  },
+};
+
+const PlanStrategique = () => {
+  const publishedData = usePublishedPageData(planStrategiqueFallback);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', publishedData);
+  const planStrategique = pageData?.planStrategique || publishedData.planStrategique;
+
   return (
     <div className="min-h-screen flex flex-col font-raleway">
       <Navbar showLogo={true} />

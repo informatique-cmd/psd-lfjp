@@ -21,21 +21,27 @@ interface MetricCardProps {
 }
 
 const MetricCard = ({ title, primary = [], secondary = [], inverse = false }: MetricCardProps) => {
-  const safePrimary = Array.isArray(primary) ? primary : [];
-  const safeSecondary = Array.isArray(secondary) ? secondary : [];
+  const safePrimary = Array.isArray(primary) ? primary.filter((item) => item && typeof item === 'object') : [];
+  const safeSecondary = Array.isArray(secondary) ? secondary.filter((item) => item && typeof item === 'object') : [];
 
   return (
     <Card className="border-french-blue/10 shadow-md h-full">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b pb-3">
         <CardTitle className="text-lg text-french-blue flex items-center">
-          <BarChart4 className="mr-2 h-5 w-5" /> {title}
+          <BarChart4 className="mr-2 h-5 w-5" /> {typeof title === 'string' ? title : String(title ?? '')}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4">
+        {safePrimary.length === 0 && safeSecondary.length === 0 && (
+          <p className="text-sm text-slate-500 italic py-4 text-center">
+            Aucun indicateur à afficher pour le moment.
+          </p>
+        )}
+
         {safePrimary.map((item, idx) => (
           <MetricItem 
             key={`p-${idx}`}
-            name={item?.name || ''}
+            name={item?.name || 'Indicateur'}
             value={item?.value ?? 0}
             label={item?.label}
             average={item?.average}
@@ -50,7 +56,7 @@ const MetricCard = ({ title, primary = [], secondary = [], inverse = false }: Me
             {safeSecondary.map((item, idx) => (
               <AlertItem 
                 key={`s-${idx}`}
-                name={item?.name || ''}
+                name={item?.name || 'Attention'}
                 value={item?.value ?? ''}
                 label={item?.label}
               />

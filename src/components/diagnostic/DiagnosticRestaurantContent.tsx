@@ -6,76 +6,132 @@ import RestaurantPieChart from './restaurant/RestaurantPieChart';
 import HorizontalBarChart from './restaurant/HorizontalBarChart';
 import VerticalBarChart from './restaurant/VerticalBarChart';
 import RestaurantConclusions from './restaurant/RestaurantConclusions';
-import { restaurantPageData } from '@/data/restaurantPageData';
+import { restaurantPageData, type RestaurantPageData } from '@/data/restaurantPageData';
 import pageDataFile from '@/content/pageData.json';
 import { CHART_COLORS } from './restaurant/restaurantData';
 import AdminRestaurantSurveyEditor from './restaurant/AdminRestaurantSurveyEditor';
-
+import { computeRestaurantAnalytics } from './restaurant/restaurantCorrelations';
+import { sanitizeRestaurantDataset } from '@/lib/pageDataSanitizer';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
 import { usePrivilegedAccess, isPrivilegedUser, shouldShowEditorControls } from '@/lib/authAccess';
 
 const restaurantDraftFallback = {
   ...pageDataFile,
-  restaurant: (pageDataFile as { restaurant?: typeof restaurantPageData }).restaurant || restaurantPageData,
+  restaurant: (pageDataFile as { restaurant?: RestaurantPageData }).restaurant || restaurantPageData,
 };
 
-const getInitialRestaurant = (): typeof restaurantPageData => {
+const sanitizeRestaurantState = (raw: unknown): RestaurantPageData => {
+  const sanitized = sanitizeRestaurantDataset(raw) as Partial<RestaurantPageData>;
+  return {
+    studentDistributionData: Array.isArray(sanitized.studentDistributionData)
+      ? sanitized.studentDistributionData
+      : restaurantDraftFallback.restaurant.studentDistributionData,
+    restaurationInterestData: Array.isArray(sanitized.restaurationInterestData)
+      ? sanitized.restaurationInterestData
+      : restaurantDraftFallback.restaurant.restaurationInterestData,
+    currentLunchData: Array.isArray(sanitized.currentLunchData)
+      ? sanitized.currentLunchData
+      : restaurantDraftFallback.restaurant.currentLunchData,
+    serviceInterestByDayData: Array.isArray(sanitized.serviceInterestByDayData)
+      ? sanitized.serviceInterestByDayData
+      : restaurantDraftFallback.restaurant.serviceInterestByDayData,
+    mealTypePreferenceData: Array.isArray(sanitized.mealTypePreferenceData)
+      ? sanitized.mealTypePreferenceData
+      : restaurantDraftFallback.restaurant.mealTypePreferenceData,
+    priceForDishData: Array.isArray(sanitized.priceForDishData)
+      ? sanitized.priceForDishData
+      : restaurantDraftFallback.restaurant.priceForDishData,
+    priceForMenuData: Array.isArray(sanitized.priceForMenuData)
+      ? sanitized.priceForMenuData
+      : restaurantDraftFallback.restaurant.priceForMenuData,
+    keyMetrics: Array.isArray(sanitized.keyMetrics)
+      ? sanitized.keyMetrics
+      : restaurantDraftFallback.restaurant.keyMetrics,
+    alertPoints: Array.isArray(sanitized.alertPoints)
+      ? sanitized.alertPoints
+      : restaurantDraftFallback.restaurant.alertPoints,
+  };
+};
+
+const getInitialRestaurant = (publishedBase: RestaurantPageData): RestaurantPageData => {
   if (typeof window !== 'undefined' && isPrivilegedUser() && shouldShowEditorControls()) {
     try {
       const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed?.restaurant) {
-          return {
-            ...restaurantDraftFallback.restaurant,
+        if (parsed?.restaurant && typeof parsed.restaurant === 'object') {
+          return sanitizeRestaurantState({
+            ...publishedBase,
             ...parsed.restaurant,
-          };
+          });
         }
       }
     } catch {
       // fallback
     }
   }
-  return restaurantDraftFallback.restaurant;
+  return sanitizeRestaurantState(publishedBase);
 };
 
 const DiagnosticRestaurantContent = () => {
-  const [restaurant, setRestaurant] = React.useState<typeof restaurantPageData>(getInitialRestaurant);
+  const publishedPageData = usePublishedPageData(restaurantDraftFallback);
+  const publishedRestaurant = React.useMemo(
+    () => sanitizeRestaurantState(publishedPageData?.restaurant || restaurantDraftFallback.restaurant),
+    [publishedPageData]
+  );
+
+  const [restaurant, setRestaurant] = React.useState<RestaurantPageData>(() =>
+    getInitialRestaurant(publishedRestaurant)
+  );
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
+
+  // Keep public view synchronized when fresh published JSON arrives
+  React.useEffect(() => {
+    if (!isPrivileged || !showEditorControls) {
+      setRestaurant(publishedRestaurant);
+    }
+  }, [publishedRestaurant, isPrivileged, showEditorControls]);
 
   React.useEffect(() => {
     const handleSync = (e: Event) => {
-      const customEvent = e as CustomEvent<{ restaurant?: typeof restaurantPageData; source?: string }>;
+      const customEvent = e as CustomEvent<{ restaurant?: unknown; source?: string }>;
       if (customEvent.detail?.source === 'restaurant_survey_editor') return;
       if (customEvent.detail?.restaurant) {
-        setRestaurant(customEvent.detail.restaurant);
+        setRestaurant(sanitizeRestaurantState(customEvent.detail.restaurant));
       }
     };
     const handleStorage = () => {
-      setRestaurant(getInitialRestaurant());
+      setRestaurant(getInitialRestaurant(publishedRestaurant));
+    };
+    const handleRecover = () => {
+      setRestaurant(sanitizeRestaurantState(restaurantPageData));
     };
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === 'lfjp-page-data-update' && e.data?.data?.restaurant) {
-        setRestaurant(e.data.data.restaurant);
+        setRestaurant(sanitizeRestaurantState(e.data.data.restaurant));
       }
     };
     window.addEventListener('storage', handleStorage);
     window.addEventListener('message', handleMessage);
     window.addEventListener('lfjp_page_data_changed', handleSync);
     window.addEventListener('lfjp_draft_cleared', handleStorage);
+    window.addEventListener('lfjp_section_recovered_restaurant', handleRecover);
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('message', handleMessage);
       window.removeEventListener('lfjp_page_data_changed', handleSync);
       window.removeEventListener('lfjp_draft_cleared', handleStorage);
+      window.removeEventListener('lfjp_section_recovered_restaurant', handleRecover);
     };
-  }, []);
+  }, [publishedRestaurant]);
 
-  const handleRestaurantChange = (updatedRestaurant: typeof restaurantPageData) => {
+  const handleRestaurantChange = (updatedRestaurant: RestaurantPageData) => {
     if (!isPrivileged || !showEditorControls) {
       console.warn('Action de modification ignorée : utilisateur non autorisé ou vue publique.');
       return;
     }
-    setRestaurant(updatedRestaurant);
+    const cleanRestaurant = sanitizeRestaurantState(updatedRestaurant);
+    setRestaurant(cleanRestaurant);
     if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
@@ -89,12 +145,12 @@ const DiagnosticRestaurantContent = () => {
         }
         const merged = {
           ...currentDraft,
-          restaurant: updatedRestaurant,
+          restaurant: cleanRestaurant,
         };
         window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
         window.dispatchEvent(
           new CustomEvent('lfjp_page_data_changed', {
-            detail: { restaurant: updatedRestaurant, source: 'restaurant_survey_editor' },
+            detail: { restaurant: cleanRestaurant, source: 'restaurant_survey_editor' },
           })
         );
         window.dispatchEvent(new Event('storage'));
@@ -102,12 +158,12 @@ const DiagnosticRestaurantContent = () => {
         if (window.parent && window.parent !== window) {
           try {
             window.parent.postMessage(
-              { type: 'lfjp_restaurant_data_updated', restaurant: updatedRestaurant, source: 'restaurant_survey_editor' },
+              { type: 'lfjp_restaurant_data_updated', restaurant: cleanRestaurant, source: 'restaurant_survey_editor' },
               '*'
             );
             window.parent.dispatchEvent(
               new CustomEvent('lfjp_page_data_changed', {
-                detail: { restaurant: updatedRestaurant, source: 'restaurant_survey_editor' },
+                detail: { restaurant: cleanRestaurant, source: 'restaurant_survey_editor' },
               })
             );
           } catch {
@@ -120,106 +176,7 @@ const DiagnosticRestaurantContent = () => {
     }
   };
 
-  // 1. Calcul dynamique du nombre total de réponses (reflète l'ensemble des effectifs)
-  const totalResponses = React.useMemo(() => {
-    const studentList = restaurant.studentDistributionData || [];
-    const totalEffectif = studentList.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
-    if (totalEffectif > 0) return totalEffectif;
-    const lunchList = restaurant.currentLunchData || [];
-    const totalLunch = lunchList.reduce((sum, item) => sum + (Math.max(0, Number(item.value)) || 0), 0);
-    if (totalLunch > 0) return totalLunch;
-    return 87;
-  }, [restaurant.studentDistributionData, restaurant.currentLunchData]);
-
-  // 2. Calcul dynamique des Statistiques Clés (Strictement synchronisées avec les graphiques)
-  const computedKeyMetrics = React.useMemo(() => {
-    // 2.1 Intérêt global pour la restauration scolaire = STRICTEMENT égal à la valeur "Oui" du PieChart
-    const interestData = restaurant.restaurationInterestData || [];
-    const ouiItem = interestData.find((d) => d.name.trim().toLowerCase() === 'oui') || interestData[0];
-    const interestVal = ouiItem ? (Math.round((Number(ouiItem.value) || 0) * 10) / 10) : 92;
-
-    // 2.2 Plats chauds = STRICTEMENT égal à la barre "Des plats chauds" du BarChart Types de repas
-    const mealsData = restaurant.mealTypePreferenceData || [];
-    const platsChaudsItem = mealsData.find((d) => d.name.toLowerCase().includes('chaud')) || mealsData[0];
-    const platsChaudsPct = platsChaudsItem 
-      ? (typeof platsChaudsItem.percentage === 'number' 
-          ? platsChaudsItem.percentage 
-          : (typeof platsChaudsItem.value === 'number' ? platsChaudsItem.value : 81.3))
-      : 81.3;
-
-    // 2.3 Budget moyen par plat = reflète dynamiquement la tranche majoritaire issue des données "Budget pour un plat"
-    const dishes = restaurant.priceForDishData || [];
-    let majorityDish = dishes[0];
-    if (dishes.length > 0) {
-      majorityDish = dishes.reduce((prev, curr) => 
-        (Number(curr.value) || 0) > (Number(prev.value) || 0) ? curr : prev
-      , dishes[0]);
-    }
-    const budgetName = majorityDish?.name ? majorityDish.name.replace(/^Entre\s+/i, '').trim() : '1500-2000 FCFA';
-    const budgetPct = majorityDish ? (Math.round((Number(majorityDish.value) || 0) * 10) / 10) : 55;
-
-    return [
-      {
-        name: restaurant.keyMetrics?.[0]?.name || "Intérêt global pour la restauration scolaire",
-        value: interestVal,
-        label: restaurant.keyMetrics?.[0]?.label || "des parents intéressés",
-        trend: (interestVal >= 50 ? "up" : "down") as "up" | "down",
-      },
-      {
-        name: restaurant.keyMetrics?.[1]?.name || "Plats chauds",
-        value: platsChaudsPct,
-        label: restaurant.keyMetrics?.[1]?.label || "des parents souhaitent des plats chauds",
-        trend: (platsChaudsPct >= 50 ? "up" : "down") as "up" | "down",
-      },
-      {
-        name: restaurant.keyMetrics?.[2]?.name || "Budget moyen par plat",
-        value: budgetName,
-        label: `pour ${budgetPct}% des parents`,
-        trend: "up" as "up" | "down",
-      },
-    ];
-  }, [restaurant.restaurationInterestData, restaurant.mealTypePreferenceData, restaurant.priceForDishData, restaurant.keyMetrics]);
-
-  // 3. Calcul dynamique des Points d'attention (alertes dynamiques)
-  const computedAlertPoints = React.useMemo(() => {
-    // 3.1 Mercredi = vrai pourcentage saisi dans "Intérêt par jour de la semaine"
-    const daysData = restaurant.serviceInterestByDayData || [];
-    const mercrediItem = daysData.find((d) => d.name.toLowerCase().includes('mercredi')) || daysData[2];
-    const mercrediPct = mercrediItem 
-      ? (typeof mercrediItem.percentage === 'number' 
-          ? mercrediItem.percentage 
-          : (typeof mercrediItem.value === 'number' ? mercrediItem.value : 36.3))
-      : 36.3;
-
-    // 3.2 Options alimentaires spécifiques
-    const optionVegetarienne = restaurant.alertPoints?.[1]?.value || "33.3%";
-
-    // 3.3 Tarification = vrai pourcentage saisi pour la tranche 2000-3000 FCFA dans "Budget pour un menu complet"
-    const menuData = restaurant.priceForMenuData || [];
-    const tarifItem = menuData.find((d) => d.name.includes('2 000') || d.name.includes('2000')) || menuData[2];
-    const tarifPct = tarifItem ? (Math.round((Number(tarifItem.value) || 0) * 10) / 10) : 58.8;
-
-    return [
-      {
-        name: restaurant.alertPoints?.[0]?.name || "Mercredi",
-        value: `${mercrediPct}%`,
-        label: "d'intérêt seulement (vs +80% autres jours)",
-        trend: "down" as "up" | "down",
-      },
-      {
-        name: restaurant.alertPoints?.[1]?.name || "Options alimentaires spécifiques",
-        value: optionVegetarienne,
-        label: restaurant.alertPoints?.[1]?.label || "demandent l'option végétarienne",
-        trend: "down" as "up" | "down",
-      },
-      {
-        name: restaurant.alertPoints?.[2]?.name || "Tarification",
-        value: `${tarifPct}%`,
-        label: "acceptent 2000-3000 FCFA pour un menu complet",
-        trend: "down" as "up" | "down",
-      },
-    ];
-  }, [restaurant.serviceInterestByDayData, restaurant.priceForMenuData, restaurant.alertPoints]);
+  const analytics = React.useMemo(() => computeRestaurantAnalytics(restaurant), [restaurant]);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -231,15 +188,15 @@ const DiagnosticRestaurantContent = () => {
       )}
       <DiagnosticCard
         title="Synthèse du sondage sur la restauration scolaire – 1er trimestre 2025"
-        description={`Analyse basée sur le sondage auprès des parents d'élèves – ${totalResponses} réponses`}
+        description={`Analyse basée sur le sondage auprès des parents d'élèves – ${analytics.totalResponses} réponses`}
         className="mb-8"
       >
         {/* Metrics and Student Distribution */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <MetricCard 
             title="Statistiques clés" 
-            primary={computedKeyMetrics}
-            secondary={computedAlertPoints}
+            primary={analytics.computedKeyMetrics}
+            secondary={analytics.computedAlertPoints}
           />
           <StudentDistributionChart data={restaurant.studentDistributionData} />
         </div>
@@ -284,7 +241,7 @@ const DiagnosticRestaurantContent = () => {
         </div>
 
         {/* Conclusions */}
-        <RestaurantConclusions />
+        <RestaurantConclusions analytics={analytics} />
       </DiagnosticCard>
     </div>
   );

@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -54,6 +56,8 @@ import {
   type BudgetProject,
 } from '@/data/budgetTransportData';
 import pageDataFile from '@/content/pageData.json';
+import { usePrivilegedAccess } from '@/lib/authAccess';
+import { isContentDraftPreview } from '@/lib/contentDraft';
 
 const XOF_TO_EUR = 655.957;
 const YEARS = [2026, 2027, 2028, 2029, 2030];
@@ -77,24 +81,25 @@ export interface AdminBudgetDashboardProps {
 export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
   onDataChange,
 }) => {
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [currency, setCurrency] = useState<'XOF' | 'EUR'>('XOF');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'synced'>('synced');
   const [editingProject, setEditingProject] = useState<BudgetProject | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
 
-  // Helper to detect outdated / desynchronized drafts (e.g. old schema or missing projects)
+  // Helper to detect invalid/missing project arrays (preserving intentional empty arrays [])
   const isStaleProjectList = useCallback((projects?: BudgetProject[]): boolean => {
-    return !projects || !Array.isArray(projects) || projects.length === 0;
+    return !projects || !Array.isArray(projects);
   }, []);
 
   // Load initial budget data from pageData or draft, prioritizing official 775M dataset
   const initialData = useMemo<BudgetData>(() => {
-    if (typeof window !== 'undefined') {
+    if (isContentDraftPreview()) {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed?.budgetData?.projects && !isStaleProjectList(parsed.budgetData.projects)) {
+          if (parsed?.budgetData?.projects && Array.isArray(parsed.budgetData.projects)) {
             return parsed.budgetData as BudgetData;
           }
         }
@@ -103,15 +108,15 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       }
     }
     const pageDataBudget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
-    if (pageDataBudget?.projects && !isStaleProjectList(pageDataBudget.projects)) {
+    if (pageDataBudget?.projects && Array.isArray(pageDataBudget.projects)) {
       return pageDataBudget;
     }
     return defaultBudgetData;
-  }, [isStaleProjectList]);
+  }, []);
 
-  // Normalization: Ensure all projects have the required interactive fields matching psd-lfjp.netlify.app & psd-lfjp.vercel.app
+  // Normalization: Ensure all projects have required interactive fields while preserving empty arrays []
   const normalizeProjects = useCallback((rawProjects?: BudgetProject[]): BudgetProject[] => {
-    const list = rawProjects && Array.isArray(rawProjects) && rawProjects.length > 0 && !isStaleProjectList(rawProjects)
+    const list = Array.isArray(rawProjects)
       ? rawProjects
       : defaultBudgetData.projects;
 
@@ -204,20 +209,27 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
 
   // Sync with global custom events or local storage changes without infinite loops
   useEffect(() => {
+    const buildSig = (list: BudgetProject[]) =>
+      list
+        .map(
+          (p) =>
+            `${p.id}:${p.title}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}:${p.category}:${p.description}:${p.link}:${p.showLink}`
+        )
+        .join('|');
+
     const handleUpdate = () => {
+      if (!isContentDraftPreview()) return;
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed?.budgetData?.projects) {
+          if (Array.isArray(parsed?.budgetData?.projects)) {
             const nextList = normalizeProjects(parsed.budgetData.projects);
-            const currentSig = projectsRef.current.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
-            const nextSig = nextList.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
-            if (currentSig !== nextSig) {
+            if (buildSig(projectsRef.current) !== buildSig(nextList)) {
               setProjectsList(nextList);
             }
           }
-          if (parsed?.budgetData?.tuitionSimulations) {
+          if (Array.isArray(parsed?.budgetData?.tuitionSimulations)) {
             setFeeRates((prevRates) => {
               const nextRates: Record<number, number> = { ...prevRates };
               parsed.budgetData.tuitionSimulations.forEach((sim: { year: number; increase: number }) => {
@@ -237,11 +249,9 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       if (customEvt.detail?.source === 'admin_budget_dashboard') {
         return;
       }
-      if (customEvt.detail?.budgetData?.projects) {
+      if (Array.isArray(customEvt.detail?.budgetData?.projects)) {
         const nextList = normalizeProjects(customEvt.detail.budgetData.projects);
-        const currentSig = projectsRef.current.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
-        const nextSig = nextList.map((p) => `${p.id}:${p.isActive}:${p.totalCost || p.budget}:${p.startYear}:${p.durationYears}`).join('|');
-        if (currentSig !== nextSig) {
+        if (buildSig(projectsRef.current) !== buildSig(nextList)) {
           setProjectsList(nextList);
         }
       }
@@ -417,6 +427,156 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     setIsAddingNew(false);
   }, []);
 
+  // Financial Calculations based on official psd-lfjp base capacities
+  const baseCapacities: Record<number, number> = useMemo(() => ({
+    2026: 43_000_000,
+    2027: 37_000_000,
+    2028: 62_000_000,
+    2029: 54_000_001,
+    2030: 54_000_000,
+  }), []);
+
+  const computeBudgetSnapshot = useCallback(
+    (projects: BudgetProject[], rates: Record<number, number>): BudgetData => {
+      const maxEnd = projects.reduce((max, p) => {
+        const s = p.startYear || 2026;
+        const d = p.durationYears || 1;
+        return Math.max(max, s + d - 1);
+      }, 2030);
+      const endYear = Math.min(2035, Math.max(2030, maxEnd));
+      const years = Array.from({ length: endYear - 2026 + 1 }, (_, i) => 2026 + i);
+
+      let compoundTuition = baseRevenue;
+      const timeline = years.map((year) => {
+        const baseCap = baseCapacities[year] || 54_000_000;
+        const rate = rates[year] || 0;
+        compoundTuition = compoundTuition * (1 + rate / 100);
+        const feeRevenue = Math.round(compoundTuition - baseRevenue);
+        const investmentCapacity = baseCap + feeRevenue;
+
+        let projectCosts = 0;
+        projects.forEach((p) => {
+          const start = p.startYear || 2026;
+          const duration = p.durationYears || 1;
+          const end = start + duration - 1;
+          if (p.isActive && year >= start && year <= end) {
+            projectCosts += Math.round((Number(p.totalCost) || Number(p.budget) || 0) / duration);
+          }
+        });
+
+        return {
+          year,
+          capacite: baseCap,
+          leviers: feeRevenue,
+          recettesTotales: investmentCapacity,
+          depenses: projectCosts,
+          solde: investmentCapacity - projectCosts,
+        };
+      });
+
+      const totalInvestment = projects
+        .filter((p) => p.isActive)
+        .reduce((sum, p) => sum + (Number(p.totalCost) || Number(p.budget) || 0), 0);
+
+      const annualCashFlowTotal = timeline
+        .filter((r) => YEARS.includes(r.year))
+        .reduce((sum, r) => sum + r.recettesTotales, 0);
+
+      const ANEFE_GRANT = 89_999_998;
+      const totalCapacity = annualCashFlowTotal + ANEFE_GRANT;
+      const fundingGap = Math.max(0, totalInvestment - totalCapacity);
+
+      let simCompound = baseRevenue;
+      const tuitionSimulations = YEARS.map((year) => {
+        const rate = rates[year] || 0;
+        simCompound = simCompound * (1 + rate / 100);
+        return {
+          year,
+          increase: rate,
+          revenue: Math.round(simCompound - baseRevenue),
+        };
+      });
+
+      const cumulativeTuition = tuitionSimulations.reduce((sum, r) => sum + r.revenue, 0);
+
+      return {
+        summaryCards: {
+          totalInvestment,
+          fundingGap,
+          estimatedCapacity: totalCapacity,
+        },
+        projects,
+        financialTimeline: timeline,
+        tuitionSimulations,
+        projectSchedule: projects.map((p) => {
+          const start = p.startYear || 2026;
+          const duration = p.durationYears || 1;
+          const annualSpend: Record<string, number> = {};
+          const spendPerYear = Math.round((Number(p.totalCost) || Number(p.budget) || 0) / duration);
+          for (let y = start; y <= start + duration - 1; y++) {
+            annualSpend[String(y)] = spendPerYear;
+          }
+          return {
+            project: p.name || p.title,
+            start,
+            end: start + duration - 1,
+            annualSpend,
+          };
+        }),
+        tuitionBaseRevenue: baseRevenue,
+        cumulativeTuition,
+      };
+    },
+    [baseRevenue, baseCapacities]
+  );
+
+  const persistBudgetSnapshot = useCallback(
+    (nextProjects: BudgetProject[], nextRates: Record<number, number>) => {
+      if (!isPrivileged || !showEditorControls) return;
+      try {
+        const updatedBudgetData = computeBudgetSnapshot(nextProjects, nextRates);
+        if (typeof window !== 'undefined') {
+          const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
+          const current = raw ? JSON.parse(raw) : (pageDataFile as Record<string, unknown>);
+          const merged = {
+            ...current,
+            budgetData: updatedBudgetData,
+          };
+          window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
+          window.dispatchEvent(
+            new CustomEvent('lfjp_page_data_changed', {
+              detail: { budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
+            })
+          );
+          window.dispatchEvent(new Event('storage'));
+
+          if (window.parent && window.parent !== window) {
+            try {
+              window.parent.postMessage(
+                { type: 'lfjp_budget_data_updated', budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
+                '*'
+              );
+              window.parent.dispatchEvent(
+                new CustomEvent('lfjp_page_data_changed', {
+                  detail: { budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
+                })
+              );
+            } catch {
+              // ignore cross-origin/frame errors
+            }
+          }
+        }
+        if (onDataChange) {
+          onDataChange(updatedBudgetData);
+        }
+        setSaveStatus('synced');
+      } catch (err) {
+        console.error('Error saving budget draft:', err);
+      }
+    },
+    [isPrivileged, showEditorControls, computeBudgetSnapshot, onDataChange]
+  );
+
   const saveModalProject = useCallback((projectToSave: BudgetProject) => {
     const s = Math.max(2026, Math.min(2035, projectToSave.startYear || 2026));
     const duration = Math.max(1, projectToSave.durationYears || 1);
@@ -456,41 +616,37 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
       showLink: projectToSave.showLink !== false,
     };
 
-    setProjectsList((prev) => {
-      const exists = prev.some((p) => p.id === normalized.id);
-      if (exists) {
-        return prev.map((p) => (p.id === normalized.id ? normalized : p));
-      }
-      return [...prev, normalized];
-    });
+    const prev = projectsRef.current;
+    const exists = prev.some((p) => p.id === normalized.id);
+    const nextList = exists
+      ? prev.map((p) => (p.id === normalized.id ? normalized : p))
+      : [...prev, normalized];
 
+    setProjectsList(nextList);
     setEditingProject(null);
     setIsAddingNew(false);
-    setSaveStatus('saved');
-  }, []);
+    persistBudgetSnapshot(nextList, feeRates);
+    toast.success(exists ? `Projet « ${finalTitle} » mis à jour.` : `Projet « ${finalTitle} » ajouté au budget.`);
+  }, [feeRates, persistBudgetSnapshot]);
 
   const handleDeleteProject = useCallback((id: string) => {
-    setProjectsList((prev) => prev.filter((p) => p.id !== id));
+    const nextList = projectsRef.current.filter((p) => p.id !== id);
+    setProjectsList(nextList);
     if (editingProject?.id === id) {
       setEditingProject(null);
     }
-    setSaveStatus('saved');
-  }, [editingProject]);
+    persistBudgetSnapshot(nextList, feeRates);
+    toast.success('Projet supprimé du budget.');
+  }, [editingProject, feeRates, persistBudgetSnapshot]);
 
   const resetAllToDefaults = useCallback(() => {
-    setProjectsList(normalizeProjects(defaultBudgetData.projects));
-    setFeeRates({ 2026: 5.4, 2027: 0.4, 2028: 0.0, 2029: 0.0, 2030: 0.0 });
-    setSaveStatus('saved');
-  }, [normalizeProjects]);
-
-  // Financial Calculations based on official psd-lfjp base capacities
-  const baseCapacities: Record<number, number> = useMemo(() => ({
-    2026: 43_000_000,
-    2027: 37_000_000,
-    2028: 62_000_000,
-    2029: 54_000_001,
-    2030: 54_000_000,
-  }), []);
+    const defaultProjects = normalizeProjects(defaultBudgetData.projects);
+    const defaultRates = { 2026: 5.4, 2027: 0.4, 2028: 0.0, 2029: 0.0, 2030: 0.0 };
+    setProjectsList(defaultProjects);
+    setFeeRates(defaultRates);
+    persistBudgetSnapshot(defaultProjects, defaultRates);
+    toast.success('Données budgétaires réinitialisées aux valeurs officielles.');
+  }, [normalizeProjects, persistBudgetSnapshot]);
 
   const calendarYears = useMemo(() => {
     const maxEnd = projectsList.reduce((max, p) => {
@@ -590,103 +746,23 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     return tuitionSimulationRows.reduce((sum, r) => sum + r.extraRevenue, 0);
   }, [tuitionSimulationRows]);
 
-  // Synchronize changes to localStorage and dispatch event for live preview / draft persistence
+  // Synchronize slider/rate edits to localStorage and dispatch event for live preview / draft persistence
   useEffect(() => {
+    if (!isPrivileged || !showEditorControls) return;
     if (saveStatus !== 'saved') return;
 
     const timer = setTimeout(() => {
-      try {
-        if (typeof window !== 'undefined') {
-          const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
-          const current = raw ? JSON.parse(raw) : (pageDataFile as Record<string, unknown>);
-
-          const updatedBudgetData: BudgetData = {
-            summaryCards: {
-              totalInvestment: financialData.totalInvestment,
-              fundingGap: financialData.fundingGap,
-              estimatedCapacity: financialData.totalCapacity,
-            },
-            projects: projectsList,
-            financialTimeline: financialData.timeline.map((t) => ({
-              year: t.year,
-              capacite: t.baseCapacity,
-              leviers: t.feeRevenue,
-              recettesTotales: t.investmentCapacity,
-              depenses: t.projectCosts,
-              solde: t.balance,
-            })),
-            tuitionSimulations: tuitionSimulationRows.map((t) => ({
-              year: t.year,
-              increase: t.rate,
-              revenue: t.extraRevenue,
-            })),
-            projectSchedule: projectsList.map((p) => {
-              const start = p.startYear || 2026;
-              const duration = p.durationYears || 1;
-              const annualSpend: Record<string, number> = {};
-              const spendPerYear = Math.round((Number(p.totalCost) || Number(p.budget) || 0) / duration);
-              for (let y = start; y <= start + duration - 1; y++) {
-                annualSpend[String(y)] = spendPerYear;
-              }
-              return {
-                project: p.name || p.title,
-                start,
-                end: start + duration - 1,
-                annualSpend,
-              };
-            }),
-            tuitionBaseRevenue: baseRevenue,
-            cumulativeTuition: cumulativeTuitionExtra,
-          };
-
-          const merged = {
-            ...current,
-            budgetData: updatedBudgetData,
-          };
-
-          window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
-          window.dispatchEvent(
-            new CustomEvent('lfjp_page_data_changed', {
-              detail: { budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
-            })
-          );
-          window.dispatchEvent(new Event('storage'));
-
-          if (window.parent && window.parent !== window) {
-            try {
-              window.parent.postMessage(
-                { type: 'lfjp_budget_data_updated', budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
-                '*'
-              );
-              window.parent.dispatchEvent(
-                new CustomEvent('lfjp_page_data_changed', {
-                  detail: { budgetData: updatedBudgetData, source: 'admin_budget_dashboard' },
-                })
-              );
-            } catch {
-              // ignore cross-origin/frame errors
-            }
-          }
-
-          if (onDataChange) {
-            onDataChange(updatedBudgetData);
-          }
-        }
-        setSaveStatus('synced');
-      } catch (err) {
-        console.error('Error auto-saving budget draft:', err);
-      }
+      persistBudgetSnapshot(projectsList, feeRates);
     }, 50);
 
     return () => clearTimeout(timer);
   }, [
     saveStatus,
-    financialData,
     projectsList,
-    tuitionSimulationRows,
-    baseRevenue,
-    cumulativeTuitionExtra,
-    onDataChange,
+    feeRates,
+    isPrivileged,
+    showEditorControls,
+    persistBudgetSnapshot,
   ]);
 
   const CustomChartTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
@@ -715,6 +791,10 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
     }
     return null;
   };
+
+  if (!isPrivileged || !showEditorControls) {
+    return null;
+  }
 
   return (
     <div
@@ -888,7 +968,21 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
           </div>
 
           <div className="flex flex-col gap-3.5">
-            {projectsList.map((project) => {
+            {projectsList.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-5 text-center space-y-2">
+                <p className="text-xs font-medium text-slate-600">
+                  Aucun projet d&apos;investissement configuré.
+                </p>
+                <button
+                  type="button"
+                  onClick={openAddProjectModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Ajouter un projet</span>
+                </button>
+              </div>
+            ) : projectsList.map((project) => {
               const startY = project.startYear || 2026;
               const durationY = project.durationYears || 1;
               const endY = startY + durationY - 1;
@@ -1493,345 +1587,354 @@ export const AdminBudgetDashboard: React.FC<AdminBudgetDashboardProps> = ({
         </div>
       </div>
 
-      {/* Edit / Add Project Modal Dialog */}
-      {editingProject && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto"
-        >
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-                  <FolderKanban className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-slate-900">
-                    {isAddingNew ? 'Ajouter un nouveau projet' : 'Modifier le projet d’investissement'}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Planification budgétaire et programmation pluriannuelle 2026–2030
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingProject(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-                title="Fermer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 space-y-4 text-xs overflow-y-auto flex-1">
-              {/* Statut d'activation du projet (Harmonisé en haut, sans débordement) */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+      {/* Edit / Add Project Modal Dialog rendered cleanly via Portal */}
+      {editingProject &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto"
+          >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveModalProject(editingProject);
+              }}
+              className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white">
                 <div className="flex items-center gap-2.5">
-                  <span
-                    className={`inline-block w-3 h-3 rounded-full ${
-                      editingProject.isActive ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-slate-300'
-                    }`}
-                  />
+                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+                    <FolderKanban className="w-5 h-5" />
+                  </div>
                   <div>
-                    <p className="font-bold text-xs text-slate-800">
-                      {editingProject.isActive ? 'Projet actif dans le budget' : 'Projet désactivé (hors budget)'}
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      {editingProject.isActive
-                        ? 'Inclus dans les totaux, flux de trésorerie et graphiques.'
-                        : 'Exclu des totaux, graphiques et simulations.'}
+                    <h3 className="font-bold text-base text-slate-900">
+                      {isAddingNew ? 'Ajouter un nouveau projet' : 'Modifier le projet d’investissement'}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Planification budgétaire et programmation pluriannuelle 2026–2030
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setEditingProject({ ...editingProject, isActive: !editingProject.isActive })}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                    editingProject.isActive ? 'bg-emerald-500' : 'bg-slate-300'
-                  }`}
-                  aria-label="Activer ou désactiver le projet"
-                  title={editingProject.isActive ? 'Désactiver ce projet' : 'Activer ce projet'}
+                  onClick={() => setEditingProject(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                  title="Fermer"
                 >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                      editingProject.isActive ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Titre */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Titre du projet <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editingProject.title || editingProject.name || ''}
-                  onChange={(e) => {
-                    const newTitle = e.target.value;
-                    const autoSlug = `/projets/${slugifyProject(newTitle)}`;
-                    const shouldAutoUpdateLink = isAddingNew || !editingProject.link || editingProject.link.startsWith('/projets/');
-                    setEditingProject({
-                      ...editingProject,
-                      title: newTitle,
-                      name: newTitle,
-                      link: shouldAutoUpdateLink ? autoSlug : editingProject.link,
-                    });
-                  }}
-                  placeholder="ex: Restauration scolaire, Climatisation phases 2 & 3..."
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
-                />
-              </div>
-
-              {/* Catégorie */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1.5">
-                  Catégorie de l'investissement
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'infra', label: 'Infrastructure', desc: 'Bâtiments, préaux, sport', icon: Building2, color: 'border-blue-300 bg-blue-50/50 text-blue-800' },
-                    { id: 'equipment', label: 'Équipement', desc: 'Climatisation, solaire, tech', icon: Wrench, color: 'border-orange-300 bg-orange-50/50 text-orange-800' },
-                    { id: 'land', label: 'Foncier', desc: 'Terrains, réserves foncières', icon: Trees, color: 'border-emerald-300 bg-emerald-50/50 text-emerald-800' },
-                  ].map((c) => {
-                    const Icon = c.icon;
-                    const isSelected = (editingProject.category || 'infra') === c.id;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setEditingProject({ ...editingProject, category: c.id as 'infra' | 'equipment' | 'land' })}
-                        className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
-                          isSelected ? `${c.color} ring-2 ring-blue-500 font-bold shadow-xs` : 'border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <Icon className="w-4 h-4" />
-                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-600" />}
-                        </div>
-                        <div>
-                          <p className="font-bold text-xs">{c.label}</p>
-                          <p className="text-[10px] text-slate-500 font-normal">{c.desc}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Budget Total */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="font-bold text-slate-700">
-                    Budget prévisionnel total (FCFA) <span className="text-red-500">*</span>
-                  </label>
-                  <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                    {formatCurrency(Number(editingProject.totalCost) || Number(editingProject.budget) || 0)}
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  min={0}
-                  step={1_000_000}
-                  value={Number(editingProject.totalCost) || Number(editingProject.budget) || 0}
-                  onChange={(e) => {
-                    const val = Math.max(0, Number(e.target.value) || 0);
-                    setEditingProject({ ...editingProject, budget: val, totalCost: val });
-                  }}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-mono font-semibold"
-                />
-                {/* Quick amount shortcuts */}
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  <span className="text-[10px] text-slate-400 self-center mr-1">Raccourcis :</span>
-                  {[25_000_000, 50_000_000, 60_000_000, 75_000_000, 100_000_000, 125_000_000, 200_000_000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setEditingProject({ ...editingProject, budget: amt, totalCost: amt })}
-                      className="px-2 py-0.5 text-[10px] rounded-md bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-800 transition font-mono cursor-pointer"
-                    >
-                      {(amt / 1_000_000).toFixed(0)} M
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Période Début - Fin (Supporte jusqu'à 2035) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Année de début
-                  </label>
-                  <select
-                    value={editingProject.startYear || 2026}
-                    onChange={(e) => {
-                      const s = Number(e.target.value);
-                      const curEnd = (editingProject.startYear || 2026) + (editingProject.durationYears || 1) - 1;
-                      const newEnd = Math.max(s, curEnd);
-                      setEditingProject({
-                        ...editingProject,
-                        startYear: s,
-                        durationYears: newEnd - s + 1,
-                      });
-                    }}
-                    className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-lg font-semibold bg-white cursor-pointer"
-                  >
-                    {EXTENDED_YEARS.map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Année de fin
-                  </label>
-                  <select
-                    value={(editingProject.startYear || 2026) + (editingProject.durationYears || 1) - 1}
-                    onChange={(e) => {
-                      const end = Number(e.target.value);
-                      const s = editingProject.startYear || 2026;
-                      setEditingProject({
-                        ...editingProject,
-                        durationYears: Math.max(1, end - s + 1),
-                      });
-                    }}
-                    className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-lg font-semibold bg-white cursor-pointer"
-                  >
-                    {EXTENDED_YEARS.filter((y) => y >= (editingProject.startYear || 2026)).map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Description de l'action ou des travaux
-                </label>
-                <textarea
-                  rows={2}
-                  value={editingProject.description || ''}
-                  onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
-                  placeholder="Précisez le périmètre des investissements..."
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Fiche détaillée & Lien de consultation */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-                      Lien de consultation de la fiche détaillée
-                    </label>
-                    <p className="text-[10px] text-slate-500">
-                      Généré automatiquement pour chaque projet • Possibilité d'afficher ou masquer le lien
-                    </p>
+              {/* Modal Body */}
+              <div className="p-5 space-y-4 text-xs overflow-y-auto flex-1">
+                {/* Statut d'activation du projet */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={`inline-block w-3 h-3 rounded-full ${
+                        editingProject.isActive ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-slate-300'
+                      }`}
+                    />
+                    <div>
+                      <p className="font-bold text-xs text-slate-800">
+                        {editingProject.isActive ? 'Projet actif dans le budget' : 'Projet désactivé (hors budget)'}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {editingProject.isActive
+                          ? 'Inclus dans les totaux, flux de trésorerie et graphiques.'
+                          : 'Exclu des totaux, graphiques et simulations.'}
+                      </p>
+                    </div>
                   </div>
-
                   <button
                     type="button"
-                    role="switch"
-                    aria-checked={editingProject.showLink !== false}
-                    onClick={() =>
-                      setEditingProject({
-                        ...editingProject,
-                        showLink: editingProject.showLink === false,
-                      })
-                    }
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                      editingProject.showLink !== false ? 'bg-blue-600' : 'bg-slate-300'
+                    onClick={() => setEditingProject({ ...editingProject, isActive: !editingProject.isActive })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      editingProject.isActive ? 'bg-emerald-500' : 'bg-slate-300'
                     }`}
-                    title={editingProject.showLink !== false ? 'Lien visible sur la fiche (cliquer pour masquer)' : 'Lien masqué sur la fiche (cliquer pour afficher)'}
+                    aria-label="Activer ou désactiver le projet"
+                    title={editingProject.isActive ? 'Désactiver ce projet' : 'Activer ce projet'}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
-                        editingProject.showLink !== false ? 'translate-x-4' : 'translate-x-0'
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        editingProject.isActive ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>
                 </div>
 
+                {/* Titre */}
                 <div>
-                  <div className="flex items-center justify-between text-[11px] mb-1 font-semibold text-slate-600">
-                    <span>URL de la fiche détaillée :</span>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${editingProject.showLink !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
-                      {editingProject.showLink !== false ? 'Lien affiché' : 'Lien masqué'}
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Titre du projet <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProject.title || editingProject.name || ''}
+                    onChange={(e) => {
+                      const newTitle = e.target.value;
+                      const autoSlug = `/projets/${slugifyProject(newTitle)}`;
+                      const shouldAutoUpdateLink = isAddingNew || !editingProject.link || editingProject.link.startsWith('/projets/');
+                      setEditingProject({
+                        ...editingProject,
+                        title: newTitle,
+                        name: newTitle,
+                        link: shouldAutoUpdateLink ? autoSlug : editingProject.link,
+                      });
+                    }}
+                    placeholder="ex: Restauration scolaire, Climatisation phases 2 & 3..."
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                  />
+                </div>
+
+                {/* Catégorie */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1.5">
+                    Catégorie de l&apos;investissement
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'infra', label: 'Infrastructure', desc: 'Bâtiments, préaux, sport', icon: Building2, color: 'border-blue-300 bg-blue-50/50 text-blue-800' },
+                      { id: 'equipment', label: 'Équipement', desc: 'Climatisation, solaire, tech', icon: Wrench, color: 'border-orange-300 bg-orange-50/50 text-orange-800' },
+                      { id: 'land', label: 'Foncier', desc: 'Terrains, réserves foncières', icon: Trees, color: 'border-emerald-300 bg-emerald-50/50 text-emerald-800' },
+                    ].map((c) => {
+                      const Icon = c.icon;
+                      const isSelected = (editingProject.category || 'infra') === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setEditingProject({ ...editingProject, category: c.id as 'infra' | 'equipment' | 'land' })}
+                          className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                            isSelected ? `${c.color} ring-2 ring-blue-500 font-bold shadow-xs` : 'border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <Icon className="w-4 h-4" />
+                            {isSelected && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                          </div>
+                          <div>
+                            <p className="font-bold text-xs">{c.label}</p>
+                            <p className="text-[10px] text-slate-500 font-normal">{c.desc}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Budget Total */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-700">
+                      Budget prévisionnel total (FCFA) <span className="text-red-500">*</span>
+                    </label>
+                    <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                      {formatCurrency(Number(editingProject.totalCost) || Number(editingProject.budget) || 0)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={editingProject.link || ''}
-                      onChange={(e) =>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1_000_000}
+                    value={Number(editingProject.totalCost) || Number(editingProject.budget) || 0}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value) || 0);
+                      setEditingProject({ ...editingProject, budget: val, totalCost: val });
+                    }}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-mono font-semibold"
+                  />
+                  {/* Quick amount shortcuts */}
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <span className="text-[10px] text-slate-400 self-center mr-1">Raccourcis :</span>
+                    {[25_000_000, 50_000_000, 60_000_000, 75_000_000, 100_000_000, 125_000_000, 200_000_000].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setEditingProject({ ...editingProject, budget: amt, totalCost: amt })}
+                        className="px-2 py-0.5 text-[10px] rounded-md bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-800 transition font-mono cursor-pointer"
+                      >
+                        {(amt / 1_000_000).toFixed(0)} M
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Période Début - Fin */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Année de début
+                    </label>
+                    <select
+                      value={editingProject.startYear || 2026}
+                      onChange={(e) => {
+                        const s = Number(e.target.value);
+                        const curEnd = (editingProject.startYear || 2026) + (editingProject.durationYears || 1) - 1;
+                        const newEnd = Math.max(s, curEnd);
                         setEditingProject({
                           ...editingProject,
-                          link: e.target.value,
+                          startYear: s,
+                          durationYears: newEnd - s + 1,
+                        });
+                      }}
+                      className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-lg font-semibold bg-white cursor-pointer"
+                    >
+                      {EXTENDED_YEARS.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Année de fin
+                    </label>
+                    <select
+                      value={(editingProject.startYear || 2026) + (editingProject.durationYears || 1) - 1}
+                      onChange={(e) => {
+                        const end = Number(e.target.value);
+                        const s = editingProject.startYear || 2026;
+                        setEditingProject({
+                          ...editingProject,
+                          durationYears: Math.max(1, end - s + 1),
+                        });
+                      }}
+                      className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-lg font-semibold bg-white cursor-pointer"
+                    >
+                      {EXTENDED_YEARS.filter((y) => y >= (editingProject.startYear || 2026)).map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Description de l&apos;action ou des travaux
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editingProject.description || ''}
+                    onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                    placeholder="Précisez le périmètre des investissements..."
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Fiche détaillée & Lien de consultation */}
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                        Lien de consultation de la fiche détaillée
+                      </label>
+                      <p className="text-[10px] text-slate-500">
+                        Généré automatiquement pour chaque projet • Possibilité d&apos;afficher ou masquer le lien
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={editingProject.showLink !== false}
+                      onClick={() =>
+                        setEditingProject({
+                          ...editingProject,
+                          showLink: editingProject.showLink === false,
                         })
                       }
-                      placeholder="/projets/mon-projet"
-                      className="flex-1 px-3 py-1.5 text-xs font-mono border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white"
-                    />
-                    {Boolean(editingProject.link && editingProject.link.trim()) && (
-                      <Link
-                        to={editingProject.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 text-xs rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold flex items-center gap-1 transition"
-                        title="Prévisualiser la fiche détaillée du projet"
-                      >
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>Tester</span>
-                      </Link>
-                    )}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                        editingProject.showLink !== false ? 'bg-blue-600' : 'bg-slate-300'
+                      }`}
+                      title={editingProject.showLink !== false ? 'Lien visible sur la fiche (cliquer pour masquer)' : 'Lien masqué sur la fiche (cliquer pour afficher)'}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
+                          editingProject.showLink !== false ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between text-[11px] mb-1 font-semibold text-slate-600">
+                      <span>URL de la fiche détaillée :</span>
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${editingProject.showLink !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+                        {editingProject.showLink !== false ? 'Lien affiché' : 'Lien masqué'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editingProject.link || ''}
+                        onChange={(e) =>
+                          setEditingProject({
+                            ...editingProject,
+                            link: e.target.value,
+                          })
+                        }
+                        placeholder="/projets/mon-projet"
+                        className="flex-1 px-3 py-1.5 text-xs font-mono border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                      {Boolean(editingProject.link && editingProject.link.trim()) && (
+                        <Link
+                          to={editingProject.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 text-xs rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold flex items-center gap-1 transition"
+                          title="Prévisualiser la fiche détaillée du projet"
+                        >
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          <span>Tester</span>
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
-              {!isAddingNew ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleDeleteProject(editingProject.id);
-                  }}
-                  className="px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Supprimer</span>
-                </button>
-              ) : <div />}
+              {/* Modal Footer */}
+              <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
+                {!isAddingNew ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDeleteProject(editingProject.id);
+                    }}
+                    className="px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Supprimer</span>
+                  </button>
+                ) : <div />}
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingProject(null)}
-                  className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 text-xs font-semibold transition cursor-pointer"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveModalProject(editingProject)}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>{isAddingNew ? 'Ajouter le projet' : 'Enregistrer les modifications'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProject(null)}
+                    className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 text-xs font-semibold transition cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{isAddingNew ? 'Ajouter le projet' : 'Enregistrer les modifications'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </form>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

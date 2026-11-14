@@ -20,8 +20,13 @@ const MetricItem = ({
   trend,
   inverse = false
 }: MetricItemProps) => {
-  const isNumber = typeof value === 'number';
-  
+  const isNumber = typeof value === 'number' && Number.isFinite(value);
+  const clampedValue = isNumber ? Math.min(100, Math.max(0, value)) : 0;
+  const hasAverage = typeof average === 'number' && Number.isFinite(average);
+  const safeName = typeof name === 'string' ? name : String(name ?? '');
+  const safeLabel = typeof label === 'string' ? label : String(label ?? '');
+  const safeDisplayText = typeof value === 'string' ? value : isNumber ? `${value}` : '0';
+
   // For inverse metrics (like negative indicators), down is good, up is bad
   const trendIsPositive = inverse 
     ? (trend === 'down')
@@ -31,15 +36,15 @@ const MetricItem = ({
   const progressColor = isNumber 
     ? (inverse 
       ? (trend === 'up' ? 'bg-red-100' : 'bg-green-100')
-      : (value < (average || 70) ? 'bg-red-100' : 'bg-green-100')
+      : (clampedValue < (hasAverage ? average : 70) ? 'bg-red-100' : 'bg-green-100')
     )
     : '';
 
   return (
     <div className="mb-4">
-      <div className="flex justify-between mb-1 items-center">
-        <div className="text-sm font-medium">{name}</div>
-        <div className="flex items-center">
+      <div className="flex justify-between mb-1 items-center gap-2">
+        <div className="text-sm font-medium">{safeName}</div>
+        <div className="flex items-center shrink-0">
           {isNumber ? (
             <>
               <span className={`text-sm font-semibold ${trendColor}`}>
@@ -52,7 +57,7 @@ const MetricItem = ({
             </>
           ) : (
             <span className={`text-sm font-semibold ${trendColor}`}>
-              {value}
+              {safeDisplayText}
             </span>
           )}
         </div>
@@ -61,12 +66,12 @@ const MetricItem = ({
       {isNumber && (
         <>
           <Progress 
-            value={value} 
+            value={clampedValue} 
             className={`h-2 ${progressColor}`}
           />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>{label}</span>
-            {average && <span>Moyenne : {average}%</span>}
+            <span>{safeLabel}</span>
+            {hasAverage && <span>Moyenne : {average}%</span>}
           </div>
         </>
       )}

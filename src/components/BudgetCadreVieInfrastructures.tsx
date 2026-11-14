@@ -37,6 +37,8 @@ import {
   type BudgetProject,
 } from '@/data/budgetTransportData';
 import pageDataFile from '@/content/pageData.json';
+import { isContentDraftPreview } from '@/lib/contentDraft';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
 
 const XOF_TO_EUR = 655.957;
 const YEARS = [2026, 2027, 2028, 2029, 2030];
@@ -70,15 +72,16 @@ export const getProjectIcon = (id: string, title?: string, className = 'w-4 h-4'
 
 export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructuresProps> = () => {
   const [currency, setCurrency] = useState<'XOF' | 'EUR'>('XOF');
+  const publishedData = usePublishedPageData(pageDataFile as Record<string, unknown>);
 
-  // Synchronized data from draft or pageDataFile
+  // Synchronized data from draft (in editor preview) or live published pageData
   const [budgetData, setBudgetData] = useState<BudgetData>(() => {
-    if (typeof window !== 'undefined') {
+    if (isContentDraftPreview()) {
       try {
         const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (draft) {
           const parsed = JSON.parse(draft);
-          if (parsed?.budgetData?.projects) {
+          if (parsed?.budgetData && Array.isArray(parsed.budgetData.projects)) {
             return parsed.budgetData as BudgetData;
           }
         }
@@ -86,12 +89,22 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
         // fallback
       }
     }
-    const fileBudget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
-    return fileBudget || defaultBudgetData;
+    const pubBudget = (publishedData as { budgetData?: BudgetData }).budgetData;
+    return pubBudget || defaultBudgetData;
   });
 
   useEffect(() => {
+    if (!isContentDraftPreview()) {
+      const pubBudget = (publishedData as { budgetData?: BudgetData }).budgetData;
+      if (pubBudget) {
+        setBudgetData(pubBudget);
+      }
+    }
+  }, [publishedData]);
+
+  useEffect(() => {
     const handleSync = (e: Event) => {
+      if (!isContentDraftPreview()) return;
       const customEvent = e as CustomEvent<{ budgetData?: BudgetData }>;
       if (customEvent.detail?.budgetData) {
         setBudgetData(customEvent.detail.budgetData);
@@ -99,16 +112,18 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
     };
     const handleStorage = () => {
       try {
-        const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
-        if (draft) {
-          const parsed = JSON.parse(draft);
-          if (parsed?.budgetData?.projects) {
-            setBudgetData(parsed.budgetData as BudgetData);
-            return;
+        if (isContentDraftPreview()) {
+          const draft = window.localStorage.getItem('lfjp-admin-page-data-draft');
+          if (draft) {
+            const parsed = JSON.parse(draft);
+            if (parsed?.budgetData && Array.isArray(parsed.budgetData.projects)) {
+              setBudgetData(parsed.budgetData as BudgetData);
+              return;
+            }
           }
         }
-        const fileBudget = (pageDataFile as { budgetData?: BudgetData }).budgetData;
-        if (fileBudget) setBudgetData(fileBudget);
+        const pubBudget = (publishedData as { budgetData?: BudgetData }).budgetData;
+        if (pubBudget) setBudgetData(pubBudget);
       } catch {
         // ignore storage parse errors
       }
@@ -121,7 +136,7 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('lfjp_draft_cleared', handleStorage);
     };
-  }, []);
+  }, [publishedData]);
 
   const formatCurrency = useCallback(
     (amountInXOF?: number | null): string => {
@@ -136,9 +151,8 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
   );
 
   const activeProjects = useMemo(() => {
-    return (budgetData.projects || defaultBudgetData.projects).filter(
-      (p) => p.isActive !== false
-    );
+    const list = Array.isArray(budgetData.projects) ? budgetData.projects : defaultBudgetData.projects;
+    return list.filter((p) => p && p.isActive !== false);
   }, [budgetData]);
 
   const totalInvestment = useMemo(() => {
@@ -620,59 +634,69 @@ export const BudgetCadreVieInfrastructures: React.FC<BudgetCadreVieInfrastructur
           </div>
 
           {/* Section 4: Évolution des écolages */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs max-w-xl space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm sm:text-base">Évolution des écolages</h3>
-                <p className="text-xs text-slate-400">
-                  Base revenus : {formatCurrency(1_203_146_500)}
+          {(() => {
+            const baseRev = Number(budgetData.tuitionBaseRevenue) || 1_203_146_500;
+            const simRows =
+              Array.isArray(budgetData.tuitionSimulations) && budgetData.tuitionSimulations.length > 0
+                ? budgetData.tuitionSimulations
+                : defaultBudgetData.tuitionSimulations;
+            const cumulativeExtra =
+              typeof budgetData.cumulativeTuition === 'number' && Number.isFinite(budgetData.cumulativeTuition)
+                ? budgetData.cumulativeTuition
+                : simRows.reduce((sum, r) => sum + (Number(r.revenue) || 0), 0);
+
+            return (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs max-w-xl space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Évolution des écolages</h3>
+                    <p className="text-xs text-slate-400">
+                      Base revenus : {formatCurrency(baseRev)}
+                    </p>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                    <Sprout className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                        <th className="py-2 px-3">Année</th>
+                        <th className="py-2 px-3 text-center">Augmentation</th>
+                        <th className="py-2 px-3 text-right">Recette suppl.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {simRows.map((row) => (
+                        <tr key={row.year} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-2 px-3 font-sans font-bold text-slate-800">{row.year}</td>
+                          <td className="py-2 px-3 text-center text-slate-600 font-sans">
+                            {Number(row.increase) || 0} %
+                          </td>
+                          <td className="py-2 px-3 text-right font-bold text-[#107C41]">
+                            +{formatCurrency(Number(row.revenue) || 0)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="rounded-xl bg-[#EAF8F0] border border-[#C5ECD6] p-3 flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-700">Cumul généré (2026-2030)</span>
+                  <span className="font-bold text-[#107C41] font-mono text-sm">
+                    {formatCurrency(cumulativeExtra)}
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-400 leading-relaxed italic">
+                  Hypothèses de recettes complémentaires intégrées à la trajectoire budgétaire 2026–2030.
                 </p>
               </div>
-              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
-                <Sprout className="w-4 h-4" />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                    <th className="py-2 px-3">Année</th>
-                    <th className="py-2 px-3 text-center">Augmentation</th>
-                    <th className="py-2 px-3 text-right">Recette suppl.</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-mono">
-                  {[
-                    { year: 2026, rate: '5.4 %', revXOF: 64_969_911 },
-                    { year: 2027, rate: '0.4 %', revXOF: 70_042_377 },
-                    { year: 2028, rate: '0 %', revXOF: 70_042_377 },
-                    { year: 2029, rate: '0 %', revXOF: 70_042_377 },
-                    { year: 2030, rate: '0 %', revXOF: 70_042_377 },
-                  ].map((row) => (
-                    <tr key={row.year} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2 px-3 font-sans font-bold text-slate-800">{row.year}</td>
-                      <td className="py-2 px-3 text-center text-slate-600 font-sans">{row.rate}</td>
-                      <td className="py-2 px-3 text-right font-bold text-[#107C41]">
-                        +{formatCurrency(row.revXOF)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="rounded-xl bg-[#EAF8F0] border border-[#C5ECD6] p-3 flex items-center justify-between text-xs">
-              <span className="font-medium text-slate-700">Cumul généré (2026-2030)</span>
-              <span className="font-bold text-[#107C41] font-mono text-sm">
-                {formatCurrency(345_139_418)}
-              </span>
-            </div>
-
-            <p className="text-[11px] text-slate-400 leading-relaxed italic">
-              Ajustez les pourcentages d'augmentation ci-dessous pour simuler d'autres scénarios de recettes liées aux écolages.
-            </p>
-          </div>
+            );
+          })()}
         </div>
       </div>
     </div>

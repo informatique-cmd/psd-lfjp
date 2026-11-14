@@ -19,6 +19,7 @@ const DiagnosticElcsContent = () => {
       console.warn('Action de modification ignorée : utilisateur non autorisé ou vue publique.');
       return;
     }
+    const sanitizedElcs = sanitizeElcsData(updatedElcs);
     if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
@@ -32,12 +33,12 @@ const DiagnosticElcsContent = () => {
         }
         const merged = {
           ...currentDraft,
-          elcsData: updatedElcs,
+          elcsData: sanitizedElcs,
         };
         window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
         window.dispatchEvent(
           new CustomEvent('lfjp_page_data_changed', {
-            detail: { elcsData: updatedElcs },
+            detail: { elcsData: sanitizedElcs },
           })
         );
         window.dispatchEvent(new Event('storage'));
@@ -45,7 +46,7 @@ const DiagnosticElcsContent = () => {
         if (window.parent && window.parent !== window) {
           try {
             window.parent.postMessage(
-              { type: 'lfjp_elcs_data_updated', elcsData: updatedElcs },
+              { type: 'lfjp_elcs_data_updated', elcsData: sanitizedElcs },
               '*'
             );
           } catch {

@@ -20,18 +20,21 @@ import pageDataFile from '@/content/pageData.json';
 import { useSmartBack } from '@/lib/navigation';
 import { AdminTransportDashboard } from '@/components/admin/AdminTransportDashboard';
 import { usePrivilegedAccess } from '@/lib/authAccess';
+import { isContentDraftPreview } from '@/lib/contentDraft';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
 
 const TransportScolaire = () => {
   const navigate = useNavigate();
   const handleBack = useSmartBack('/plan-strategique');
+  const publishedData = usePublishedPageData(pageDataFile as Record<string, unknown>);
 
   const getInitialTransport = (): TransportData => {
-    if (typeof window !== 'undefined') {
+    if (isContentDraftPreview()) {
       try {
         const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed?.transportData?.communes && parsed.transportData.communes.length > 0) {
+          if (parsed?.transportData && Array.isArray(parsed.transportData.communes)) {
             return parsed.transportData as TransportData;
           }
         }
@@ -39,8 +42,8 @@ const TransportScolaire = () => {
         // fallback
       }
     }
-    const fileTransport = (pageDataFile as { transportData?: TransportData }).transportData;
-    if (fileTransport?.communes && fileTransport.communes.length > 0) {
+    const fileTransport = (publishedData as { transportData?: TransportData }).transportData;
+    if (fileTransport && Array.isArray(fileTransport.communes)) {
       return fileTransport;
     }
     return defaultTransportData;
@@ -49,18 +52,29 @@ const TransportScolaire = () => {
   const [liveTransport, setLiveTransport] = React.useState<TransportData>(getInitialTransport);
 
   React.useEffect(() => {
+    if (!isContentDraftPreview()) {
+      const pubTransport = (publishedData as { transportData?: TransportData }).transportData;
+      if (pubTransport && Array.isArray(pubTransport.communes)) {
+        setLiveTransport(pubTransport);
+      }
+    }
+  }, [publishedData]);
+
+  React.useEffect(() => {
     const handleStorage = () => {
       try {
-        const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed?.transportData?.communes) {
-            setLiveTransport(parsed.transportData as TransportData);
-            return;
+        if (isContentDraftPreview()) {
+          const saved = window.localStorage.getItem('lfjp-admin-page-data-draft');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed?.transportData && Array.isArray(parsed.transportData.communes)) {
+              setLiveTransport(parsed.transportData as TransportData);
+              return;
+            }
           }
         }
-        const fileTransport = (pageDataFile as { transportData?: TransportData }).transportData;
-        if (fileTransport?.communes && fileTransport.communes.length > 0) {
+        const fileTransport = (publishedData as { transportData?: TransportData }).transportData;
+        if (fileTransport && Array.isArray(fileTransport.communes)) {
           setLiveTransport(fileTransport);
           return;
         }
@@ -72,7 +86,7 @@ const TransportScolaire = () => {
 
     const handleSync = (e: Event) => {
       const customEvent = e as CustomEvent<{ transportData?: TransportData }>;
-      if (customEvent.detail?.transportData?.communes) {
+      if (customEvent.detail?.transportData && Array.isArray(customEvent.detail.transportData.communes)) {
         setLiveTransport(customEvent.detail.transportData);
         return;
       }
@@ -81,6 +95,7 @@ const TransportScolaire = () => {
 
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
+      if (!isContentDraftPreview()) return;
       if (event.data?.type === 'lfjp-page-data-update' && event.data.data?.transportData) {
         setLiveTransport(event.data.data.transportData);
       }
@@ -97,7 +112,7 @@ const TransportScolaire = () => {
       window.removeEventListener('lfjp_draft_cleared', handleStorage);
       window.removeEventListener('message', handleMessage);
     };
-  }, []);
+  }, [publishedData]);
 
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [isEditorMode, setIsEditorMode] = React.useState<boolean>(

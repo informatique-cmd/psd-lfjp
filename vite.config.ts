@@ -24,6 +24,18 @@ export default defineConfig(({ mode }) => ({
             res.end(JSON.stringify({ ok: true, service: "lfjp-api" }));
             return;
           }
+          if (req.url?.startsWith("/api/content/published") && req.method === "GET") {
+            res.setHeader("Content-Type", "application/json");
+            res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+            try {
+              const pageDataPath = path.resolve(__dirname, "src/content/pageData.json");
+              const raw = fs.existsSync(pageDataPath) ? fs.readFileSync(pageDataPath, "utf8") : "null";
+              res.end(JSON.stringify({ pageData: JSON.parse(raw), source: "local" }));
+            } catch {
+              res.end(JSON.stringify({ pageData: null, source: "fallback" }));
+            }
+            return;
+          }
           if (req.url === "/api/auth/logout") {
             res.setHeader("Set-Cookie", "lfjp_admin_session=; Path=/; Max-Age=0");
             res.setHeader("Content-Type", "application/json");
