@@ -302,6 +302,11 @@
         "name": "Lycée",
         "value": 23,
         "percentage": 26.4
+      },
+      {
+        "name": "Nouveau niveau",
+        "value": 15,
+        "percentage": 10
       }
     ],
     "restaurationInterestData": [
