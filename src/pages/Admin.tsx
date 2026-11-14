@@ -32,7 +32,9 @@ import { AdminTransportDashboard } from '@/components/admin/AdminTransportDashbo
 import { isValidManagedPage, isValidPageData, normalizePageSlug, sanitizePageData, validateManagedPages, validatePageDataDetailed, type ContentBlock, type ManagedPage, type TextStyle } from '@/content/pageTypes';
 import { parseLocaleNumber, sanitizeDiagnosticData, sanitizeElcsDataset, sanitizePsdAxesData, sanitizeRestaurantDataset } from '@/lib/pageDataSanitizer';
 import { recalculateStudentDistribution } from '@/components/diagnostic/restaurant/restaurantCorrelations';
-import { invalidatePublishedPageDataCache, setPublishedPageDataCache } from '@/lib/publishedDataSync';
+import { defaultMethodeData, type MethodeData } from '@/data/methodeData';
+import type { ActionPagesMap } from '@/data/actionPageData';
+import { invalidatePublishedPageDataCache, setPublishedPageDataCache, setPublishedSiteContentCache } from '@/lib/publishedDataSync';
 import { normalizeMediaUrl } from '@/lib/media';
 import publishedPageText from '@/content/pageText.json';
 import { pageTextDraftStorageKey } from '@/lib/pageOverrides';
@@ -132,6 +134,8 @@ const defaultPageData = {
   psdSurveyData: (pageDataFile as { psdSurveyData?: PsdSurveyData }).psdSurveyData || defaultPsdSurveyData,
   budgetData: (pageDataFile as { budgetData?: BudgetData }).budgetData || defaultBudgetData,
   transportData: (pageDataFile as { transportData?: TransportData }).transportData || defaultTransportData,
+  methodeData: (pageDataFile as { methodeData?: MethodeData }).methodeData || defaultMethodeData,
+  actionPages: (pageDataFile as { actionPages?: ActionPagesMap }).actionPages || {},
 };
 const restaurantEditorGroups: { title: string; datasets: { key: keyof typeof restaurantPageData; label: string; fields: { key: string; label: string; type?: 'number' | 'text' }[] }[] }[] = [
   { title: 'Répartition et réponses', datasets: [
@@ -607,6 +611,18 @@ const Admin = () => {
       approveDeploymentRequest(pendingDeployment.id, userProfile.email);
       setPendingDeployment(loadPendingDeploymentRequest());
       clearAllDraftStorage();
+      if (pendingDeployment.draftFiles?.siteContent) {
+        try {
+          const parsedSiteContent = JSON.parse(pendingDeployment.draftFiles.siteContent) as Record<string, unknown>;
+          setPublishedSiteContentCache(parsedSiteContent);
+          setContent(parsedSiteContent as Content);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('lfjp_site_content_changed', { detail: parsedSiteContent }));
+          }
+        } catch {
+          // ignore invalid siteContent snapshot
+        }
+      }
       if (pendingDeployment.draftFiles?.pageData) {
         try {
           const parsedApproved = sanitizePageData(
@@ -716,9 +732,10 @@ const Admin = () => {
       }));
 
       const finalPageDataStr = draftOutcome.pageDataStr;
+      const finalSiteContentStr = draftOutcome.siteContentStr;
 
       const payloadFiles = {
-        siteContent: serializedContent,
+        siteContent: finalSiteContentStr,
         pages: serializedPages,
         pageData: finalPageDataStr,
         pageText: pageTextJson,
@@ -739,8 +756,19 @@ const Admin = () => {
       clearAllDraftStorage();
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(pageDataDraftStorageKey, finalPageDataStr);
+        window.localStorage.setItem(draftStorageKey, finalSiteContentStr);
       }
       setPageDataJson(finalPageDataStr);
+      try {
+        const parsedSiteFinal = JSON.parse(finalSiteContentStr) as Record<string, unknown>;
+        setPublishedSiteContentCache(parsedSiteFinal);
+        setContent(parsedSiteFinal as Content);
+        window.dispatchEvent(
+          new CustomEvent('lfjp_site_content_changed', { detail: parsedSiteFinal })
+        );
+      } catch {
+        // ignore
+      }
       try {
         const parsedFinal = JSON.parse(finalPageDataStr) as Record<string, unknown>;
         setPublishedPageDataCache(parsedFinal);
@@ -1503,6 +1531,7 @@ const Admin = () => {
             if (event.data.psdAxesData) parsed.psdAxesData = event.data.psdAxesData;
             if (event.data.psdTimelines) parsed.psdTimelines = event.data.psdTimelines;
             if (event.data.planStrategique) parsed.planStrategique = event.data.planStrategique;
+            if (event.data.actionPages) parsed.actionPages = event.data.actionPages;
             const sanitized = sanitizePageData(parsed);
             const updated = JSON.stringify(sanitized, null, 2);
             window.localStorage.setItem(pageDataDraftStorageKey, updated);
@@ -1510,6 +1539,33 @@ const Admin = () => {
           } catch {
             return prev;
           }
+        });
+        return;
+      }
+      if (event.data?.type === 'lfjp_methode_data_updated' && event.data.methodeData) {
+        setPageDataJson((prev) => {
+          try {
+            const parsed = JSON.parse(prev);
+            parsed.methodeData = event.data.methodeData;
+            const sanitized = sanitizePageData(parsed);
+            const updated = JSON.stringify(sanitized, null, 2);
+            window.localStorage.setItem(pageDataDraftStorageKey, updated);
+            return updated;
+          } catch {
+            return prev;
+          }
+        });
+        return;
+      }
+      if (event.data?.type === 'lfjp_site_content_updated' && isRecord(event.data.siteContent)) {
+        setContent((prev) => {
+          const merged = { ...prev, ...event.data.siteContent } as Content;
+          try {
+            window.localStorage.setItem(draftStorageKey, JSON.stringify(merged, null, 2));
+          } catch {
+            // ignore
+          }
+          return merged;
         });
         return;
       }
@@ -1568,6 +1624,16 @@ const Admin = () => {
     const syncVisualDraft = (event: StorageEvent) => {
       if (event.key === pageTextDraftStorageKey && event.newValue) setPageTextJson(event.newValue);
       if (event.key === pageDataDraftStorageKey && event.newValue) setPageDataJson(event.newValue);
+      if (event.key === draftStorageKey && event.newValue) {
+        try {
+          const parsed = JSON.parse(event.newValue);
+          if (isRecord(parsed) && isRecord(parsed.home) && isRecord(parsed.visionMissionsValeurs)) {
+            setContent(parsed as Content);
+          }
+        } catch {
+          // ignore
+        }
+      }
     };
     const handlePageDataUpdate = (event: Event) => {
       const custom = event as CustomEvent<Record<string, unknown>>;
@@ -1583,11 +1649,19 @@ const Admin = () => {
         });
       }
     };
+    const handleSiteContentUpdate = (event: Event) => {
+      const custom = event as CustomEvent<Record<string, unknown>>;
+      if (custom.detail && isRecord(custom.detail)) {
+        setContent((prev) => ({ ...prev, ...custom.detail } as Content));
+      }
+    };
     window.addEventListener('storage', syncVisualDraft);
     window.addEventListener('lfjp_page_data_changed', handlePageDataUpdate);
+    window.addEventListener('lfjp_site_content_changed', handleSiteContentUpdate);
     return () => {
       window.removeEventListener('storage', syncVisualDraft);
       window.removeEventListener('lfjp_page_data_changed', handlePageDataUpdate);
+      window.removeEventListener('lfjp_site_content_changed', handleSiteContentUpdate);
     };
   }, []);
 
@@ -2065,7 +2139,7 @@ const Admin = () => {
         throw new Error('Les modifications visuelles des pages sont invalides. Vérifiez leur JSON avant de déployer.');
       }
 
-      const contentStr = customFiles?.siteContent || serializedContent || window.localStorage.getItem(draftStorageKey) || '{}';
+      const contentStr = customFiles?.siteContent || window.localStorage.getItem(draftStorageKey) || serializedContent || '{}';
       const pagesStr = customFiles?.pages || JSON.stringify({ pages: currentPagesList }, null, 2);
 
       const defaultToken = getDefaultDeployToken();
@@ -2138,7 +2212,7 @@ const Admin = () => {
     }
   };
 
-  const validateAndSaveDraft = (): { ok: true; pageData: Record<string, unknown>; pageDataStr: string } | { ok: false; error: string } => {
+  const validateAndSaveDraft = (): { ok: true; pageData: Record<string, unknown>; pageDataStr: string; siteContentStr: string } | { ok: false; error: string } => {
     try {
       const baseParsed = JSON.parse(pageDataJson) as Record<string, unknown>;
       const merged: Record<string, unknown> = { ...defaultPageData, ...baseParsed };
@@ -2160,6 +2234,8 @@ const Admin = () => {
             if (draftParsed.keyMetrics) merged.keyMetrics = draftParsed.keyMetrics;
             if (draftParsed.bacBlancSchedule) merged.bacBlancSchedule = draftParsed.bacBlancSchedule;
             if (draftParsed.filmAnnuelData) merged.filmAnnuelData = draftParsed.filmAnnuelData;
+            if (draftParsed.methodeData) merged.methodeData = draftParsed.methodeData;
+            if (draftParsed.actionPages) merged.actionPages = draftParsed.actionPages;
             if (draftParsed.rubriques) merged.rubriques = draftParsed.rubriques;
           }
         } catch (draftErr) {
@@ -2203,7 +2279,12 @@ const Admin = () => {
       window.localStorage.setItem(pagesDraftStorageKey, serializedPages);
       window.localStorage.setItem(pageTextDraftStorageKey, pageTextJson);
       setStatus('Brouillon enregistré dans ce navigateur. Il n’est pas encore public.');
-      return { ok: true, pageData: sanitized, pageDataStr: updatedPageDataStr };
+      return {
+        ok: true,
+        pageData: sanitized,
+        pageDataStr: updatedPageDataStr,
+        siteContentStr: serializedContent,
+      };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Le JSON des données de pages est invalide.';
       console.error('[LFJP saveDraft Error]', errorMsg, error);

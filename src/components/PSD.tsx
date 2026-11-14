@@ -12,8 +12,9 @@ import {
 import { psdTimelineData } from '@/data/psdTimelineData';
 import { useContentDraft } from '@/lib/contentDraft';
 import { usePrivilegedAccess } from '@/lib/authAccess';
-import { sanitizePsdAxesData, sanitizePsdTimelines } from '@/lib/pageDataSanitizer';
+import { sanitizeActionPages, sanitizePsdAxesData, sanitizePsdTimelines } from '@/lib/pageDataSanitizer';
 import { usePublishedPageData } from '@/lib/publishedDataSync';
+import type { ActionPagesMap } from '@/data/actionPageData';
 
 const fallbackPlanData = {
   ...pageDataFile,
@@ -25,6 +26,7 @@ const fallbackPlanData = {
     title: 'PLAN STRATÉGIQUE DE DÉVELOPPEMENT',
     subtitle: 'Lycée Français Jacques Prévert (2026-2030)',
   },
+  actionPages: (pageDataFile as { actionPages?: ActionPagesMap }).actionPages || {},
 };
 
 function mergeAxes(raw: unknown): PsdAxesData {
@@ -84,11 +86,19 @@ const PSD = () => {
     () => pageData?.planStrategique || fallbackPlanData.planStrategique,
     [pageData?.planStrategique]
   );
+  const actionPages = React.useMemo<ActionPagesMap>(
+    () =>
+      ((sanitizeActionPages(pageData?.actionPages) as ActionPagesMap) ||
+        fallbackPlanData.actionPages ||
+        {}) as ActionPagesMap,
+    [pageData?.actionPages]
+  );
 
   const handlePlanDataChange = (next: {
     psdAxesData: PsdAxesData;
     psdTimelines: PsdTimelinesRecord;
     planStrategique: PlanStrategiqueMeta;
+    actionPages?: ActionPagesMap;
   }) => {
     if (!isPrivileged || !showEditorControls) return;
     if (typeof window === 'undefined') return;
@@ -102,11 +112,13 @@ const PSD = () => {
           currentDraft = {};
         }
       }
+      const nextActionPages = next.actionPages ?? actionPages;
       const merged = {
         ...currentDraft,
         psdAxesData: next.psdAxesData,
         psdTimelines: next.psdTimelines,
         planStrategique: next.planStrategique,
+        actionPages: nextActionPages,
       };
       window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
       window.dispatchEvent(
@@ -115,6 +127,7 @@ const PSD = () => {
             psdAxesData: next.psdAxesData,
             psdTimelines: next.psdTimelines,
             planStrategique: next.planStrategique,
+            actionPages: nextActionPages,
           },
         })
       );
@@ -128,6 +141,7 @@ const PSD = () => {
               psdAxesData: next.psdAxesData,
               psdTimelines: next.psdTimelines,
               planStrategique: next.planStrategique,
+              actionPages: nextActionPages,
             },
             '*'
           );
@@ -149,6 +163,7 @@ const PSD = () => {
               psdAxesData={psdAxesData}
               psdTimelines={psdTimelines}
               planStrategique={planStrategique}
+              actionPages={actionPages}
               onChange={handlePlanDataChange}
             />
           )}

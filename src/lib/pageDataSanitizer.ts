@@ -459,6 +459,142 @@ export const sanitizeTransportData = (raw: unknown): Record<string, unknown> | u
   return next;
 };
 
+export const sanitizeMethodeData = (raw: unknown): Record<string, unknown> | undefined => {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw)) return {};
+  const sanitizeStrList = (arr: unknown): string[] =>
+    Array.isArray(arr) ? arr.map((it) => (typeof it === 'string' ? it : String(it ?? ''))) : [];
+
+  const steps = Array.isArray(raw.steps)
+    ? raw.steps
+        .filter((s) => isRecord(s))
+        .map((s) => ({
+          title: typeof s.title === 'string' ? s.title : String(s.title ?? 'Étape'),
+          description: typeof s.description === 'string' ? s.description : String(s.description ?? ''),
+        }))
+    : [];
+
+  const comm = isRecord(raw.commissionCard) ? raw.commissionCard : {};
+  const val = isRecord(raw.validationCard) ? raw.validationCard : {};
+
+  const out: Record<string, unknown> = {
+    heroTitle: typeof raw.heroTitle === 'string' ? raw.heroTitle : 'Démarche de réalisation du PSD',
+    heroSubtitle: typeof raw.heroSubtitle === 'string' ? raw.heroSubtitle : '',
+    stepsEyebrow: typeof raw.stepsEyebrow === 'string' ? raw.stepsEyebrow : 'Démarche',
+    stepsTitle: typeof raw.stepsTitle === 'string' ? raw.stepsTitle : '',
+    stepsSubtitle: typeof raw.stepsSubtitle === 'string' ? raw.stepsSubtitle : '',
+    steps,
+    commissionCard: {
+      eyebrow: typeof comm.eyebrow === 'string' ? comm.eyebrow : '',
+      title: typeof comm.title === 'string' ? comm.title : '',
+      paragraphs: sanitizeStrList(comm.paragraphs),
+      roleBoxTitle: typeof comm.roleBoxTitle === 'string' ? comm.roleBoxTitle : 'Rôle de la commission',
+      roleItems: sanitizeStrList(comm.roleItems),
+      validationBoxTitle: typeof comm.validationBoxTitle === 'string' ? comm.validationBoxTitle : 'Validation APE',
+      validationItems: sanitizeStrList(comm.validationItems),
+    },
+    validationCard: {
+      eyebrow: typeof val.eyebrow === 'string' ? val.eyebrow : '',
+      title: typeof val.title === 'string' ? val.title : '',
+      paragraphs: sanitizeStrList(val.paragraphs),
+      highlights: Array.isArray(val.highlights)
+        ? val.highlights
+            .filter((h) => isRecord(h))
+            .map((h) => ({
+              title: typeof h.title === 'string' ? h.title : '',
+              description: typeof h.description === 'string' ? h.description : '',
+            }))
+        : [],
+    },
+    showMetricsOnPage: raw.showMetricsOnPage === true,
+    metricsSectionTitle: typeof raw.metricsSectionTitle === 'string' ? raw.metricsSectionTitle : 'Indicateurs clés de la démarche',
+    keyMetrics: Array.isArray(raw.keyMetrics)
+      ? raw.keyMetrics
+          .filter((m) => isRecord(m))
+          .map((m) => ({
+            label: typeof m.label === 'string' ? m.label : String(m.label ?? 'Indicateur'),
+            value: typeof m.value === 'string' ? m.value : String(m.value ?? ''),
+            ...(typeof m.note === 'string' && m.note ? { note: m.note } : {}),
+          }))
+      : [],
+    chartTitle: typeof raw.chartTitle === 'string' ? raw.chartTitle : 'Avancement des phases méthodologiques (%)',
+    chartItems: Array.isArray(raw.chartItems)
+      ? raw.chartItems
+          .filter((c) => isRecord(c))
+          .map((c) => ({
+            name: typeof c.name === 'string' ? c.name : String(c.name ?? 'Étape'),
+            value: Math.max(0, sanitizeNumberOrFallback(c.value, 0)),
+            ...(c.target !== undefined ? { target: Math.max(1, sanitizeNumberOrFallback(c.target, 100)) } : {}),
+          }))
+      : [],
+  };
+
+  return out;
+};
+
+export const sanitizeActionPages = (raw: unknown): Record<string, unknown> | undefined => {
+  if (raw === undefined) return undefined;
+  if (!isRecord(raw)) return {};
+  const out: Record<string, unknown> = {};
+  Object.entries(raw).forEach(([slugKey, entry]) => {
+    if (!isRecord(entry)) return;
+    const rawSlug = typeof entry.slug === 'string' && entry.slug.trim() ? entry.slug.trim() : slugKey;
+    const normalizedSlug = rawSlug.startsWith('/') ? rawSlug.replace(/\/+$/, '') : `/${rawSlug.replace(/\/+$/, '')}`;
+    const axisKey =
+      entry.axisKey === 'axe1' || entry.axisKey === 'axe2' || entry.axisKey === 'axe3' || entry.axisKey === 'axe4'
+        ? entry.axisKey
+        : 'axe1';
+
+    out[normalizedSlug] = {
+      slug: normalizedSlug,
+      axisKey,
+      rubriqueTitle: typeof entry.rubriqueTitle === 'string' ? entry.rubriqueTitle : 'Rubrique',
+      title: typeof entry.title === 'string' ? entry.title : 'Nouvelle action',
+      badge: typeof entry.badge === 'string' ? entry.badge : typeof entry.rubriqueTitle === 'string' ? entry.rubriqueTitle : 'Action PSD',
+      subtitle: typeof entry.subtitle === 'string' ? entry.subtitle : '',
+      description: typeof entry.description === 'string' ? entry.description : '',
+      budgetMillions: Math.max(0, sanitizeNumberOrFallback(entry.budgetMillions, 0)),
+      period: typeof entry.period === 'string' ? entry.period : '2026 – 2030',
+      kpis: Array.isArray(entry.kpis)
+        ? entry.kpis
+            .filter((k) => isRecord(k))
+            .map((k) => ({
+              label: typeof k.label === 'string' ? k.label : 'Indicateur',
+              value: typeof k.value === 'string' ? k.value : String(k.value ?? ''),
+              subtitle: typeof k.subtitle === 'string' ? k.subtitle : '',
+            }))
+        : [],
+      objectives: Array.isArray(entry.objectives)
+        ? entry.objectives.map((o) => (typeof o === 'string' ? o : String(o ?? '')))
+        : [],
+      highlights: Array.isArray(entry.highlights)
+        ? entry.highlights.map((h) => (typeof h === 'string' ? h : String(h ?? '')))
+        : [],
+      steps: Array.isArray(entry.steps)
+        ? entry.steps
+            .filter((s) => isRecord(s))
+            .map((s) => ({
+              period: typeof s.period === 'string' ? s.period : '2026',
+              phase: typeof s.phase === 'string' ? s.phase : 'Phase',
+              description: typeof s.description === 'string' ? s.description : '',
+            }))
+        : [],
+      indicators: Array.isArray(entry.indicators)
+        ? entry.indicators
+            .filter((ind) => isRecord(ind))
+            .map((ind) => ({
+              name: typeof ind.name === 'string' ? ind.name : 'Indicateur',
+              currentRate: Math.max(0, sanitizeNumberOrFallback(ind.currentRate, 0)),
+              targetRate: Math.max(1, sanitizeNumberOrFallback(ind.targetRate, 100)),
+              unit: typeof ind.unit === 'string' && ind.unit ? ind.unit : '%',
+              status: typeof ind.status === 'string' && ind.status ? ind.status : 'En cours',
+            }))
+        : [],
+    };
+  });
+  return out;
+};
+
 /**
  * Normalizes an entire pageData object before JSON validation & serialization:
  * - Converts French decimal commas ("17,2") to valid JS numbers (17.2)
@@ -489,6 +625,12 @@ export const sanitizePageData = (raw: unknown): Record<string, unknown> => {
   }
   if (next.transportData !== undefined) {
     next.transportData = sanitizeTransportData(next.transportData);
+  }
+  if (next.methodeData !== undefined) {
+    next.methodeData = sanitizeMethodeData(next.methodeData);
+  }
+  if (next.actionPages !== undefined) {
+    next.actionPages = sanitizeActionPages(next.actionPages);
   }
   if (isRecord(next.planStrategique)) {
     next.planStrategique = {
@@ -739,6 +881,12 @@ export const validatePageDataDetailed = (value: unknown): { valid: boolean; erro
   }
   if (value.psdSurveyData !== undefined && !isRecord(value.psdSurveyData)) {
     errors.push('psdSurveyData : objet attendu.');
+  }
+  if (value.methodeData !== undefined && !isRecord(value.methodeData)) {
+    errors.push('methodeData : objet attendu.');
+  }
+  if (value.actionPages !== undefined && !isRecord(value.actionPages)) {
+    errors.push('actionPages : objet attendu.');
   }
 
   return {

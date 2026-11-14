@@ -1,11 +1,17 @@
-
 import React from 'react';
 import { List } from 'lucide-react';
 import siteContent from '@/content/siteContent.json';
-import { readContentDraft } from '@/lib/contentDraft';
+import { useContentDraft } from '@/lib/contentDraft';
+import { usePublishedSiteContent } from '@/lib/publishedDataSync';
+import type { VisionMissionsValeursContent } from './AdminVisionValeursEditor';
 
 const Missions = () => {
-  const missions = readContentDraft('lfjp-admin-draft', siteContent).visionMissionsValeurs.missions;
+  const publishedSiteContent = usePublishedSiteContent(siteContent as unknown as Record<string, unknown>);
+  const content = useContentDraft('lfjp-admin-draft', publishedSiteContent) as typeof siteContent & {
+    visionMissionsValeurs: VisionMissionsValeursContent;
+  };
+  const vmv = content?.visionMissionsValeurs || siteContent.visionMissionsValeurs;
+  const missions = Array.isArray(vmv.missions) ? vmv.missions : siteContent.visionMissionsValeurs.missions;
 
   return (
     <section id="missions" className="py-16 md:py-24 bg-gray-50">
@@ -18,10 +24,10 @@ const Missions = () => {
 
             <h2 className="text-3xl font-playfair font-bold text-french-blue flex items-center">
               <span className="mr-2">2.</span>
-              NOS MISSIONS
+              {(vmv as VisionMissionsValeursContent).missionsSectionTitle || 'NOS MISSIONS'}
             </h2>
           </div>
-          
+
           <div className="w-full md:w-2/3">
             <ul className="space-y-4">
               {missions.map((mission, index) => (

@@ -387,4 +387,96 @@ test('Plan Stratégique Axes 1-4 remove Vue Globale and Synthèse consolidée bl
   });
 });
 
+test('Dynamic /actions/:slug pages and chronological Accueil, Méthode, Vision & Valeurs editors are strictly gated and synced', () => {
+  const actionDataSrc = readFileSync(resolve(rootDir, 'src/data/actionPageData.ts'), 'utf-8');
+  assert.ok(actionDataSrc.includes('generateUniqueActionLink'), 'actionPageData.ts must expose generateUniqueActionLink');
+  assert.ok(actionDataSrc.includes('resolveActionPage'), 'actionPageData.ts must expose resolveActionPage');
+
+  const appSrc = readFileSync(resolve(rootDir, 'src/App.tsx'), 'utf-8');
+  assert.ok(appSrc.includes('path="/actions/:slug"'), 'App.tsx must register dynamic route /actions/:slug');
+
+  const managedSrc = readFileSync(resolve(rootDir, 'src/pages/ManagedPage.tsx'), 'utf-8');
+  assert.ok(managedSrc.includes('ActionDetailPage'), 'ManagedPage.tsx must resolve custom action slugs to ActionDetailPage');
+
+  const actionDetailSrc = readFileSync(resolve(rootDir, 'src/pages/ActionDetailPage.tsx'), 'utf-8');
+  assert.ok(
+    actionDetailSrc.includes('isPrivileged && showEditorControls'),
+    'ActionDetailPage.tsx must strictly gate Espace Éditeur behind isPrivileged && showEditorControls'
+  );
+  assert.ok(actionDetailSrc.includes('usePublishedPageData'), 'ActionDetailPage.tsx must sync with published data');
+  assert.ok(actionDetailSrc.includes('ErrorBoundary'), 'ActionDetailPage.tsx must wrap chart in ErrorBoundary');
+
+  ['PSDAxe1.tsx', 'PSDAxe2.tsx', 'PSDAxe3.tsx', 'PSDAxe4.tsx'].forEach((file) => {
+    const axeSrc = readFileSync(resolve(rootDir, 'src/components', file), 'utf-8');
+    assert.ok(
+      axeSrc.includes('slugifyActionSegment'),
+      `${file} must generate deterministic /actions/<slug> fallback when item.link is empty`
+    );
+  });
+
+  const pageChecks = [
+    { page: 'src/pages/Index.tsx', editor: 'AdminHomeEditor', syncHook: 'usePublishedSiteContent' },
+    { page: 'src/pages/Methode.tsx', editor: 'AdminMethodeEditor', syncHook: 'usePublishedPageData' },
+    { page: 'src/pages/VisionMissionsValeurs.tsx', editor: 'AdminVisionValeursEditor', syncHook: 'usePublishedSiteContent' },
+  ];
+  pageChecks.forEach(({ page, editor, syncHook }) => {
+    const src = readFileSync(resolve(rootDir, page), 'utf-8');
+    assert.ok(src.includes(editor), `${page} must mount ${editor}`);
+    assert.ok(src.includes('isPrivileged && showEditorControls'), `${page} must strictly gate ${editor}`);
+    assert.ok(src.includes(syncHook), `${page} must subscribe to ${syncHook}`);
+  });
+
+  const newEditors = [
+    'src/components/AdminHomeEditor.tsx',
+    'src/components/AdminMethodeEditor.tsx',
+    'src/components/AdminVisionValeursEditor.tsx',
+  ];
+  newEditors.forEach((relPath) => {
+    const src = readFileSync(resolve(rootDir, relPath), 'utf-8');
+    assert.ok(
+      /if\s*\(\s*!isPrivileged\s*\|\|\s*!showEditorControls\s*\)\s*\{\s*return\s+null;\s*\}/.test(src),
+      `${relPath} must strictly return null from DOM when !isPrivileged || !showEditorControls`
+    );
+    assert.ok(src.includes('Privilège Éditeur'), `${relPath} must include Privilège Éditeur badge`);
+  });
+
+  const homeEditor = readFileSync(resolve(rootDir, 'src/components/AdminHomeEditor.tsx'), 'utf-8');
+  assert.ok(
+    homeEditor.indexOf('1. En-tête & Bannière') < homeEditor.indexOf('2. Cartes de présentation') &&
+      homeEditor.indexOf('2. Cartes de présentation') < homeEditor.indexOf('3. Mots officiels') &&
+      homeEditor.indexOf('3. Mots officiels') < homeEditor.indexOf('4. Chiffres clés'),
+    'AdminHomeEditor sections must follow exact page chronological vertical order'
+  );
+
+  const methodeEditor = readFileSync(resolve(rootDir, 'src/components/AdminMethodeEditor.tsx'), 'utf-8');
+  assert.ok(
+    methodeEditor.indexOf('1. En-tête de la page Méthode') < methodeEditor.indexOf('2. Étapes de la démarche') &&
+      methodeEditor.indexOf('2. Étapes de la démarche') < methodeEditor.indexOf('3a. Carte Commission PSD') &&
+      methodeEditor.indexOf('3a. Carte Commission PSD') < methodeEditor.indexOf('4. Chiffres clés'),
+    'AdminMethodeEditor sections must follow exact page chronological vertical order'
+  );
+
+  const vmvEditor = readFileSync(resolve(rootDir, 'src/components/AdminVisionValeursEditor.tsx'), 'utf-8');
+  assert.ok(
+    vmvEditor.indexOf('1. En-tête Hero') < vmvEditor.indexOf('2. Section « 1. NOTRE VISION »') &&
+      vmvEditor.indexOf('2. Section « 1. NOTRE VISION »') < vmvEditor.indexOf('3. Section « 2. NOS MISSIONS »') &&
+      vmvEditor.indexOf('3. Section « 2. NOS MISSIONS »') < vmvEditor.indexOf('4. Section « 3. NOS VALEURS »') &&
+      vmvEditor.indexOf('4. Section « 3. NOS VALEURS »') < vmvEditor.indexOf('5. Chiffres clés'),
+    'AdminVisionValeursEditor sections must follow exact page chronological vertical order'
+  );
+
+  const publishedApiSrc = readFileSync(resolve(rootDir, 'api/content/published.ts'), 'utf-8');
+  assert.ok(publishedApiSrc.includes('src/content/siteContent.json'), 'api/content/published.ts must serve siteContent.json too');
+
+  const sanitizerSrc = readFileSync(resolve(rootDir, 'src/lib/pageDataSanitizer.ts'), 'utf-8');
+  assert.ok(sanitizerSrc.includes('sanitizeMethodeData'), 'pageDataSanitizer must export sanitizeMethodeData');
+  assert.ok(sanitizerSrc.includes('sanitizeActionPages'), 'pageDataSanitizer must export sanitizeActionPages');
+
+  const adminSrc = readFileSync(resolve(rootDir, 'src/pages/Admin.tsx'), 'utf-8');
+  assert.ok(adminSrc.includes('draftParsed.methodeData'), 'Admin.tsx validateAndSaveDraft must preserve methodeData');
+  assert.ok(adminSrc.includes('draftParsed.actionPages'), 'Admin.tsx validateAndSaveDraft must preserve actionPages');
+  assert.ok(adminSrc.includes('setPublishedSiteContentCache'), 'Admin.tsx must update setPublishedSiteContentCache on deploy');
+});
+
+
 

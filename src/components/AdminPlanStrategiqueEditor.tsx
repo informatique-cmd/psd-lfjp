@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BarChart3, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronUp, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import {
   computeAxisProgressRate,
   defaultPsdAxesData,
@@ -12,9 +13,16 @@ import {
   type PsdAxisObjective,
 } from '@/data/psdAxesData';
 import type { PsdTimelineAction, PsdTimelineKey } from '@/data/psdTimelineData';
+import {
+  buildDefaultActionPage,
+  collectExistingActionLinks,
+  generateUniqueActionLink,
+  normalizeActionSlug,
+  type ActionPagesMap,
+} from '@/data/actionPageData';
 import { usePrivilegedAccess } from '@/lib/authAccess';
 import { LocaleNumberInput } from '@/components/ui/locale-number-input';
-import { sanitizePsdAxesData, sanitizePsdTimelines } from '@/lib/pageDataSanitizer';
+import { sanitizeActionPages, sanitizePsdAxesData, sanitizePsdTimelines } from '@/lib/pageDataSanitizer';
 import { PsdAxisIndicatorsSection } from './PsdAxisIndicatorsSection';
 
 export interface PlanStrategiqueMeta {
@@ -36,10 +44,12 @@ export interface AdminPlanStrategiqueEditorProps {
   psdAxesData: PsdAxesData;
   psdTimelines: PsdTimelinesRecord;
   planStrategique: PlanStrategiqueMeta;
+  actionPages?: ActionPagesMap;
   onChange: (next: {
     psdAxesData: PsdAxesData;
     psdTimelines: PsdTimelinesRecord;
     planStrategique: PlanStrategiqueMeta;
+    actionPages?: ActionPagesMap;
   }) => void;
 }
 
@@ -75,6 +85,7 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
   psdAxesData,
   psdTimelines,
   planStrategique,
+  actionPages = {},
   onChange,
 }) => {
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
@@ -88,14 +99,17 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
   const emit = (
     nextAxes: PsdAxesData,
     nextTimelines: PsdTimelinesRecord,
-    nextMeta: PlanStrategiqueMeta
+    nextMeta: PlanStrategiqueMeta,
+    nextActionPages: ActionPagesMap = actionPages
   ) => {
     const cleanAxes = sanitizePsdAxesData(nextAxes) as PsdAxesData;
     const cleanTimelines = sanitizePsdTimelines(nextTimelines) as PsdTimelinesRecord;
+    const cleanActionPages = (sanitizeActionPages(nextActionPages) || {}) as ActionPagesMap;
     onChange({
       psdAxesData: cleanAxes,
       psdTimelines: cleanTimelines,
       planStrategique: nextMeta,
+      actionPages: cleanActionPages,
     });
   };
 
@@ -591,17 +605,26 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                   type="button"
                   size="sm"
                   onClick={() => {
+                    const existingLinks = collectExistingActionLinks(psdAxesData, actionPages);
+                    const newLink = generateUniqueActionLink('Nouvelle action', existingLinks);
+                    const newPage = buildDefaultActionPage({
+                      slug: newLink,
+                      axisKey,
+                      rubriqueTitle: 'Nouvelle rubrique',
+                      title: 'Nouvelle action',
+                    });
                     const nextSections: PsdAxisActionSection[] = [
                       ...axisActionSections,
                       {
                         title: 'Nouvelle rubrique',
-                        items: [{ label: 'Nouvelle action', link: '' }],
+                        items: [{ label: 'Nouvelle action', link: newLink }],
                       },
                     ];
                     emit(
                       { ...psdAxesData, [axisKey]: { ...axis, actionSections: nextSections } },
                       psdTimelines,
-                      planStrategique
+                      planStrategique,
+                      { ...actionPages, [newLink]: newPage }
                     );
                   }}
                   className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white"
@@ -644,11 +667,19 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                             size="sm"
                             variant="outline"
                             onClick={() => {
+                              const existingLinks = collectExistingActionLinks(psdAxesData, actionPages);
+                              const newLink = generateUniqueActionLink('Nouvelle action', existingLinks);
+                              const newPage = buildDefaultActionPage({
+                                slug: newLink,
+                                axisKey,
+                                rubriqueTitle: section.title,
+                                title: 'Nouvelle action',
+                              });
                               const nextSections = axisActionSections.map((s, i) =>
                                 i === secIdx
                                   ? {
                                       ...s,
-                                      items: [...s.items, { label: 'Nouvelle action', link: '' }],
+                                      items: [...s.items, { label: 'Nouvelle action', link: newLink }],
                                     }
                                   : s
                               );
@@ -658,7 +689,8 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                                   [axisKey]: { ...axis, actionSections: nextSections },
                                 },
                                 psdTimelines,
-                                planStrategique
+                                planStrategique,
+                                { ...actionPages, [newLink]: newPage }
                               );
                             }}
                             className="h-7 text-[11px] border-purple-200 text-purple-800 hover:bg-purple-50"
@@ -711,58 +743,103 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
                                     <Input
                                       value={item.label}
                                       onChange={(e) => {
+                                        const nextLabel = e.target.value;
                                         const nextSections = axisActionSections.map((s, si) =>
                                           si === secIdx
                                             ? {
                                                 ...s,
                                                 items: s.items.map((it, ii) =>
                                                   ii === itemIdx
-                                                    ? { ...it, label: e.target.value }
+                                                    ? { ...it, label: nextLabel }
                                                     : it
                                                 ),
                                               }
                                             : s
                                         );
+                                        let nextPages = actionPages;
+                                        if (item.link && item.link.startsWith('/actions/')) {
+                                          const slugKey = normalizeActionSlug(item.link);
+                                          const existingPage = actionPages[slugKey];
+                                          if (existingPage) {
+                                            nextPages = {
+                                              ...actionPages,
+                                              [slugKey]: {
+                                                ...existingPage,
+                                                title: nextLabel || existingPage.title,
+                                                rubriqueTitle: section.title,
+                                              },
+                                            };
+                                          }
+                                        }
                                         emit(
                                           {
                                             ...psdAxesData,
                                             [axisKey]: { ...axis, actionSections: nextSections },
                                           },
                                           psdTimelines,
-                                          planStrategique
+                                          planStrategique,
+                                          nextPages
                                         );
                                       }}
                                       className="h-7 text-xs bg-white"
                                     />
                                   </td>
                                   <td className="p-1">
-                                    <Input
-                                      value={item.link || ''}
-                                      placeholder="/exemple-fiche"
-                                      onChange={(e) => {
-                                        const nextSections = axisActionSections.map((s, si) =>
-                                          si === secIdx
-                                            ? {
-                                                ...s,
-                                                items: s.items.map((it, ii) =>
-                                                  ii === itemIdx
-                                                    ? { ...it, link: e.target.value }
-                                                    : it
-                                                ),
-                                              }
-                                            : s
-                                        );
-                                        emit(
-                                          {
-                                            ...psdAxesData,
-                                            [axisKey]: { ...axis, actionSections: nextSections },
-                                          },
-                                          psdTimelines,
-                                          planStrategique
-                                        );
-                                      }}
-                                      className="h-7 text-xs bg-white text-slate-600"
-                                    />
+                                    <div className="flex items-center gap-1">
+                                      <Input
+                                        value={item.link || ''}
+                                        placeholder="/actions/mon-action"
+                                        onChange={(e) => {
+                                          const rawVal = e.target.value;
+                                          const nextSections = axisActionSections.map((s, si) =>
+                                            si === secIdx
+                                              ? {
+                                                  ...s,
+                                                  items: s.items.map((it, ii) =>
+                                                    ii === itemIdx
+                                                      ? { ...it, link: rawVal }
+                                                      : it
+                                                  ),
+                                                }
+                                              : s
+                                          );
+                                          let nextPages = actionPages;
+                                          if (rawVal.trim().startsWith('/actions/')) {
+                                            const norm = normalizeActionSlug(rawVal);
+                                            if (!actionPages[norm]) {
+                                              nextPages = {
+                                                ...actionPages,
+                                                [norm]: buildDefaultActionPage({
+                                                  slug: norm,
+                                                  axisKey,
+                                                  rubriqueTitle: section.title,
+                                                  title: item.label,
+                                                }),
+                                              };
+                                            }
+                                          }
+                                          emit(
+                                            {
+                                              ...psdAxesData,
+                                              [axisKey]: { ...axis, actionSections: nextSections },
+                                            },
+                                            psdTimelines,
+                                            planStrategique,
+                                            nextPages
+                                          );
+                                        }}
+                                        className="h-7 text-xs bg-white text-slate-600"
+                                      />
+                                      {item.link && item.link.startsWith('/') && (
+                                        <Link
+                                          to={item.link}
+                                          title="Ouvrir la page dédiée"
+                                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                                        >
+                                          <ExternalLink className="h-3.5 w-3.5" />
+                                        </Link>
+                                      )}
+                                    </div>
                                   </td>
                                   <td className="p-1 text-right">
                                     <Button

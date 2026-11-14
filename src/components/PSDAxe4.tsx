@@ -2,6 +2,7 @@
 import React from 'react';
 import pageDataFile from '@/content/pageData.json';
 import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
+import { slugifyActionSegment } from '@/data/actionPageData';
 import { useContentDraft } from '@/lib/contentDraft';
 import { usePublishedPageData } from '@/lib/publishedDataSync';
 import { Compass, HeartHandshake, Medal, PiggyBank, RefreshCcw, Sparkles, UsersRound, Target } from 'lucide-react';
@@ -251,12 +252,15 @@ const PSDAxe4 = () => {
     ? actionSections
     : (axisOverview.actionSections || []).map((sec) => ({
         title: sec.title,
-        items: (sec.items || []).map((it) => ({
-          content: <strong>{it.label}</strong>,
-          link: it.link || undefined,
-          linkAriaLabel: `En savoir plus – ${it.label}`,
-          linkIcon: (it.link && iconByLink[it.link]) || Medal,
-        })),
+        items: (sec.items || []).map((it) => {
+          const resolvedLink = it.link?.trim() || `/actions/${slugifyActionSegment(it.label)}`;
+          return {
+            content: <strong>{it.label}</strong>,
+            link: resolvedLink,
+            linkAriaLabel: `En savoir plus – ${it.label}`,
+            linkIcon: iconByLink[resolvedLink] || Medal,
+          };
+        }),
       }));
 
   const effectiveIndicators = !indicatorsModified

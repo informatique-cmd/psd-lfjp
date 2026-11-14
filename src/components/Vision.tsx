@@ -1,11 +1,18 @@
-
 import React from 'react';
 import { Target } from 'lucide-react';
 import siteContent from '@/content/siteContent.json';
-import { readContentDraft } from '@/lib/contentDraft';
+import { useContentDraft } from '@/lib/contentDraft';
+import { usePublishedSiteContent } from '@/lib/publishedDataSync';
+import type { VisionMissionsValeursContent } from './AdminVisionValeursEditor';
 
 const Vision = () => {
-  const content = readContentDraft('lfjp-admin-draft', siteContent);
+  const publishedSiteContent = usePublishedSiteContent(siteContent as unknown as Record<string, unknown>);
+  const content = useContentDraft('lfjp-admin-draft', publishedSiteContent) as typeof siteContent & {
+    visionMissionsValeurs: VisionMissionsValeursContent;
+  };
+  const vmv = content?.visionMissionsValeurs || siteContent.visionMissionsValeurs;
+  const paragraphs = Array.isArray(vmv.vision) ? vmv.vision : siteContent.visionMissionsValeurs.vision;
+
   return (
     <section id="vision" className="py-16 md:py-24 bg-white">
       <div className="container mx-auto px-6">
@@ -17,14 +24,17 @@ const Vision = () => {
 
             <h2 className="text-3xl font-playfair font-bold text-french-blue flex items-center">
               <span className="mr-2">1.</span>
-              NOTRE VISION
+              {(vmv as VisionMissionsValeursContent).visionSectionTitle || 'NOTRE VISION'}
             </h2>
           </div>
 
           <div className="w-full md:w-2/3">
-            
             <div className="space-y-4 font-raleway">
-              {content.visionMissionsValeurs.vision.map((paragraph) => <p key={paragraph} className="text-gray-700 leading-relaxed">{paragraph}</p>)}
+              {paragraphs.map((paragraph, idx) => (
+                <p key={`vision-p-${idx}`} className="text-gray-700 leading-relaxed">
+                  {paragraph}
+                </p>
+              ))}
             </div>
           </div>
         </div>

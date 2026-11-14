@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import pageDataFile from '@/content/pageData.json';
 import { psdTimelineData } from '@/data/psdTimelineData';
 import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
+import { slugifyActionSegment } from '@/data/actionPageData';
 import { useContentDraft } from '@/lib/contentDraft';
 import { usePublishedPageData } from '@/lib/publishedDataSync';
 import { ChevronDown, Globe2, Handshake, Palette } from 'lucide-react';
@@ -305,16 +306,19 @@ const PSDAxe2 = () => {
     ? actionSections
     : (axisOverview.actionSections || []).map((sec) => ({
         title: sec.title,
-        items: (sec.items || []).map((it) => ({
-          content: (
-            <span>
-              <strong>{it.label}</strong>
-            </span>
-          ),
-          link: it.link || undefined,
-          linkAriaLabel: `En savoir plus – ${it.label}`,
-          linkIcon: (it.link && iconByLink[it.link]) || Globe2,
-        })),
+        items: (sec.items || []).map((it) => {
+          const resolvedLink = it.link?.trim() || `/actions/${slugifyActionSegment(it.label)}`;
+          return {
+            content: (
+              <span>
+                <strong>{it.label}</strong>
+              </span>
+            ),
+            link: resolvedLink,
+            linkAriaLabel: `En savoir plus – ${it.label}`,
+            linkIcon: iconByLink[resolvedLink] || Globe2,
+          };
+        }),
       }));
 
   const effectiveIndicators = !indicatorsModified

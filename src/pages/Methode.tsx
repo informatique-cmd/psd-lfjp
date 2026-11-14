@@ -2,65 +2,119 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Footer from '../components/Footer';
+import AdminMethodeEditor from '../components/AdminMethodeEditor';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRightCircle, CheckCircle, RefreshCw, Users } from "lucide-react";
+import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import pageDataFile from '@/content/pageData.json';
+import { defaultMethodeData, type MethodeData } from '@/data/methodeData';
+import { useContentDraft } from '@/lib/contentDraft';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
+import { usePrivilegedAccess } from '@/lib/authAccess';
+import { sanitizeMethodeData } from '@/lib/pageDataSanitizer';
 
-const steps = [
-  {
-    title: "Vérification des enjeux",
-    description: "Clarifier le périmètre du plan stratégique, ses objectifs et le calendrier global (12 à 18 mois).",
-  },
-  {
-    title: "Réalisation du diagnostic",
-    description: "Recueillir données et perceptions pour dresser un état des lieux partagé.",
-  },
-  {
-    title: "Analyse des résultats",
-    description: "Identifier les points d'appui et les besoins prioritaires mis en lumière par le diagnostic.",
-  },
-  {
-    title: "Identification des axes & options",
-    description: "Structurer les grandes orientations qui guideront le plan stratégique.",
-  },
-  {
-    title: "Plan d'action détaillé",
-    description: "Construire les actions, jalons et indicateurs rattachés à chaque axe.",
-  },
-  {
-    title: "Mise en œuvre, suivi & pilotage continu",
-    description:
-      "Déployer les actions, en suivre l'avancement et ajuster en continu grâce aux retours du terrain et aux instances de gouvernance.",
-  },
-];
+const fallbackMethodePageData = {
+  ...pageDataFile,
+  methodeData:
+    (pageDataFile as { methodeData?: MethodeData }).methodeData || defaultMethodeData,
+};
 
 const Methode = () => {
+  const publishedData = usePublishedPageData(fallbackMethodePageData);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', publishedData);
+  const { isPrivileged, showEditorControls } = usePrivilegedAccess();
+
+  const methodeData = React.useMemo<MethodeData>(() => {
+    const raw = (pageData as { methodeData?: unknown })?.methodeData || defaultMethodeData;
+    const sanitized = sanitizeMethodeData(raw) as Partial<MethodeData> | undefined;
+    return {
+      ...defaultMethodeData,
+      ...(sanitized || {}),
+      steps: sanitized?.steps ?? defaultMethodeData.steps,
+      commissionCard: {
+        ...defaultMethodeData.commissionCard,
+        ...(sanitized?.commissionCard || {}),
+      },
+      validationCard: {
+        ...defaultMethodeData.validationCard,
+        ...(sanitized?.validationCard || {}),
+      },
+    };
+  }, [pageData]);
+
+  const handleMethodeChange = (nextMethodeData: MethodeData) => {
+    if (!isPrivileged || !showEditorControls) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem('lfjp-admin-page-data-draft');
+      let currentDraft: Record<string, unknown> = {};
+      if (raw) {
+        try {
+          currentDraft = JSON.parse(raw) || {};
+        } catch {
+          currentDraft = {};
+        }
+      }
+      const merged = {
+        ...currentDraft,
+        methodeData: nextMethodeData,
+      };
+      window.localStorage.setItem('lfjp-admin-page-data-draft', JSON.stringify(merged));
+      window.dispatchEvent(
+        new CustomEvent('lfjp_page_data_changed', {
+          detail: { methodeData: nextMethodeData },
+        })
+      );
+      window.dispatchEvent(new Event('storage'));
+      if (window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage(
+            { type: 'lfjp_methode_data_updated', methodeData: nextMethodeData },
+            '*'
+          );
+        } catch {
+          // ignore
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save Methode draft', err);
+    }
+  };
+
+  const keyMetrics = Array.isArray(methodeData.keyMetrics) ? methodeData.keyMetrics : [];
+  const chartItems = Array.isArray(methodeData.chartItems) ? methodeData.chartItems : [];
+
   return (
     <div className="min-h-screen flex flex-col font-raleway bg-white">
       <Navbar showLogo={true} />
       <Hero
-        title="Démarche de réalisation du PSD"
-        subtitle="Une méthode éprouvée et participative pour le Lycée Français Jacques Prévert"
+        title={methodeData.heroTitle}
+        subtitle={methodeData.heroSubtitle}
       />
+
+      {isPrivileged && showEditorControls && (
+        <AdminMethodeEditor methodeData={methodeData} onChange={handleMethodeChange} />
+      )}
 
       <main className="flex-1">
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-6 space-y-10">
             <div className="text-center max-w-3xl mx-auto space-y-4">
               <p className="text-sm uppercase tracking-[0.2em] text-french-blue font-semibold">
-                Démarche
+                {methodeData.stepsEyebrow}
               </p>
               <h2 className="text-3xl md:text-4xl font-playfair font-bold text-slate-900">
-                6 étapes structurées sur 12 à 18 mois
+                {methodeData.stepsTitle}
               </h2>
               <p className="text-lg text-gray-600">
-                Nous proposons d'emprunter une démarche éprouvée de réalisation de plan stratégique, organisée en
-                étapes successives pour sécuriser les résultats.
+                {methodeData.stepsSubtitle}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {steps.map((step, index) => (
-                <Card key={step.title} className="h-full border border-slate-100 shadow-sm">
+              {methodeData.steps.map((step, index) => (
+                <Card key={`${step.title}-${index}`} className="h-full border border-slate-100 shadow-sm">
                   <CardContent className="p-6 space-y-3">
                     <div className="flex items-center gap-2 text-french-blue font-semibold">
                       <ArrowRightCircle className="h-5 w-5" />
@@ -81,37 +135,31 @@ const Methode = () => {
               <CardContent className="p-8 space-y-6">
                 <div className="flex items-center gap-3 text-french-blue">
                   <Users className="h-6 w-6" />
-                  <p className="text-sm uppercase tracking-wide font-semibold">Approche participative & inclusive</p>
+                  <p className="text-sm uppercase tracking-wide font-semibold">{methodeData.commissionCard.eyebrow}</p>
                 </div>
                 <h3 className="text-3xl font-playfair font-bold text-slate-900">
-                  Une commission PSD mobilisée avec l'APE
+                  {methodeData.commissionCard.title}
                 </h3>
                 <div className="space-y-4 text-gray-700 leading-relaxed">
-                  <p>
-                    La commission PSD agit au service de l'APE. Un facteur clé de succès est la collaboration de l'ensemble
-                    des parties prenantes : parents, élèves, corps enseignants et partenaires. À chaque étape, l'APE
-                    intervient pour valider les orientations et les livrables.
-                  </p>
-                  <p>
-                    Cette mobilisation collective garantit l'adéquation des propositions aux besoins du terrain et inscrit la
-                    démarche dans une logique de co-construction.
-                  </p>
+                  {methodeData.commissionCard.paragraphs.map((paragraph, pIdx) => (
+                    <p key={`comm-par-${pIdx}`}>{paragraph}</p>
+                  ))}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   <div className="p-4 rounded-lg bg-blue-50 text-french-blue border border-blue-100 space-y-2">
-                    <p className="text-sm font-semibold uppercase tracking-wide">Rôle de la commission</p>
+                    <p className="text-sm font-semibold uppercase tracking-wide">{methodeData.commissionCard.roleBoxTitle}</p>
                     <ul className="list-disc list-inside space-y-1 text-sm text-french-blue/90">
-                      <li>Coordonner l'avancement du plan.</li>
-                      <li>Garantir l'inclusivité des échanges.</li>
-                      <li>S'assurer de la cohérence avec les enjeux identifiés.</li>
+                      {methodeData.commissionCard.roleItems.map((item, rIdx) => (
+                        <li key={`role-item-${rIdx}`}>{item}</li>
+                      ))}
                     </ul>
                   </div>
                   <div className="p-4 rounded-lg bg-green-50 text-emerald-800 border border-green-100 space-y-2">
-                    <p className="text-sm font-semibold uppercase tracking-wide">Validation APE</p>
+                    <p className="text-sm font-semibold uppercase tracking-wide">{methodeData.commissionCard.validationBoxTitle}</p>
                     <ul className="list-disc list-inside space-y-1 text-sm text-emerald-700">
-                      <li>Propositions à partir des idées et sondages.</li>
-                      <li>Validation itérative des axes et actions.</li>
-                      <li>Sollicitation régulière pour maintenir l'alignement.</li>
+                      {methodeData.commissionCard.validationItems.map((item, vIdx) => (
+                        <li key={`val-item-${vIdx}`}>{item}</li>
+                      ))}
                     </ul>
                   </div>
                 </div>
@@ -122,39 +170,74 @@ const Methode = () => {
               <CardContent className="p-8 space-y-6 h-full flex flex-col">
                 <div className="flex items-center gap-3 text-french-blue">
                   <RefreshCw className="h-6 w-6" />
-                  <p className="text-sm uppercase tracking-wide font-semibold">Cycle de validation</p>
+                  <p className="text-sm uppercase tracking-wide font-semibold">{methodeData.validationCard.eyebrow}</p>
                 </div>
-                <h3 className="text-3xl font-playfair font-bold text-slate-900">Des boucles de validation régulières</h3>
+                <h3 className="text-3xl font-playfair font-bold text-slate-900">{methodeData.validationCard.title}</h3>
                 <div className="space-y-4 text-gray-700 leading-relaxed">
-                  <p>
-                    Chaque étape de la démarche est soumise à validation : la commission PSD s'appuie sur les idées issues
-                    des sondages et des groupes de travail pour formuler des propositions, présentées ensuite à l'APE.
-                  </p>
-                  <p>
-                    En cas de besoin d'ajustement, un nouveau cycle d'aller-retour est enclenché jusqu'à validation. Cette
-                    boucle garantit que la feuille de route finale soit partagée et réaliste.
-                  </p>
+                  {methodeData.validationCard.paragraphs.map((paragraph, pIdx) => (
+                    <p key={`val-par-${pIdx}`}>{paragraph}</p>
+                  ))}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto">
-                  <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 mt-1" />
-                    <div>
-                      <p className="font-semibold text-slate-900">Feuille de route validée</p>
-                      <p className="text-sm text-gray-600">Une fois validée, la mise en œuvre démarre immédiatement.</p>
+                  {methodeData.validationCard.highlights.map((hl, hIdx) => (
+                    <div key={`hl-item-${hIdx}`} className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                      <CheckCircle className="h-5 w-5 text-emerald-600 mt-1 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-slate-900">{hl.title}</p>
+                        <p className="text-sm text-gray-600">{hl.description}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                    <CheckCircle className="h-5 w-5 text-emerald-600 mt-1" />
-                    <div>
-                      <p className="font-semibold text-slate-900">Plan d'actions mis en œuvre</p>
-                      <p className="text-sm text-gray-600">Le suivi continu garantit l'impact et la pertinence des actions.</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
           </div>
         </section>
+
+        {methodeData.showMetricsOnPage && (keyMetrics.length > 0 || chartItems.length > 0) && (
+          <ErrorBoundary compact sectionName="Indicateurs Méthode">
+            <section className="py-12 bg-gray-50 border-t border-slate-100">
+              <div className="container mx-auto px-6 space-y-8">
+                <h2 className="text-3xl font-playfair font-bold text-slate-900 text-center">
+                  {methodeData.metricsSectionTitle || 'Indicateurs clés de la démarche'}
+                </h2>
+                {keyMetrics.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {keyMetrics.map((km, idx) => (
+                      <Card key={`meth-pub-km-${idx}`} className="border border-slate-100 shadow-sm">
+                        <CardContent className="p-6">
+                          <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{km.label}</p>
+                          <p className="text-3xl font-playfair font-bold text-french-blue mt-1">{km.value}</p>
+                          {km.note && <p className="text-sm text-gray-600 mt-1">{km.note}</p>}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+                {chartItems.length > 0 && (
+                  <Card className="border border-slate-100 shadow-sm">
+                    <CardContent className="p-6">
+                      {methodeData.chartTitle && (
+                        <h3 className="text-lg font-playfair font-bold text-slate-900 mb-4">{methodeData.chartTitle}</h3>
+                      )}
+                      <div className="h-[260px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartItems} margin={{ top: 10, right: 20, left: 0, bottom: 8 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                            <YAxis tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Bar dataKey="value" name="Avancement (%)" fill="#005BAC" radius={[6, 6, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </section>
+          </ErrorBoundary>
+        )}
       </main>
 
       <Footer />

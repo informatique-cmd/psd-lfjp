@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import pageDataFile from '@/content/pageData.json';
 import { psdTimelineData } from '@/data/psdTimelineData';
 import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
+import { slugifyActionSegment } from '@/data/actionPageData';
 import { useContentDraft } from '@/lib/contentDraft';
 import { usePublishedPageData } from '@/lib/publishedDataSync';
 import { Link } from 'react-router-dom';
@@ -279,13 +280,16 @@ const PSDAxe1 = () => {
     ? actions
     : (axisOverview.actionSections || []).map((sec) => ({
         title: sec.title,
-        items: (sec.items || []).map((it) => ({
-          content: <strong>{it.label}</strong>,
-          link: it.link || undefined,
-          linkAriaLabel: `En savoir plus – ${it.label}`,
-          linkIcon: (it.link && iconByLink[it.link]) || GraduationCap,
-          highlight: it.highlight,
-        })),
+        items: (sec.items || []).map((it) => {
+          const resolvedLink = it.link?.trim() || `/actions/${slugifyActionSegment(it.label)}`;
+          return {
+            content: <strong>{it.label}</strong>,
+            link: resolvedLink,
+            linkAriaLabel: `En savoir plus – ${it.label}`,
+            linkIcon: iconByLink[resolvedLink] || GraduationCap,
+            highlight: it.highlight,
+          };
+        }),
       }));
 
   return (

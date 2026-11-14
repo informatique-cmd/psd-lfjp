@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import pageDataFile from '@/content/pageData.json';
 import { psdTimelineData } from '@/data/psdTimelineData';
 import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
+import { slugifyActionSegment } from '@/data/actionPageData';
 import { useContentDraft } from '@/lib/contentDraft';
 import { usePublishedPageData } from '@/lib/publishedDataSync';
 import { GraduationCap, HandCoins, Laptop, Wifi, ChevronDown } from 'lucide-react';
@@ -310,12 +311,15 @@ const PSDAxe3 = () => {
     ? actionSections
     : (axisOverview.actionSections || []).map((sec) => ({
         title: sec.title,
-        items: (sec.items || []).map((it) => ({
-          content: <strong>{it.label}</strong>,
-          link: it.link || undefined,
-          linkAriaLabel: `En savoir plus – ${it.label}`,
-          linkIcon: (it.link && iconByLink[it.link]) || GraduationCap,
-        })),
+        items: (sec.items || []).map((it) => {
+          const resolvedLink = it.link?.trim() || `/actions/${slugifyActionSegment(it.label)}`;
+          return {
+            content: <strong>{it.label}</strong>,
+            link: resolvedLink,
+            linkAriaLabel: `En savoir plus – ${it.label}`,
+            linkIcon: iconByLink[resolvedLink] || GraduationCap,
+          };
+        }),
       }));
 
   const effectiveIndicators = !indicatorsModified

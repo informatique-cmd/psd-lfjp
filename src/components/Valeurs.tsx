@@ -1,26 +1,33 @@
-
 import React from 'react';
 import { Heart, Award, Users, Sparkles, Check } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import siteContent from '@/content/siteContent.json';
-import { readContentDraft } from '@/lib/contentDraft';
+import { useContentDraft } from '@/lib/contentDraft';
+import { usePublishedSiteContent } from '@/lib/publishedDataSync';
+import type { VisionMissionsValeursContent } from './AdminVisionValeursEditor';
 
 const Valeurs = () => {
   const icons = [Heart, Award, Users, Sparkles, Check];
-  const values = readContentDraft('lfjp-admin-draft', siteContent).visionMissionsValeurs.values.map((value, index) => ({ ...value, Icon: icons[index] || Check }));
+  const publishedSiteContent = usePublishedSiteContent(siteContent as unknown as Record<string, unknown>);
+  const content = useContentDraft('lfjp-admin-draft', publishedSiteContent) as typeof siteContent & {
+    visionMissionsValeurs: VisionMissionsValeursContent;
+  };
+  const vmv = content?.visionMissionsValeurs || siteContent.visionMissionsValeurs;
+  const rawValues = Array.isArray(vmv.values) ? vmv.values : siteContent.visionMissionsValeurs.values;
+  const values = rawValues.map((value, index) => ({ ...value, Icon: icons[index % icons.length] || Check }));
 
   return (
     <section id="valeurs" className="py-16 md:py-24 bg-white">
       <div className="container mx-auto px-6">
         <h2 className="text-3xl font-playfair font-bold text-french-blue mb-10 flex items-center">
           <span className="mr-2">3.</span>
-          NOS VALEURS
+          {(vmv as VisionMissionsValeursContent).valeursSectionTitle || 'NOS VALEURS'}
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {values.map((value, index) => (
-            <Card 
-              key={index} 
+            <Card
+              key={index}
               className="border-none shadow-lg hover:shadow-xl transition-all duration-300 opacity-0 animate-fade-in"
               style={{ animationDelay: `${index * 0.1}s` }}
             >

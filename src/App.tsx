@@ -64,6 +64,7 @@ import ToutesLesReussites from "./pages/ToutesLesReussites";
 import CelebrationReussitesDiplomes from "./pages/CelebrationReussitesDiplomes";
 import Admin from "./pages/Admin";
 import ManagedPage from "./pages/ManagedPage";
+import ActionDetailPage from "./pages/ActionDetailPage";
 import PageTextEditor from "./components/PageTextEditor";
 import { RouteTracker } from "./lib/navigation";
 
@@ -455,6 +456,13 @@ const App = () => {
                 } />
                 <Route path="/projets/:slug" element={<ProjectDetailPage />} />
                 <Route path="/fiche-projet/:slug" element={<ProjectDetailPage />} />
+                <Route path="/actions/:slug" element={
+                  <>
+                    <BreadcrumbNav />
+                    <ActionDetailPage />
+                    <BackToTop />
+                  </>
+                } />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<ManagedPage />} />
               </Routes>

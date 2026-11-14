@@ -10,7 +10,18 @@ import {
 } from "@/components/ui/breadcrumb";
 import routesData from "@/data/breadcrumbRoutes.json";
 import { Home } from 'lucide-react';
-import { getManagedPages, type ManagedPage } from '@/content/pageTypes';
+import { getManagedPages } from '@/content/pageTypes';
+import pageDataFile from '@/content/pageData.json';
+import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
+import { resolveActionPage, type ActionPagesMap } from '@/data/actionPageData';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
+import { useContentDraft } from '@/lib/contentDraft';
+
+const breadcrumbFallback = {
+  ...pageDataFile,
+  psdAxesData: (pageDataFile as { psdAxesData?: PsdAxesData }).psdAxesData || defaultPsdAxesData,
+  actionPages: (pageDataFile as { actionPages?: ActionPagesMap }).actionPages || {},
+};
 
 interface RouteMap {
   [key: string]: {
@@ -23,6 +34,8 @@ const routes: RouteMap = routesData;
 
 const BreadcrumbNav = () => {
   const managedPages = getManagedPages();
+  const publishedData = usePublishedPageData(breadcrumbFallback);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', publishedData);
   const location = useLocation();
   const pathnames = location.pathname.split('/').filter(x => x);
   
@@ -41,6 +54,20 @@ const BreadcrumbNav = () => {
       name: 'Fiche détaillée du projet',
       parent: '/budget-cadre-vie-infrastructures',
     };
+  }
+
+  if (!currentRoute) {
+    const resolvedAction = resolveActionPage(
+      (pageData?.actionPages as ActionPagesMap) || {},
+      (pageData?.psdAxesData as PsdAxesData) || defaultPsdAxesData,
+      currentPath
+    );
+    if (resolvedAction) {
+      currentRoute = {
+        name: resolvedAction.title,
+        parent: '/plan-strategique',
+      };
+    }
   }
 
   if (!currentRoute) return null;

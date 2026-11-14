@@ -8,8 +8,14 @@ import BackToTop from '@/components/BackToTop';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NotFound from '@/pages/NotFound';
+import ActionDetailPage from '@/pages/ActionDetailPage';
 import { getManagedPages, isValidContentBlock, normalizePageSlug, type ContentBlock, type ManagedPage as ManagedPageData, type TextStyle } from '@/content/pageTypes';
 import { normalizeMediaUrl } from '@/lib/media';
+import pageDataFile from '@/content/pageData.json';
+import { defaultPsdAxesData, type PsdAxesData } from '@/data/psdAxesData';
+import { resolveActionPage, type ActionPagesMap } from '@/data/actionPageData';
+import { usePublishedPageData } from '@/lib/publishedDataSync';
+import { useContentDraft } from '@/lib/contentDraft';
 
 import pagesFile from '@/content/pages.json';
 
@@ -19,6 +25,12 @@ const getPagesList = () => {
   } catch {
     return (pagesFile.pages || []) as ManagedPageData[];
   }
+};
+
+const fallbackBundle = {
+  ...pageDataFile,
+  psdAxesData: (pageDataFile as { psdAxesData?: PsdAxesData }).psdAxesData || defaultPsdAxesData,
+  actionPages: (pageDataFile as { actionPages?: ActionPagesMap }).actionPages || {},
 };
 
 const textStyle = (style?: TextStyle): React.CSSProperties => ({
@@ -73,25 +85,47 @@ const ManagedPage = () => {
   const pathname = normalizePageSlug(location.pathname);
   const draftPages = useMemo(() => getManagedPages(), []);
   const page = draftPages.find((item) => normalizePageSlug(item.slug) === pathname);
-  if (!page) return <NotFound />;
 
-  return (
-    <div className="min-h-screen font-raleway">
-      <Navbar showLogo={true} />
-      <BreadcrumbNav />
-      <main className="container mx-auto px-6 py-12">
-        <Card className="mx-auto max-w-4xl border-none shadow-lg">
-          <CardContent className="space-y-6 p-8 md:p-12">
-            <h1 className="text-4xl font-playfair font-bold text-french-blue md:text-5xl">{page.title}</h1>
-            {page.description && <p className="text-xl text-gray-600">{page.description}</p>}
-            {page.blocks.filter(isValidContentBlock).map((block, index) => <Block key={`${block.type}-${index}`} block={block} />)}
-          </CardContent>
-        </Card>
-      </main>
-      <Footer />
-      <BackToTop />
-    </div>
-  );
+  const publishedData = usePublishedPageData(fallbackBundle);
+  const pageData = useContentDraft('lfjp-admin-page-data-draft', publishedData);
+
+  const matchedActionPage = useMemo(() => {
+    const actionPages = (pageData?.actionPages as ActionPagesMap) || {};
+    const axes = (pageData?.psdAxesData as PsdAxesData) || defaultPsdAxesData;
+    return resolveActionPage(actionPages, axes, pathname);
+  }, [pageData?.actionPages, pageData?.psdAxesData, pathname]);
+
+  if (page) {
+    return (
+      <div className="min-h-screen font-raleway">
+        <Navbar showLogo={true} />
+        <BreadcrumbNav />
+        <main className="container mx-auto px-6 py-12">
+          <Card className="mx-auto max-w-4xl border-none shadow-lg">
+            <CardContent className="space-y-6 p-8 md:p-12">
+              <h1 className="text-4xl font-playfair font-bold text-french-blue md:text-5xl">{page.title}</h1>
+              {page.description && <p className="text-xl text-gray-600">{page.description}</p>}
+              {page.blocks.filter(isValidContentBlock).map((block, index) => <Block key={`${block.type}-${index}`} block={block} />)}
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+        <BackToTop />
+      </div>
+    );
+  }
+
+  if (matchedActionPage) {
+    return (
+      <>
+        <BreadcrumbNav />
+        <ActionDetailPage overrideSlug={pathname} />
+        <BackToTop />
+      </>
+    );
+  }
+
+  return <NotFound />;
 };
 
 export const hasManagedPage = (pathname: string) =>
