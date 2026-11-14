@@ -302,6 +302,11 @@
         "name": "Lycée",
         "value": 23,
         "percentage": 26.4
+      },
+      {
+        "name": "TEST",
+        "value": 15,
+        "percentage": 10
       }
     ],
     "restaurationInterestData": [
@@ -1136,8 +1141,8 @@
     "stats": {
       "totalEleves": 593,
       "partSaly": "49 %",
-      "partPeripherie": "48 %",
-      "partEloignee": "3 %"
+      "partPeripherie": "42 %",
+      "partEloignee": "9 %"
     },
     "circuits": [
       {
