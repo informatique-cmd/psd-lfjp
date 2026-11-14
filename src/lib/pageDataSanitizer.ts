@@ -215,7 +215,8 @@ export const sanitizePsdAxesData = (raw: unknown): Record<string, unknown> | und
             status: typeof ind.status === 'string' && ind.status ? ind.status : 'En cours',
           }))
       : [];
-    out[axisKey] = {
+
+    const nextAxis: Record<string, unknown> = {
       id: axisKey,
       shortTitle: typeof axis.shortTitle === 'string' ? axis.shortTitle : axisKey.toUpperCase(),
       title: typeof axis.title === 'string' ? axis.title : axisKey.toUpperCase(),
@@ -223,6 +224,46 @@ export const sanitizePsdAxesData = (raw: unknown): Record<string, unknown> | und
       budgetMillions: Math.max(0, sanitizeNumberOrFallback(axis.budgetMillions, 0)),
       indicators,
     };
+
+    if (Array.isArray(axis.objectives)) {
+      nextAxis.objectives = axis.objectives
+        .filter((obj) => isRecord(obj))
+        .map((obj) => {
+          const item: Record<string, unknown> = {
+            description: typeof obj.description === 'string' ? obj.description : String(obj.description ?? ''),
+          };
+          if (typeof obj.title === 'string' && obj.title.trim() !== '') {
+            item.title = obj.title;
+          }
+          return item;
+        });
+    }
+
+    if (Array.isArray(axis.actionSections)) {
+      nextAxis.actionSections = axis.actionSections
+        .filter((sec) => isRecord(sec))
+        .map((sec) => ({
+          title: typeof sec.title === 'string' ? sec.title : String(sec.title ?? 'Rubrique'),
+          items: Array.isArray(sec.items)
+            ? sec.items
+                .filter((it) => isRecord(it))
+                .map((it) => {
+                  const row: Record<string, unknown> = {
+                    label: typeof it.label === 'string' ? it.label : String(it.label ?? 'Action'),
+                  };
+                  if (typeof it.link === 'string' && it.link.trim() !== '') {
+                    row.link = it.link;
+                  }
+                  if (it.highlight === true) {
+                    row.highlight = true;
+                  }
+                  return row;
+                })
+            : [],
+        }));
+    }
+
+    out[axisKey] = nextAxis;
   });
   return out;
 };
@@ -670,8 +711,31 @@ export const validatePageDataDetailed = (value: unknown): { valid: boolean; erro
   if (value.transportData !== undefined && !isRecord(value.transportData)) {
     errors.push('transportData : objet attendu.');
   }
-  if (value.psdAxesData !== undefined && !isRecord(value.psdAxesData)) {
-    errors.push('psdAxesData : objet attendu.');
+  if (value.psdAxesData !== undefined) {
+    if (!isRecord(value.psdAxesData)) {
+      errors.push('psdAxesData : objet attendu.');
+    } else {
+      (['axe1', 'axe2', 'axe3', 'axe4'] as const).forEach((axisKey) => {
+        const ax = (value.psdAxesData as Record<string, unknown>)[axisKey];
+        if (ax === undefined) return;
+        if (!isRecord(ax)) {
+          errors.push(`psdAxesData.${axisKey} : objet attendu.`);
+          return;
+        }
+        if (typeof ax.budgetMillions !== 'number' || !Number.isFinite(ax.budgetMillions)) {
+          errors.push(`psdAxesData.${axisKey}.budgetMillions : nombre fini attendu.`);
+        }
+        if (!Array.isArray(ax.indicators)) {
+          errors.push(`psdAxesData.${axisKey}.indicators : tableau attendu.`);
+        }
+        if (ax.objectives !== undefined && !Array.isArray(ax.objectives)) {
+          errors.push(`psdAxesData.${axisKey}.objectives : tableau attendu.`);
+        }
+        if (ax.actionSections !== undefined && !Array.isArray(ax.actionSections)) {
+          errors.push(`psdAxesData.${axisKey}.actionSections : tableau attendu.`);
+        }
+      });
+    }
   }
   if (value.psdSurveyData !== undefined && !isRecord(value.psdSurveyData)) {
     errors.push('psdSurveyData : objet attendu.');

@@ -2870,8 +2870,33 @@ const Admin = () => {
 
   const getEditablePsdAxesData = (): PsdAxesData => {
     const raw = getEditablePageData().psdAxesData;
-    const sanitized = sanitizePsdAxesData(raw || defaultPsdAxesData);
-    return (sanitized || defaultPsdAxesData) as PsdAxesData;
+    const sanitized = (sanitizePsdAxesData(raw || defaultPsdAxesData) || {}) as Partial<PsdAxesData>;
+    return {
+      axe1: {
+        ...defaultPsdAxesData.axe1,
+        ...(sanitized.axe1 || {}),
+        objectives: sanitized.axe1?.objectives ?? defaultPsdAxesData.axe1.objectives,
+        actionSections: sanitized.axe1?.actionSections ?? defaultPsdAxesData.axe1.actionSections,
+      },
+      axe2: {
+        ...defaultPsdAxesData.axe2,
+        ...(sanitized.axe2 || {}),
+        objectives: sanitized.axe2?.objectives ?? defaultPsdAxesData.axe2.objectives,
+        actionSections: sanitized.axe2?.actionSections ?? defaultPsdAxesData.axe2.actionSections,
+      },
+      axe3: {
+        ...defaultPsdAxesData.axe3,
+        ...(sanitized.axe3 || {}),
+        objectives: sanitized.axe3?.objectives ?? defaultPsdAxesData.axe3.objectives,
+        actionSections: sanitized.axe3?.actionSections ?? defaultPsdAxesData.axe3.actionSections,
+      },
+      axe4: {
+        ...defaultPsdAxesData.axe4,
+        ...(sanitized.axe4 || {}),
+        objectives: sanitized.axe4?.objectives ?? defaultPsdAxesData.axe4.objectives,
+        actionSections: sanitized.axe4?.actionSections ?? defaultPsdAxesData.axe4.actionSections,
+      },
+    };
   };
 
   const updatePsdAxisField = (

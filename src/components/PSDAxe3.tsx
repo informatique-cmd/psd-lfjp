@@ -268,6 +268,56 @@ const PSDAxe3 = () => {
     JSON.stringify(axisOverview.indicators || []) !==
     JSON.stringify(defaultPsdAxesData.axe3.indicators);
 
+  const objectivesModified =
+    axisOverview.objectives !== undefined &&
+    JSON.stringify(axisOverview.objectives) !==
+      JSON.stringify(defaultPsdAxesData.axe3.objectives);
+
+  const actionsModified =
+    axisOverview.actionSections !== undefined &&
+    JSON.stringify(axisOverview.actionSections) !==
+      JSON.stringify(defaultPsdAxesData.axe3.actionSections);
+
+  const iconByLink: Record<string, typeof Laptop> = {
+    '/classe-numerique': Laptop,
+    '/plan-maintenance-strategique#informatique': Laptop,
+    '/pc-par-lyceen': Laptop,
+    '/curriculum-numerique-spiralaire': GraduationCap,
+    '/introduction-au-code': GraduationCap,
+    '/module-ia': GraduationCap,
+    '/education-numerique-citoyen': GraduationCap,
+    '/connectivite-2-0': Wifi,
+    '/profil-digital-lfjp': Laptop,
+    '/laboratoire-numerique': Laptop,
+    '/mecenat-numerique': HandCoins,
+  };
+
+  const effectiveObjectifs = !objectivesModified
+    ? objectifs
+    : (axisOverview.objectives || []).length === 0
+      ? [{ content: <span className="italic text-slate-500">Aucun objectif défini pour cet axe.</span> }]
+      : (axisOverview.objectives || []).map((obj) => ({
+          content: obj.title ? (
+            <>
+              <strong>{obj.title}</strong> : {obj.description}
+            </>
+          ) : (
+            <>{obj.description}</>
+          ),
+        }));
+
+  const effectiveActionSections = !actionsModified
+    ? actionSections
+    : (axisOverview.actionSections || []).map((sec) => ({
+        title: sec.title,
+        items: (sec.items || []).map((it) => ({
+          content: <strong>{it.label}</strong>,
+          link: it.link || undefined,
+          linkAriaLabel: `En savoir plus – ${it.label}`,
+          linkIcon: (it.link && iconByLink[it.link]) || GraduationCap,
+        })),
+      }));
+
   const effectiveIndicators = !indicatorsModified
     ? indicators
     : (axisOverview.indicators || []).length === 0
@@ -287,8 +337,8 @@ const PSDAxe3 = () => {
       title={axisOverview.title}
       subtitle={axisOverview.subtitle}
       timeline={timelineContent}
-      objectifs={objectifs}
-      actionSections={actionSections}
+      objectifs={effectiveObjectifs}
+      actionSections={effectiveActionSections}
       indicators={effectiveIndicators}
     />
   );

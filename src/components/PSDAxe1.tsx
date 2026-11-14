@@ -233,6 +233,61 @@ const PSDAxe1 = () => {
     JSON.stringify(axisOverview.indicators || []) !==
     JSON.stringify(defaultPsdAxesData.axe1.indicators);
 
+  const objectivesModified =
+    axisOverview.objectives !== undefined &&
+    JSON.stringify(axisOverview.objectives) !==
+      JSON.stringify(defaultPsdAxesData.axe1.objectives);
+
+  const actionsModified =
+    axisOverview.actionSections !== undefined &&
+    JSON.stringify(axisOverview.actionSections) !==
+      JSON.stringify(defaultPsdAxesData.axe1.actionSections);
+
+  const iconByLink: Record<string, typeof GraduationCap> = {
+    '/climatisation-durable': Sun,
+    '/construction-cantine': Utensils,
+    '/plan-maintenance-strategique': Hammer,
+    '/politique-e3d': Leaf,
+    '/couverture-terrain-sport': Building,
+    '/transport-scolaire': BusFront,
+    '/budget-cadre-vie-infrastructures': BarChart3,
+    '/parcours-sante': HeartPulse,
+    '/protocole-phare': ShieldCheck,
+    '/mediation-entre-pairs': Handshake,
+    '/projet-eps': GraduationCap,
+    '/savoir-rouler': Bike,
+    '/savoir-nager': LifeBuoy,
+    '/parentalite-coeducation': HeartHandshake,
+    '/expression-participation': Users2,
+  };
+
+  const effectiveObjectifs = !objectivesModified
+    ? objectifs
+    : (axisOverview.objectives || []).length === 0
+      ? [{ content: <span className="italic text-slate-500">Aucun objectif défini pour cet axe.</span> }]
+      : (axisOverview.objectives || []).map((obj) => ({
+          content: obj.title ? (
+            <>
+              <strong>{obj.title}</strong> : {obj.description}
+            </>
+          ) : (
+            <>{obj.description}</>
+          ),
+        }));
+
+  const effectiveActions: ActionSection[] = !actionsModified
+    ? actions
+    : (axisOverview.actionSections || []).map((sec) => ({
+        title: sec.title,
+        items: (sec.items || []).map((it) => ({
+          content: <strong>{it.label}</strong>,
+          link: it.link || undefined,
+          linkAriaLabel: `En savoir plus – ${it.label}`,
+          linkIcon: (it.link && iconByLink[it.link]) || GraduationCap,
+          highlight: it.highlight,
+        })),
+      }));
+
   return (
     <div>
       <h3 className="text-xl font-playfair font-bold text-french-blue mb-4">
@@ -331,7 +386,7 @@ const PSDAxe1 = () => {
         >
           <h4 className="mb-3 text-lg font-semibold text-slate-900">Objectifs détaillés</h4>
           <ul className="list-disc space-y-2 pl-5 text-gray-700 font-raleway">
-            {objectifs.map((item, index) => (
+            {effectiveObjectifs.map((item, index) => (
               <li key={index}>{item.content}</li>
             ))}
           </ul>
@@ -340,7 +395,9 @@ const PSDAxe1 = () => {
         <div id="details-actions" className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h4 className="mb-3 text-lg font-semibold text-slate-900">Rubriques détaillées</h4>
           <ul className="space-y-6 font-raleway">
-            {actions.map((section, sectionIndex) => (
+            {effectiveActions.length === 0 ? (
+              <li className="italic text-slate-500">Aucune rubrique définie pour cet axe.</li>
+            ) : effectiveActions.map((section, sectionIndex) => (
               <li key={sectionIndex} className="space-y-2">
                 <h5 className="text-base font-semibold text-french-blue">{section.title}</h5>
                 <ul className="space-y-2 list-disc list-outside pl-6 marker:text-slate-400">

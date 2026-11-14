@@ -265,6 +265,58 @@ const PSDAxe2 = () => {
     JSON.stringify(axisOverview.indicators || []) !==
     JSON.stringify(defaultPsdAxesData.axe2.indicators);
 
+  const objectivesModified =
+    axisOverview.objectives !== undefined &&
+    JSON.stringify(axisOverview.objectives) !==
+      JSON.stringify(defaultPsdAxesData.axe2.objectives);
+
+  const actionsModified =
+    axisOverview.actionSections !== undefined &&
+    JSON.stringify(axisOverview.actionSections) !==
+      JSON.stringify(defaultPsdAxesData.axe2.actionSections);
+
+  const iconByLink: Record<string, typeof Globe2> = {
+    '/section-internationale-bfi': Globe2,
+    '/dnbi': Globe2,
+    '/bfi': Globe2,
+    'https://psd-lfjp.netlify.app/mediation-entre-pairs': Handshake,
+    '/parcours-education-artistique-culturelle': Palette,
+    '/semaine-des-cultures': Palette,
+    '/voyages-scolaires-internationaux-sejours-locaux': Globe2,
+    '/jumelages-partages-projets-collaboratifs': Handshake,
+    '/echanges-scolaires-adn-aefe': Globe2,
+  };
+
+  const effectiveObjectifs = !objectivesModified
+    ? objectifs
+    : (axisOverview.objectives || []).length === 0
+      ? [{ content: <span className="italic text-slate-500">Aucun objectif défini pour cet axe.</span> }]
+      : (axisOverview.objectives || []).map((obj) => ({
+          content: obj.title ? (
+            <>
+              <strong>{obj.title}</strong> : {obj.description}
+            </>
+          ) : (
+            <>{obj.description}</>
+          ),
+        }));
+
+  const effectiveActionSections = !actionsModified
+    ? actionSections
+    : (axisOverview.actionSections || []).map((sec) => ({
+        title: sec.title,
+        items: (sec.items || []).map((it) => ({
+          content: (
+            <span>
+              <strong>{it.label}</strong>
+            </span>
+          ),
+          link: it.link || undefined,
+          linkAriaLabel: `En savoir plus – ${it.label}`,
+          linkIcon: (it.link && iconByLink[it.link]) || Globe2,
+        })),
+      }));
+
   const effectiveIndicators = !indicatorsModified
     ? indicators
     : (axisOverview.indicators || []).length === 0
@@ -285,8 +337,8 @@ const PSDAxe2 = () => {
       title={axisOverview.title}
       subtitle={axisOverview.subtitle}
       timeline={timelineContent}
-      objectifs={objectifs}
-      actionSections={actionSections}
+      objectifs={effectiveObjectifs}
+      actionSections={effectiveActionSections}
       indicators={effectiveIndicators}
     />
   );
