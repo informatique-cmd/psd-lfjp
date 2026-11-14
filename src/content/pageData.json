@@ -337,8 +337,8 @@
       },
       {
         "name": "À la maison et un repas préparé",
-        "value": 1,
-        "percentage": 1.3
+        "value": 1.3,
+        "percentage": 10
       }
     ],
     "serviceInterestByDayData": [
@@ -687,15 +687,15 @@
           "name": "Lycée",
           "value": 33,
           "label": "Appréciation positive des bâtiments",
-          "average": 75,
-          "trend": "down"
+          "trend": "down",
+          "average": 75
         },
         {
           "name": "Élémentaire",
           "value": 84.8,
           "label": "Appréciation positive des bâtiments",
-          "average": 75,
-          "trend": "up"
+          "trend": "up",
+          "average": 75
         }
       ],
       "secondary": [
@@ -726,22 +726,22 @@
           "name": "Relations élèves-enseignants",
           "value": 81.7,
           "label": "de satisfaction au lycée",
-          "average": 87.5,
-          "trend": "down"
+          "trend": "down",
+          "average": 87.5
         },
         {
           "name": "Relations avec autres adultes",
           "value": 97.4,
           "label": "de satisfaction au lycée",
-          "average": 90,
-          "trend": "up"
+          "trend": "up",
+          "average": 90
         },
         {
           "name": "Relations avec vie scolaire",
           "value": 90.4,
           "label": "de satisfaction au lycée",
-          "average": 85,
-          "trend": "up"
+          "trend": "up",
+          "average": 85
         }
       ],
       "secondary": [
@@ -766,8 +766,8 @@
           "name": "Intérêt des apprentissages",
           "value": 66.1,
           "label": "au lycée",
-          "average": 72,
-          "trend": "down"
+          "trend": "down",
+          "average": 72
         },
         {
           "name": "Encouragement des enseignants",
@@ -792,8 +792,8 @@
           "name": "Absentéisme lié à la violence",
           "value": 9.6,
           "label": "des élèves",
-          "average": 15,
-          "trend": "down"
+          "trend": "down",
+          "average": 15
         },
         {
           "name": "Multivictimation",
@@ -818,426 +818,6 @@
       ]
     }
   },
-  "budgetData": {
-    "summaryCards": {
-      "totalInvestment": 775000000,
-      "fundingGap": 89860582,
-      "estimatedCapacity": 685139418
-    },
-    "projects": [
-      {
-        "id": "proj-clim",
-        "title": "Climatisation (phases 2 & 3)",
-        "name": "Climatisation (phases 2 & 3)",
-        "category": "equipment",
-        "description": "Déploiement progressif sur les bâtiments restants",
-        "period": "2026 – 2027",
-        "budget": 60000000,
-        "totalCost": 60000000,
-        "startYear": 2026,
-        "durationYears": 2,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 30000000,
-        "variableMax": 90000000,
-        "color": "from-sky-100 to-sky-50",
-        "link": "/climatisation-durable",
-        "showLink": true
-      },
-      {
-        "id": "proj-sport-couv",
-        "title": "Couverture terrain de sport",
-        "name": "Couverture terrain de sport",
-        "category": "infra",
-        "description": "Protection solaire et confort thermique pour les cours d’EPS et compétitions",
-        "period": "2026",
-        "budget": 75000000,
-        "totalCost": 75000000,
-        "startYear": 2026,
-        "durationYears": 1,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 60000000,
-        "variableMax": 90000000,
-        "color": "from-amber-100 to-orange-50",
-        "link": "/couverture-terrain-sport",
-        "showLink": true
-      },
-      {
-        "id": "proj-foncier",
-        "title": "Acquisition terrain & réserve foncière",
-        "name": "Acquisition terrain",
-        "category": "land",
-        "description": "Réserve foncière pour extensions futures et aménagements extérieurs",
-        "period": "2026 – 2027",
-        "budget": 60000000,
-        "totalCost": 60000000,
-        "startYear": 2026,
-        "durationYears": 2,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 50000000,
-        "variableMax": 80000000,
-        "color": "from-lime-100 to-emerald-50",
-        "link": "/projets/acquisition-terrain",
-        "showLink": false
-      },
-      {
-        "id": "proj-cantine",
-        "title": "Restauration scolaire & Cantine",
-        "name": "Restauration scolaire",
-        "category": "infra",
-        "description": "Montée en charge cuisine, réfectoire & self-service pour 450 repas/jour",
-        "period": "2027 – 2029",
-        "budget": 200000000,
-        "totalCost": 200000000,
-        "startYear": 2027,
-        "durationYears": 3,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 150000000,
-        "variableMax": 250000000,
-        "color": "from-orange-100 to-amber-50",
-        "link": "/construction-cantine",
-        "showLink": true
-      },
-      {
-        "id": "proj-solaire",
-        "title": "Solaire terrain de sport",
-        "name": "Solaire terrain de sport",
-        "category": "equipment",
-        "description": "Installation photovoltaïque complémentaire pour l’autoconsommation énergétique",
-        "period": "2028 – 2029",
-        "budget": 55000000,
-        "totalCost": 55000000,
-        "startYear": 2028,
-        "durationYears": 2,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 45000000,
-        "variableMax": 65000000,
-        "color": "from-emerald-100 to-emerald-50",
-        "link": "/projets/solaire-terrain-de-sport",
-        "showLink": false
-      },
-      {
-        "id": "proj-piscine",
-        "title": "Piscine",
-        "name": "Piscine",
-        "category": "infra",
-        "description": "Réhabilitation et sécurisation du bassin pour le parcours Savoir-nager",
-        "period": "2028 – 2029",
-        "budget": 125000000,
-        "totalCost": 125000000,
-        "startYear": 2028,
-        "durationYears": 2,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 100000000,
-        "variableMax": 150000000,
-        "color": "from-sky-100 to-blue-50",
-        "link": "/projets/piscine",
-        "showLink": false
-      },
-      {
-        "id": "proj-extension",
-        "title": "Projet d’extension phase 1",
-        "name": "Projet d’extension phase 1",
-        "category": "infra",
-        "description": "Création de nouvelles surfaces pédagogiques, salles de cours et laboratoires",
-        "period": "2030",
-        "budget": 200000000,
-        "totalCost": 200000000,
-        "startYear": 2030,
-        "durationYears": 1,
-        "isActive": true,
-        "isVariable": true,
-        "variableMin": 150000000,
-        "variableMax": 250000000,
-        "color": "from-indigo-100 to-indigo-50",
-        "link": "/projets/projet-extension-phase-1",
-        "showLink": false
-      }
-    ],
-    "financialTimeline": [
-      {
-        "year": 2026,
-        "capacite": 43000000,
-        "leviers": 64969911,
-        "recettesTotales": 107969911,
-        "depenses": 135000000,
-        "solde": -27030089
-      },
-      {
-        "year": 2027,
-        "capacite": 37000000,
-        "leviers": 70042377,
-        "recettesTotales": 107042377,
-        "depenses": 126666667,
-        "solde": -19624290
-      },
-      {
-        "year": 2028,
-        "capacite": 62000000,
-        "leviers": 70042377,
-        "recettesTotales": 132042377,
-        "depenses": 156666667,
-        "solde": -24624290
-      },
-      {
-        "year": 2029,
-        "capacite": 54000001,
-        "leviers": 70042377,
-        "recettesTotales": 124042378,
-        "depenses": 156666667,
-        "solde": -32624289
-      },
-      {
-        "year": 2030,
-        "capacite": 54000000,
-        "leviers": 70042377,
-        "recettesTotales": 124042377,
-        "depenses": 200000000,
-        "solde": -75957623
-      }
-    ],
-    "tuitionSimulations": [
-      {
-        "year": 2026,
-        "increase": 5.4,
-        "revenue": 64969911
-      },
-      {
-        "year": 2027,
-        "increase": 0.4,
-        "revenue": 70042377
-      },
-      {
-        "year": 2028,
-        "increase": 0,
-        "revenue": 70042377
-      },
-      {
-        "year": 2029,
-        "increase": 0,
-        "revenue": 70042377
-      },
-      {
-        "year": 2030,
-        "increase": 0,
-        "revenue": 70042377
-      }
-    ],
-    "projectSchedule": [
-      {
-        "project": "Climatisation (phases 2 & 3)",
-        "start": 2026,
-        "end": 2027,
-        "annualSpend": {
-          "2026": 30000000,
-          "2027": 30000000
-        }
-      },
-      {
-        "project": "Couverture terrain de sport",
-        "start": 2026,
-        "end": 2026,
-        "annualSpend": {
-          "2026": 75000000
-        }
-      },
-      {
-        "project": "Acquisition terrain",
-        "start": 2026,
-        "end": 2027,
-        "annualSpend": {
-          "2026": 30000000,
-          "2027": 30000000
-        }
-      },
-      {
-        "project": "Restauration scolaire",
-        "start": 2027,
-        "end": 2029,
-        "annualSpend": {
-          "2027": 66666667,
-          "2028": 66666667,
-          "2029": 66666667
-        }
-      },
-      {
-        "project": "Solaire terrain de sport",
-        "start": 2028,
-        "end": 2029,
-        "annualSpend": {
-          "2028": 27500000,
-          "2029": 27500000
-        }
-      },
-      {
-        "project": "Piscine",
-        "start": 2028,
-        "end": 2029,
-        "annualSpend": {
-          "2028": 62500000,
-          "2029": 62500000
-        }
-      },
-      {
-        "project": "Projet d’extension phase 1",
-        "start": 2030,
-        "end": 2030,
-        "annualSpend": {
-          "2030": 200000000
-        }
-      }
-    ],
-    "tuitionBaseRevenue": 1203146500,
-    "cumulativeTuition": 345139419
-  },
-  "transportData": {
-    "communes": [
-      {
-        "ville": "Saly",
-        "total": 291,
-        "part": "49 %"
-      },
-      {
-        "ville": "Ngaparou",
-        "total": 120,
-        "part": "20 %"
-      },
-      {
-        "ville": "Mbour",
-        "total": 99,
-        "part": "17 %"
-      },
-      {
-        "ville": "Somone",
-        "total": 30,
-        "part": "5 %"
-      },
-      {
-        "ville": "Malicounda",
-        "total": 23,
-        "part": "4 %"
-      },
-      {
-        "ville": "Nguerigne",
-        "total": 14,
-        "part": "2 %"
-      },
-      {
-        "ville": "Autres (> 30 km)",
-        "total": 16,
-        "part": "3 %"
-      }
-    ],
-    "stats": {
-      "totalEleves": 593,
-      "partSaly": "49 %",
-      "partPeripherie": "48 %",
-      "partEloignee": "3 %"
-    },
-    "circuits": [
-      {
-        "name": "Ligne 1 : Mbour Centre → Saly → LFJP",
-        "eleves": 99,
-        "arrets": "Rond-Point Total Mbour, Stade Caroline Faye, Croisement Saly, Lycée",
-        "horaireDepart": "07h10"
-      },
-      {
-        "name": "Ligne 2 : Somone → Ngaparou → Nguerigne → LFJP",
-        "eleves": 164,
-        "arrets": "Somone Plage, Mairie Ngaparou, Nguerigne Bambara, Route du Lycée",
-        "horaireDepart": "07h15"
-      },
-      {
-        "name": "Ligne 3 : Saly Port & Résidences → Malicounda → LFJP",
-        "eleves": 65,
-        "arrets": "Saly Port, Golf Club, Saly Joseph, Malicounda Échangeur, Lycée",
-        "horaireDepart": "07h25"
-      }
-    ],
-    "tarifs": [
-      {
-        "zone": "Zone 1 (Saly & proximité immédiate)",
-        "description": "Trajets inférieurs à 5 km",
-        "mensuel": 28000,
-        "annuel": 280000
-      },
-      {
-        "zone": "Zone 2 (Ngaparou / Mbour centre)",
-        "description": "Trajets entre 5 et 12 km",
-        "mensuel": 38000,
-        "annuel": 380000
-      },
-      {
-        "zone": "Zone 3 (Somone / Malicounda / Nguerigne)",
-        "description": "Trajets supérieurs à 12 km",
-        "mensuel": 48000,
-        "annuel": 480000
-      }
-    ],
-    "pointsCles": [
-      "Forte concentration : 91 % des élèves résident à moins de 15 km de l’établissement.",
-      "Sujet secondaire pour 68 % des familles qui privilégient le co-voiturage ou les déplacements individuels.",
-      "Levier d’attractivité ciblé pour les communes de Ngaparou, Somone et la périphérie de Mbour.",
-      "Scénario préconisé : service mutualisé avec bus scolaires sécurisés et accompagnateurs formés."
-    ]
-  },
-  "rubriques": [
-    {
-      "id": "accueil",
-      "name": "Accueil",
-      "path": "/",
-      "badge": "Racine",
-      "description": "Portail d’accueil, hero, chiffres clés, actualités, mots officiels et rubriques phares",
-      "iconName": "Home",
-      "isOfficial": true,
-      "order": 1
-    },
-    {
-      "id": "methode",
-      "name": "Méthode",
-      "path": "/methode",
-      "badge": "Pilier 1",
-      "description": "Démarche participative, calendrier de concertation, comités et méthodologie du PSD",
-      "iconName": "Sliders",
-      "isOfficial": true,
-      "order": 2
-    },
-    {
-      "id": "vision",
-      "name": "Vision, Missions & Valeurs",
-      "path": "/vision-missions-valeurs",
-      "badge": "Pilier 2",
-      "description": "Piliers éducatifs, missions prioritaires et valeurs fondamentales partagées du LFJP",
-      "iconName": "Heart",
-      "isOfficial": true,
-      "order": 3
-    },
-    {
-      "id": "diagnostic",
-      "name": "Diagnostic",
-      "path": "/diagnostic",
-      "badge": "Pilier 3",
-      "description": "Enquête Climat Scolaire (ELCS), restauration scolaire, constats de l’établissement et indicateurs clés",
-      "iconName": "ChartNoAxesCombined",
-      "isOfficial": true,
-      "order": 4
-    },
-    {
-      "id": "plan-strategique",
-      "name": "Plan Stratégique",
-      "path": "/plan-strategique",
-      "badge": "Pilier 4",
-      "description": "Les 4 grands axes prioritaires, jalons temporels, budgets d’investissement et 40+ fiches projets",
-      "iconName": "Target",
-      "isOfficial": true,
-      "order": 5
-    }
-  ],
   "psdAxesData": {
     "axe1": {
       "id": "axe1",
@@ -1394,23 +974,72 @@
       "recommendationRate": 59,
       "recommendationNote": "Taux modéré - Marge d'amélioration",
       "topClasses": [
-        { "name": "1ʳᵉ", "percentage": 24 },
-        { "name": "2ⁿᵈᵉ", "percentage": 21 },
-        { "name": "6ᵉ", "percentage": 19 }
+        {
+          "name": "1ʳᵉ",
+          "percentage": 24
+        },
+        {
+          "name": "2ⁿᵈᵉ",
+          "percentage": 21
+        },
+        {
+          "name": "6ᵉ",
+          "percentage": 19
+        }
       ],
       "qualiteInformation": [
-        { "name": "Sorties & voyages", "score": 2.05, "note": "Maillon le plus faible", "tone": "red" },
-        { "name": "Décisions budgétaires de l'AP", "score": 2.16, "tone": "red" },
-        { "name": "Projets & activités pédagogiques", "score": 2.41, "tone": "amber" },
-        { "name": "Paiement des écolages", "score": 2.45, "tone": "amber" },
-        { "name": "Pronote", "score": 3.18, "note": "Seul canal satisfaisant", "tone": "green" }
+        {
+          "name": "Sorties & voyages",
+          "score": 2.05,
+          "note": "Maillon le plus faible",
+          "tone": "red"
+        },
+        {
+          "name": "Décisions budgétaires de l'AP",
+          "score": 2.16,
+          "tone": "red"
+        },
+        {
+          "name": "Projets & activités pédagogiques",
+          "score": 2.41,
+          "tone": "amber"
+        },
+        {
+          "name": "Paiement des écolages",
+          "score": 2.45,
+          "tone": "amber"
+        },
+        {
+          "name": "Pronote",
+          "score": 3.18,
+          "note": "Seul canal satisfaisant",
+          "tone": "green"
+        }
       ],
       "qualiteInformationConstat": "Besoin de communication proactive et régulière sur les projets, voyages et gestion financière.",
       "installations": [
-        { "name": "Sanitaires", "score": 1.98, "note": "Sujet le plus critique", "tone": "red" },
-        { "name": "Salles de classe", "score": 2.17, "tone": "red" },
-        { "name": "Vestiaires & équipements sportifs", "score": 2.26, "tone": "red" },
-        { "name": "CDI-BCD", "score": 3.49, "note": "Point fort reconnu", "tone": "green" }
+        {
+          "name": "Sanitaires",
+          "score": 1.98,
+          "note": "Sujet le plus critique",
+          "tone": "red"
+        },
+        {
+          "name": "Salles de classe",
+          "score": 2.17,
+          "tone": "red"
+        },
+        {
+          "name": "Vestiaires & équipements sportifs",
+          "score": 2.26,
+          "tone": "red"
+        },
+        {
+          "name": "CDI-BCD",
+          "score": 3.49,
+          "note": "Point fort reconnu",
+          "tone": "green"
+        }
       ],
       "installationsKeywords": [
         "clim/climatisation (25 occurrences)",
@@ -1419,34 +1048,120 @@
         "foot (espaces de jeu)"
       ],
       "offreScolaire": [
-        { "name": "Offre linguistique", "score": 2.6, "tone": "red" },
-        { "name": "Options payantes / périscolaire", "score": 2.66, "tone": "red" },
-        { "name": "Ouverture culturelle", "score": 2.57, "tone": "red" },
-        { "name": "Offre sportive", "score": 3.05, "tone": "green" },
-        { "name": "Enseignement du français", "score": 3.11, "tone": "green" },
-        { "name": "Maths & sciences", "score": 3.34, "tone": "green" }
+        {
+          "name": "Offre linguistique",
+          "score": 2.6,
+          "tone": "red"
+        },
+        {
+          "name": "Options payantes / périscolaire",
+          "score": 2.66,
+          "tone": "red"
+        },
+        {
+          "name": "Ouverture culturelle",
+          "score": 2.57,
+          "tone": "red"
+        },
+        {
+          "name": "Offre sportive",
+          "score": 3.05,
+          "tone": "green"
+        },
+        {
+          "name": "Enseignement du français",
+          "score": 3.11,
+          "tone": "green"
+        },
+        {
+          "name": "Maths & sciences",
+          "score": 3.34,
+          "tone": "green"
+        }
       ],
       "accompagnement": [
-        { "name": "Professeur principal", "score": 3.83, "note": "Relation très favorable", "tone": "green" },
-        { "name": "Surveillants", "score": 3.28, "tone": "green" },
-        { "name": "Vie scolaire", "score": 3.22, "tone": "green" },
-        { "name": "Professeurs du secondaire", "score": 3.08, "tone": "green" }
+        {
+          "name": "Professeur principal",
+          "score": 3.83,
+          "note": "Relation très favorable",
+          "tone": "green"
+        },
+        {
+          "name": "Surveillants",
+          "score": 3.28,
+          "tone": "green"
+        },
+        {
+          "name": "Vie scolaire",
+          "score": 3.22,
+          "tone": "green"
+        },
+        {
+          "name": "Professeurs du secondaire",
+          "score": 3.08,
+          "tone": "green"
+        }
       ],
       "pointsForts": [
-        { "name": "Sport", "score": 3.31, "note": "Dynamisme et implication", "tone": "green" },
-        { "name": "Sciences", "score": 2.97, "tone": "green" },
-        { "name": "Inclusion & ouverture culturelle", "score": 2.8, "tone": "green" },
-        { "name": "Numérique", "score": 2.44, "tone": "amber" },
-        { "name": "Plurilinguisme", "score": 2.36, "tone": "amber" }
+        {
+          "name": "Sport",
+          "score": 3.31,
+          "note": "Dynamisme et implication",
+          "tone": "green"
+        },
+        {
+          "name": "Sciences",
+          "score": 2.97,
+          "tone": "green"
+        },
+        {
+          "name": "Inclusion & ouverture culturelle",
+          "score": 2.8,
+          "tone": "green"
+        },
+        {
+          "name": "Numérique",
+          "score": 2.44,
+          "tone": "amber"
+        },
+        {
+          "name": "Plurilinguisme",
+          "score": 2.36,
+          "tone": "amber"
+        }
       ],
       "pointsFortsConstat": "Le plurilinguisme et le numérique ne sont pas encore identifiés comme de véritables atouts.",
       "priorites": [
-        { "name": "Développer les voyages scolaires", "score": 4.02, "tone": "blue" },
-        { "name": "Climatisation des salles", "score": 3.92, "tone": "blue" },
-        { "name": "Restauration scolaire", "score": 3.81, "tone": "blue" },
-        { "name": "Équipements sportifs", "score": 3.47, "tone": "blue" },
-        { "name": "Développement du plurilinguisme", "score": 3.4, "tone": "blue" },
-        { "name": "Numérique éducatif", "score": 3.29, "tone": "blue" }
+        {
+          "name": "Développer les voyages scolaires",
+          "score": 4.02,
+          "tone": "blue"
+        },
+        {
+          "name": "Climatisation des salles",
+          "score": 3.92,
+          "tone": "blue"
+        },
+        {
+          "name": "Restauration scolaire",
+          "score": 3.81,
+          "tone": "blue"
+        },
+        {
+          "name": "Équipements sportifs",
+          "score": 3.47,
+          "tone": "blue"
+        },
+        {
+          "name": "Développement du plurilinguisme",
+          "score": 3.4,
+          "tone": "blue"
+        },
+        {
+          "name": "Numérique éducatif",
+          "score": 3.29,
+          "tone": "blue"
+        }
       ],
       "prioritesSecondaryNote": "Transport scolaire et garderie matinale restent secondaires (≤ 2,9/5)"
     },
@@ -1456,76 +1171,731 @@
       "recommendationRate": 93,
       "recommendationNote": "Capital de confiance solide à préserver",
       "motifChoix": [
-        { "name": "Continuité du cursus en France", "score": 4.4, "note": "Première raison invoquée", "tone": "blue" },
-        { "name": "Partenariat AEFE", "score": 4.07, "tone": "blue" },
-        { "name": "Langue & culture françaises", "score": 4.04, "tone": "blue" },
-        { "name": "Excellence & qualité de l'enseignement", "score": 3.71, "tone": "blue" },
-        { "name": "Aide apportée à l'enfant", "score": 3.52, "tone": "blue" },
-        { "name": "Frais de scolarité", "score": 2.67, "note": "Coût jugé élevé", "tone": "orange" }
+        {
+          "name": "Continuité du cursus en France",
+          "score": 4.4,
+          "note": "Première raison invoquée",
+          "tone": "blue"
+        },
+        {
+          "name": "Partenariat AEFE",
+          "score": 4.07,
+          "tone": "blue"
+        },
+        {
+          "name": "Langue & culture françaises",
+          "score": 4.04,
+          "tone": "blue"
+        },
+        {
+          "name": "Excellence & qualité de l'enseignement",
+          "score": 3.71,
+          "tone": "blue"
+        },
+        {
+          "name": "Aide apportée à l'enfant",
+          "score": 3.52,
+          "tone": "blue"
+        },
+        {
+          "name": "Frais de scolarité",
+          "score": 2.67,
+          "note": "Coût jugé élevé",
+          "tone": "orange"
+        }
       ],
       "qualiteInformation": [
-        { "name": "Pronote", "score": 4.32, "note": "Outil plébiscité", "tone": "green" },
-        { "name": "Inscriptions", "score": 4.13, "tone": "green" },
-        { "name": "Actualité de l'APE-LFJP", "score": 4.02, "tone": "green" },
-        { "name": "Paiement des écolages", "score": 3.8, "tone": "blue" },
-        { "name": "Projets & activités", "score": 3.79, "tone": "blue" },
-        { "name": "Sorties & voyages", "score": 3.58, "note": "Préavis trop court", "tone": "orange" },
-        { "name": "Options & sections", "score": 3.39, "tone": "orange" }
+        {
+          "name": "Pronote",
+          "score": 4.32,
+          "note": "Outil plébiscité",
+          "tone": "green"
+        },
+        {
+          "name": "Inscriptions",
+          "score": 4.13,
+          "tone": "green"
+        },
+        {
+          "name": "Actualité de l'APE-LFJP",
+          "score": 4.02,
+          "tone": "green"
+        },
+        {
+          "name": "Paiement des écolages",
+          "score": 3.8,
+          "tone": "blue"
+        },
+        {
+          "name": "Projets & activités",
+          "score": 3.79,
+          "tone": "blue"
+        },
+        {
+          "name": "Sorties & voyages",
+          "score": 3.58,
+          "note": "Préavis trop court",
+          "tone": "orange"
+        },
+        {
+          "name": "Options & sections",
+          "score": 3.39,
+          "tone": "orange"
+        }
       ],
       "qualiteInformationConstat": "Information papier ou multi-canal pour toucher ceux qui lisent peu les mails.",
       "installations": [
-        { "name": "Zones circulation externes", "score": 2.41, "note": "Parking et sécurité critiqués", "tone": "red" },
-        { "name": "Équipements sportifs & vestiaires", "score": 2.73, "tone": "orange" },
-        { "name": "Sécurité abords", "score": 2.94, "tone": "orange" },
-        { "name": "Salles de classe", "score": 2.96, "tone": "orange" },
-        { "name": "Sanitaires", "score": 2.98, "tone": "orange" },
-        { "name": "Espaces verts & cour", "score": 3.2, "tone": "blue" },
-        { "name": "CDI/BCD", "score": 3.5, "tone": "green" },
-        { "name": "Circulations internes", "score": 3.59, "tone": "green" }
+        {
+          "name": "Zones circulation externes",
+          "score": 2.41,
+          "note": "Parking et sécurité critiqués",
+          "tone": "red"
+        },
+        {
+          "name": "Équipements sportifs & vestiaires",
+          "score": 2.73,
+          "tone": "orange"
+        },
+        {
+          "name": "Sécurité abords",
+          "score": 2.94,
+          "tone": "orange"
+        },
+        {
+          "name": "Salles de classe",
+          "score": 2.96,
+          "tone": "orange"
+        },
+        {
+          "name": "Sanitaires",
+          "score": 2.98,
+          "tone": "orange"
+        },
+        {
+          "name": "Espaces verts & cour",
+          "score": 3.2,
+          "tone": "blue"
+        },
+        {
+          "name": "CDI/BCD",
+          "score": 3.5,
+          "tone": "green"
+        },
+        {
+          "name": "Circulations internes",
+          "score": 3.59,
+          "tone": "green"
+        }
       ],
       "installationsConstat": "climatisation, parking, chaleur, sanitaires, circulation externe.",
       "offreScolaire": [
-        { "name": "Citoyenneté & valeurs", "score": 3.85, "tone": "green" },
-        { "name": "Enseignement du français", "score": 3.77, "tone": "green" },
-        { "name": "Ouverture culturelle", "score": 3.73, "tone": "green" },
-        { "name": "Maths & sciences", "score": 3.56, "tone": "blue" },
-        { "name": "Offre sportive", "score": 3.34, "tone": "blue" },
-        { "name": "Offre linguistique (global)", "score": 3.22, "tone": "orange" },
-        { "name": "Anglais / espagnol", "score": 3.13, "tone": "orange" },
-        { "name": "Options payantes", "score": 3.04, "tone": "orange" }
+        {
+          "name": "Citoyenneté & valeurs",
+          "score": 3.85,
+          "tone": "green"
+        },
+        {
+          "name": "Enseignement du français",
+          "score": 3.77,
+          "tone": "green"
+        },
+        {
+          "name": "Ouverture culturelle",
+          "score": 3.73,
+          "tone": "green"
+        },
+        {
+          "name": "Maths & sciences",
+          "score": 3.56,
+          "tone": "blue"
+        },
+        {
+          "name": "Offre sportive",
+          "score": 3.34,
+          "tone": "blue"
+        },
+        {
+          "name": "Offre linguistique (global)",
+          "score": 3.22,
+          "tone": "orange"
+        },
+        {
+          "name": "Anglais / espagnol",
+          "score": 3.13,
+          "tone": "orange"
+        },
+        {
+          "name": "Options payantes",
+          "score": 3.04,
+          "tone": "orange"
+        }
       ],
       "offreScolaireConstat": "renforcer l'anglais, besoin de \"native speakers\", optimiser le rapport coût/choix des options.",
       "accompagnement": [
-        { "name": "ASEM (maternelle)", "score": 4.24, "note": "Point fort reconnu", "tone": "green" },
-        { "name": "Professeur des écoles", "score": 3.81, "tone": "green" },
-        { "name": "Professeur principal (secondaire)", "score": 3.72, "tone": "green" },
-        { "name": "Vie scolaire", "score": 3.71, "tone": "green" },
-        { "name": "Professeurs du secondaire", "score": 3.54, "tone": "blue" }
+        {
+          "name": "ASEM (maternelle)",
+          "score": 4.24,
+          "note": "Point fort reconnu",
+          "tone": "green"
+        },
+        {
+          "name": "Professeur des écoles",
+          "score": 3.81,
+          "tone": "green"
+        },
+        {
+          "name": "Professeur principal (secondaire)",
+          "score": 3.72,
+          "tone": "green"
+        },
+        {
+          "name": "Vie scolaire",
+          "score": 3.71,
+          "tone": "green"
+        },
+        {
+          "name": "Professeurs du secondaire",
+          "score": 3.54,
+          "tone": "blue"
+        }
       ],
       "accompagnementConstat": "davantage de soutien en langues et meilleure répartition des évaluations.",
       "pointsForts": [
-        { "name": "Culture française", "score": 3.79, "tone": "emerald" },
-        { "name": "Ouverture culturelle", "score": 3.73, "tone": "emerald" },
-        { "name": "Inclusion", "score": 3.41, "tone": "blue" },
-        { "name": "International", "score": 3.36, "tone": "blue" },
-        { "name": "Sciences", "score": 3.22, "tone": "blue" },
-        { "name": "Numérique", "score": 3.18, "tone": "orange" },
-        { "name": "Sport", "score": 3.15, "tone": "orange" },
-        { "name": "Plurilinguisme", "score": 3.01, "tone": "orange" }
+        {
+          "name": "Culture française",
+          "score": 3.79,
+          "tone": "emerald"
+        },
+        {
+          "name": "Ouverture culturelle",
+          "score": 3.73,
+          "tone": "emerald"
+        },
+        {
+          "name": "Inclusion",
+          "score": 3.41,
+          "tone": "blue"
+        },
+        {
+          "name": "International",
+          "score": 3.36,
+          "tone": "blue"
+        },
+        {
+          "name": "Sciences",
+          "score": 3.22,
+          "tone": "blue"
+        },
+        {
+          "name": "Numérique",
+          "score": 3.18,
+          "tone": "orange"
+        },
+        {
+          "name": "Sport",
+          "score": 3.15,
+          "tone": "orange"
+        },
+        {
+          "name": "Plurilinguisme",
+          "score": 3.01,
+          "tone": "orange"
+        }
       ],
       "pointsFortsConstat": "richesse des événements culturels et taux de réussite aux examens.",
       "priorites": [
-        { "name": "Restauration scolaire", "score": 4.4, "note": "Priorité absolue", "tone": "purple" },
-        { "name": "Climatisation des salles", "score": 4.33, "tone": "purple" },
-        { "name": "Développement du plurilinguisme", "score": 4.24, "tone": "purple" },
-        { "name": "Équipements sportifs", "score": 3.93, "tone": "blue" },
-        { "name": "Numérique éducatif", "score": 3.92, "tone": "blue" },
-        { "name": "Transport scolaire", "score": 3.48, "tone": "blue" }
+        {
+          "name": "Restauration scolaire",
+          "score": 4.4,
+          "note": "Priorité absolue",
+          "tone": "purple"
+        },
+        {
+          "name": "Climatisation des salles",
+          "score": 4.33,
+          "tone": "purple"
+        },
+        {
+          "name": "Développement du plurilinguisme",
+          "score": 4.24,
+          "tone": "purple"
+        },
+        {
+          "name": "Équipements sportifs",
+          "score": 3.93,
+          "tone": "blue"
+        },
+        {
+          "name": "Numérique éducatif",
+          "score": 3.92,
+          "tone": "blue"
+        },
+        {
+          "name": "Transport scolaire",
+          "score": 3.48,
+          "tone": "blue"
+        }
       ],
       "prioritesSecondaires": [
-        { "name": "Garderie matinale", "score": 2.49 },
-        { "name": "Augmentation des effectifs", "score": 2.68 }
+        {
+          "name": "Garderie matinale",
+          "score": 2.49
+        },
+        {
+          "name": "Augmentation des effectifs",
+          "score": 2.68
+        }
       ]
     }
-  }
+  },
+  "budgetData": {
+    "summaryCards": {
+      "totalInvestment": 825000000,
+      "fundingGap": 139860582,
+      "estimatedCapacity": 685139418
+    },
+    "projects": [
+      {
+        "id": "proj-clim",
+        "title": "Climatisation (phases 2 & 3)",
+        "name": "Climatisation (phases 2 & 3)",
+        "category": "equipment",
+        "description": "Déploiement progressif sur les bâtiments restants",
+        "period": "2026 – 2027",
+        "budget": 60000000,
+        "totalCost": 60000000,
+        "startYear": 2026,
+        "durationYears": 2,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 30000000,
+        "variableMax": 90000000,
+        "color": "from-sky-100 to-sky-50",
+        "link": "/climatisation-durable",
+        "showLink": true
+      },
+      {
+        "id": "proj-sport-couv",
+        "title": "Couverture terrain de sport",
+        "name": "Couverture terrain de sport",
+        "category": "infra",
+        "description": "Protection solaire et confort thermique pour les cours d’EPS et compétitions",
+        "period": "2026",
+        "budget": 75000000,
+        "totalCost": 75000000,
+        "startYear": 2026,
+        "durationYears": 1,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 60000000,
+        "variableMax": 90000000,
+        "color": "from-amber-100 to-orange-50",
+        "link": "/couverture-terrain-sport",
+        "showLink": true
+      },
+      {
+        "id": "proj-foncier",
+        "title": "Acquisition terrain & réserve foncière",
+        "name": "Acquisition terrain",
+        "category": "land",
+        "description": "Réserve foncière pour extensions futures et aménagements extérieurs",
+        "period": "2026 – 2027",
+        "budget": 60000000,
+        "totalCost": 60000000,
+        "startYear": 2026,
+        "durationYears": 2,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 50000000,
+        "variableMax": 80000000,
+        "color": "from-lime-100 to-emerald-50",
+        "link": "/projets/acquisition-terrain",
+        "showLink": false
+      },
+      {
+        "id": "proj-cantine",
+        "title": "Restauration scolaire & Cantine",
+        "name": "Restauration scolaire",
+        "category": "infra",
+        "description": "Montée en charge cuisine, réfectoire & self-service pour 450 repas/jour",
+        "period": "2027 – 2029",
+        "budget": 200000000,
+        "totalCost": 200000000,
+        "startYear": 2027,
+        "durationYears": 3,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 150000000,
+        "variableMax": 250000000,
+        "color": "from-orange-100 to-amber-50",
+        "link": "/construction-cantine",
+        "showLink": true
+      },
+      {
+        "id": "proj-solaire",
+        "title": "Solaire terrain de sport",
+        "name": "Solaire terrain de sport",
+        "category": "equipment",
+        "description": "Installation photovoltaïque complémentaire pour l’autoconsommation énergétique",
+        "period": "2028 – 2029",
+        "budget": 55000000,
+        "totalCost": 55000000,
+        "startYear": 2028,
+        "durationYears": 2,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 45000000,
+        "variableMax": 65000000,
+        "color": "from-emerald-100 to-emerald-50",
+        "link": "/projets/solaire-terrain-de-sport",
+        "showLink": false
+      },
+      {
+        "id": "proj-piscine",
+        "title": "Piscine",
+        "name": "Piscine",
+        "category": "infra",
+        "description": "Réhabilitation et sécurisation du bassin pour le parcours Savoir-nager",
+        "period": "2028 – 2029",
+        "budget": 125000000,
+        "totalCost": 125000000,
+        "startYear": 2028,
+        "durationYears": 2,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 100000000,
+        "variableMax": 150000000,
+        "color": "from-sky-100 to-blue-50",
+        "link": "/projets/piscine",
+        "showLink": false
+      },
+      {
+        "id": "proj-extension",
+        "title": "Projet d’extension phase 1",
+        "name": "Projet d’extension phase 1",
+        "category": "infra",
+        "description": "Création de nouvelles surfaces pédagogiques, salles de cours et laboratoires",
+        "period": "2030",
+        "budget": 200000000,
+        "totalCost": 200000000,
+        "startYear": 2030,
+        "durationYears": 1,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 150000000,
+        "variableMax": 250000000,
+        "color": "from-indigo-100 to-indigo-50",
+        "link": "/projets/projet-extension-phase-1",
+        "showLink": false
+      },
+      {
+        "id": "proj-1794662461230",
+        "title": "TESTER",
+        "name": "TESTER",
+        "category": "equipment",
+        "description": "",
+        "period": "2026 – 2028",
+        "budget": 50000000,
+        "totalCost": 50000000,
+        "startYear": 2026,
+        "durationYears": 3,
+        "isActive": true,
+        "isVariable": true,
+        "variableMin": 25000000,
+        "variableMax": 75000000,
+        "color": "from-sky-100 to-sky-50",
+        "link": "/projets/tester",
+        "showLink": true
+      }
+    ],
+    "financialTimeline": [
+      {
+        "year": 2026,
+        "capacite": 43000000,
+        "leviers": 64969911,
+        "recettesTotales": 107969911,
+        "depenses": 151666667,
+        "solde": -43696756
+      },
+      {
+        "year": 2027,
+        "capacite": 37000000,
+        "leviers": 70042377,
+        "recettesTotales": 107042377,
+        "depenses": 143333334,
+        "solde": -36290957
+      },
+      {
+        "year": 2028,
+        "capacite": 62000000,
+        "leviers": 70042377,
+        "recettesTotales": 132042377,
+        "depenses": 173333334,
+        "solde": -41290957
+      },
+      {
+        "year": 2029,
+        "capacite": 54000001,
+        "leviers": 70042377,
+        "recettesTotales": 124042378,
+        "depenses": 156666667,
+        "solde": -32624289
+      },
+      {
+        "year": 2030,
+        "capacite": 54000000,
+        "leviers": 70042377,
+        "recettesTotales": 124042377,
+        "depenses": 200000000,
+        "solde": -75957623
+      }
+    ],
+    "tuitionSimulations": [
+      {
+        "year": 2026,
+        "increase": 5.4,
+        "revenue": 64969911
+      },
+      {
+        "year": 2027,
+        "increase": 0.4,
+        "revenue": 70042377
+      },
+      {
+        "year": 2028,
+        "increase": 0,
+        "revenue": 70042377
+      },
+      {
+        "year": 2029,
+        "increase": 0,
+        "revenue": 70042377
+      },
+      {
+        "year": 2030,
+        "increase": 0,
+        "revenue": 70042377
+      }
+    ],
+    "projectSchedule": [
+      {
+        "project": "Climatisation (phases 2 & 3)",
+        "start": 2026,
+        "end": 2027,
+        "annualSpend": {
+          "2026": 30000000,
+          "2027": 30000000
+        }
+      },
+      {
+        "project": "Couverture terrain de sport",
+        "start": 2026,
+        "end": 2026,
+        "annualSpend": {
+          "2026": 75000000
+        }
+      },
+      {
+        "project": "Acquisition terrain",
+        "start": 2026,
+        "end": 2027,
+        "annualSpend": {
+          "2026": 30000000,
+          "2027": 30000000
+        }
+      },
+      {
+        "project": "Restauration scolaire",
+        "start": 2027,
+        "end": 2029,
+        "annualSpend": {
+          "2027": 66666667,
+          "2028": 66666667,
+          "2029": 66666667
+        }
+      },
+      {
+        "project": "Solaire terrain de sport",
+        "start": 2028,
+        "end": 2029,
+        "annualSpend": {
+          "2028": 27500000,
+          "2029": 27500000
+        }
+      },
+      {
+        "project": "Piscine",
+        "start": 2028,
+        "end": 2029,
+        "annualSpend": {
+          "2028": 62500000,
+          "2029": 62500000
+        }
+      },
+      {
+        "project": "Projet d’extension phase 1",
+        "start": 2030,
+        "end": 2030,
+        "annualSpend": {
+          "2030": 200000000
+        }
+      },
+      {
+        "project": "TESTER",
+        "start": 2026,
+        "end": 2028,
+        "annualSpend": {
+          "2026": 16666667,
+          "2027": 16666667,
+          "2028": 16666667
+        }
+      }
+    ],
+    "tuitionBaseRevenue": 1203146500,
+    "cumulativeTuition": 345139419
+  },
+  "transportData": {
+    "communes": [
+      {
+        "ville": "Saly",
+        "total": 291,
+        "part": "49 %"
+      },
+      {
+        "ville": "Ngaparou",
+        "total": 120,
+        "part": "20 %"
+      },
+      {
+        "ville": "Mbour",
+        "total": 99,
+        "part": "17 %"
+      },
+      {
+        "ville": "Somone",
+        "total": 30,
+        "part": "5 %"
+      },
+      {
+        "ville": "Malicounda",
+        "total": 23,
+        "part": "4 %"
+      },
+      {
+        "ville": "Nguerigne",
+        "total": 14,
+        "part": "2 %"
+      },
+      {
+        "ville": "Autres (> 30 km)",
+        "total": 16,
+        "part": "3 %"
+      }
+    ],
+    "stats": {
+      "totalEleves": 593,
+      "partSaly": "49 %",
+      "partPeripherie": "42 %",
+      "partEloignee": "9 %"
+    },
+    "circuits": [
+      {
+        "name": "Ligne 1 : Mbour Centre → Saly → LFJP",
+        "arrets": "Rond-Point Total Mbour, Stade Caroline Faye, Croisement Saly, Lycée",
+        "horaireDepart": "07h10",
+        "eleves": 99
+      },
+      {
+        "name": "Ligne 2 : Somone → Ngaparou → Nguerigne → LFJP",
+        "arrets": "Somone Plage, Mairie Ngaparou, Nguerigne Bambara, Route du Lycée",
+        "horaireDepart": "07h15",
+        "eleves": 164
+      },
+      {
+        "name": "Ligne 3 : Saly Port & Résidences → Malicounda → LFJP",
+        "arrets": "Saly Port, Golf Club, Saly Joseph, Malicounda Échangeur, Lycée",
+        "horaireDepart": "07h25",
+        "eleves": 65
+      }
+    ],
+    "tarifs": [
+      {
+        "zone": "Zone 1 (Saly & proximité immédiate)",
+        "description": "Trajets inférieurs à 5 km",
+        "mensuel": 28000,
+        "annuel": 280000
+      },
+      {
+        "zone": "Zone 2 (Ngaparou / Mbour centre)",
+        "description": "Trajets entre 5 et 12 km",
+        "mensuel": 38000,
+        "annuel": 380000
+      },
+      {
+        "zone": "Zone 3 (Somone / Malicounda / Nguerigne)",
+        "description": "Trajets supérieurs à 12 km",
+        "mensuel": 48000,
+        "annuel": 480000
+      }
+    ],
+    "pointsCles": [
+      "Forte concentration : 91 % des élèves résident à moins de 15 km de l’établissement.",
+      "Sujet secondaire pour 68 % des familles qui privilégient le co-voiturage ou les déplacements individuels.",
+      "Levier d’attractivité ciblé pour les communes de Ngaparou, Somone et la périphérie de Mbour.",
+      "Scénario préconisé : service mutualisé avec bus scolaires sécurisés et accompagnateurs formés."
+    ]
+  },
+  "rubriques": [
+    {
+      "id": "accueil",
+      "name": "Accueil",
+      "path": "/",
+      "badge": "Racine",
+      "description": "Portail d’accueil, hero, chiffres clés, actualités, mots officiels et rubriques phares",
+      "iconName": "Home",
+      "isOfficial": true,
+      "order": 1
+    },
+    {
+      "id": "methode",
+      "name": "Méthode",
+      "path": "/methode",
+      "badge": "Pilier 1",
+      "description": "Démarche participative, calendrier de concertation, comités et méthodologie du PSD",
+      "iconName": "Sliders",
+      "isOfficial": true,
+      "order": 2
+    },
+    {
+      "id": "vision",
+      "name": "Vision, Missions & Valeurs",
+      "path": "/vision-missions-valeurs",
+      "badge": "Pilier 2",
+      "description": "Piliers éducatifs, missions prioritaires et valeurs fondamentales partagées du LFJP",
+      "iconName": "Heart",
+      "isOfficial": true,
+      "order": 3
+    },
+    {
+      "id": "diagnostic",
+      "name": "Diagnostic",
+      "path": "/diagnostic",
+      "badge": "Pilier 3",
+      "description": "Enquête Climat Scolaire (ELCS), restauration scolaire, constats de l’établissement et indicateurs clés",
+      "iconName": "ChartNoAxesCombined",
+      "isOfficial": true,
+      "order": 4
+    },
+    {
+      "id": "plan-strategique",
+      "name": "Plan Stratégique",
+      "path": "/plan-strategique",
+      "badge": "Pilier 4",
+      "description": "Les 4 grands axes prioritaires, jalons temporels, budgets d’investissement et 40+ fiches projets",
+      "iconName": "Target",
+      "isOfficial": true,
+      "order": 5
+    }
+  ],
+  "source": "restaurant_survey_editor"
 }
