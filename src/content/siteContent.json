@@ -57,11 +57,32 @@
     "heroSubtitle": "Excellence, Respect, Créativité, Persévérance, Civisme",
     "sectionTitle": "Plan stratégique de développement du Lycée Français Jacques Prévert",
     "navItems": [
-      { "id": "accueil", "label": "Accueil", "path": "/", "isProtected": true },
-      { "id": "methode", "label": "Méthode", "path": "/methode" },
-      { "id": "vision", "label": "Vision & Valeurs", "path": "/vision-missions-valeurs" },
-      { "id": "diagnostic", "label": "Diagnostic", "path": "/diagnostic" },
-      { "id": "plan-strategique", "label": "Plan Stratégique", "path": "/plan-strategique" }
+      {
+        "id": "accueil",
+        "label": "Accueil",
+        "path": "/",
+        "isProtected": true
+      },
+      {
+        "id": "methode",
+        "label": "Méthode",
+        "path": "/methode"
+      },
+      {
+        "id": "vision",
+        "label": "Vision & Valeurs",
+        "path": "/vision-missions-valeurs"
+      },
+      {
+        "id": "diagnostic",
+        "label": "Diagnostic",
+        "path": "/diagnostic"
+      },
+      {
+        "id": "plan-strategique",
+        "label": "Plan Stratégique",
+        "path": "/plan-strategique"
+      }
     ],
     "cards": [
       {
