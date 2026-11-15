@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { toast } from 'sonner';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Footer from '../components/Footer';
@@ -108,15 +107,6 @@ const Index = () => {
     }
   };
 
-  const handleSaveDraft = () => {
-    if (!isPrivileged || !showEditorControls) return;
-    handleHomeChange(home);
-    handlePagesChange(currentPages);
-    toast.success('Brouillon enregistré localement', {
-      description: 'Les modifications de l’accueil et du menu sont enregistrées dans votre espace sans être publiées.',
-    });
-  };
-
   const cards = Array.isArray(home.cards) ? home.cards : siteContent.home.cards;
   const messages = Array.isArray(home.messages) ? home.messages : siteContent.home.messages;
 
@@ -131,7 +121,6 @@ const Index = () => {
           pages={currentPages}
           onChange={handleHomeChange}
           onPagesChange={handlePagesChange}
-          onSaveDraft={handleSaveDraft}
         />
       )}
 

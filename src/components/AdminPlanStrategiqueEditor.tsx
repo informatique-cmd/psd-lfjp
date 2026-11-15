@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BarChart3, ChevronDown, ChevronUp, ExternalLink, Plus, Save, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { BarChart3, ChevronDown, ChevronUp, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import {
   computeAxisProgressRate,
   defaultPsdAxesData,
@@ -153,20 +152,6 @@ export const AdminPlanStrategiqueEditor: React.FC<AdminPlanStrategiqueEditorProp
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              emit(psdAxesData, psdTimelines, planStrategique, actionPages);
-              toast.success('Brouillon enregistré localement', {
-                description: 'Vos modifications sur le Plan Stratégique restent privées jusqu’à la publication.',
-              });
-            }}
-            className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-          >
-            <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
-          </Button>
-
           <Button
             type="button"
             size="sm"

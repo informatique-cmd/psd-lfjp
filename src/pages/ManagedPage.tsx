@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BreadcrumbNav from '@/components/Breadcrumb';
@@ -343,12 +342,6 @@ const ManagedPage = () => {
           <AdminManagedPageEditor
             page={page}
             onChange={handleManagedPageChange}
-            onSaveDraft={() => {
-              handleManagedPageChange(page);
-              toast.success('Brouillon enregistré localement', {
-                description: `La page « ${page.title} » est sauvegardée dans votre brouillon privé.`,
-              });
-            }}
           />
         )}
         <main className="container mx-auto px-6 py-12 flex-1">

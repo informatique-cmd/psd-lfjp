@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, FileEdit, Plus, Save, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, FileEdit, Plus, Trash2 } from 'lucide-react';
 import { usePrivilegedAccess } from '@/lib/authAccess';
 
 export interface VisionValueItem {
@@ -67,20 +66,6 @@ export const AdminVisionValeursEditor: React.FC<AdminVisionValeursEditorProps> =
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                onChange(data);
-                toast.success('Brouillon enregistré localement', {
-                  description: 'Vos modifications sur Vision, Missions & Valeurs restent privées jusqu’à la publication.',
-                });
-              }}
-              className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-            >
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
-            </Button>
-
             <Button
               type="button"
               size="sm"

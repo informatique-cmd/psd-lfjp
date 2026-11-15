@@ -498,7 +498,7 @@ test('Superfluous bottom BarCharts are removed, top-nav rubriques CRUD works, Mo
   assert.ok(homeEditorSrc.includes('Ajouter une rubrique'), 'AdminHomeEditor must allow adding a top-menu rubrique');
   assert.ok(homeEditorSrc.includes('Protégée (Accueil)'), 'AdminHomeEditor must protect Accueil (/) from deletion');
   assert.ok(homeEditorSrc.includes('!isAccueil'), 'AdminHomeEditor must hide delete action for Accueil');
-  assert.ok(homeEditorSrc.includes('Enregistrer le brouillon'), 'AdminHomeEditor must include Enregistrer le brouillon button');
+  assert.ok(!homeEditorSrc.includes('Enregistrer le brouillon'), 'AdminHomeEditor must NOT contain duplicate Enregistrer le brouillon button');
 
   const desktopMenuSrc = readFileSync(resolve(rootDir, 'src/components/navigation/DesktopMenu.tsx'), 'utf-8');
   const mobileMenuSrc = readFileSync(resolve(rootDir, 'src/components/navigation/MobileMenu.tsx'), 'utf-8');
@@ -519,12 +519,34 @@ test('Superfluous bottom BarCharts are removed, top-nav rubriques CRUD works, Mo
     /if\s*\(\s*!isPrivileged\s*\|\|\s*!showEditorControls\s*\)\s*\{\s*return\s+null;\s*\}/.test(managedEditorSrc),
     'AdminManagedPageEditor must strictly return null for public unauthenticated visitors'
   );
-  assert.ok(managedEditorSrc.includes('Enregistrer le brouillon'), 'AdminManagedPageEditor must expose Enregistrer le brouillon');
+  assert.ok(!managedEditorSrc.includes('Enregistrer le brouillon'), 'AdminManagedPageEditor must NOT contain duplicate Enregistrer le brouillon button');
+
+  const noDraftButtonFiles = [
+    'src/components/AdminHomeEditor.tsx',
+    'src/components/AdminMethodeEditor.tsx',
+    'src/components/AdminVisionValeursEditor.tsx',
+    'src/components/AdminPlanStrategiqueEditor.tsx',
+    'src/components/AdminManagedPageEditor.tsx',
+    'src/components/admin/RubriqueCMSPanels.tsx',
+    'src/pages/ActionDetailPage.tsx',
+    'src/pages/Index.tsx',
+    'src/pages/Methode.tsx',
+    'src/pages/VisionMissionsValeurs.tsx',
+    'src/pages/Diagnostic.tsx',
+    'src/pages/PlanStrategique.tsx',
+    'src/pages/ManagedPage.tsx',
+  ];
+  noDraftButtonFiles.forEach((relPath) => {
+    const src = readFileSync(resolve(rootDir, relPath), 'utf-8');
+    assert.ok(!src.includes('Enregistrer le brouillon'), `${relPath} must NOT contain Enregistrer le brouillon button`);
+  });
 
   const adminSrc = readFileSync(resolve(rootDir, 'src/pages/Admin.tsx'), 'utf-8');
   assert.ok(!adminSrc.includes('Modifier le site'), 'Admin.tsx top bar must NOT contain redundant Modifier le site button');
   assert.ok(!adminSrc.includes('Mode modification activé'), 'Admin.tsx must NOT render editorModeActive helper banner');
-  assert.ok(adminSrc.includes('Enregistrer le brouillon'), 'Admin.tsx top bar must highlight Enregistrer le brouillon');
+  const draftBtnMatches = adminSrc.match(/>Enregistrer le brouillon</g) || [];
+  assert.equal(draftBtnMatches.length, 2, 'Admin.tsx must have Enregistrer le brouillon button ONLY in the Editor top header and SuperAdmin top header (1 per authenticated role view)');
+  assert.ok(!adminSrc.includes('<Save className="h-4 w-4" /> Brouillon'), 'Admin.tsx must NOT contain duplicate Brouillon button in visual editor card');
 });
 
 

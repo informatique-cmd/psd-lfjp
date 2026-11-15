@@ -5154,16 +5154,6 @@ const Admin = () => {
                   >
                     <Eye className="mr-1.5 h-3.5 w-3.5 text-french-blue" /> Aperçu du site
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      saveDraft();
-                    }}
-                    className="bg-french-blue hover:bg-blue-700 text-white text-xs"
-                  >
-                    <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
-                  </Button>
                 </div>
               </div>
             );
@@ -9335,7 +9325,6 @@ const Admin = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => saveDraft()}><Save className="h-4 w-4" /> Brouillon</Button>
                   <Button type="button" variant="outline" size="icon" title={visualExpanded ? 'Réduire l’éditeur' : 'Agrandir l’éditeur'} aria-label={visualExpanded ? 'Réduire l’éditeur' : 'Agrandir l’éditeur'} onClick={() => setVisualExpanded((expanded) => !expanded)}>{visualExpanded ? <Minimize2 /> : <Maximize2 />}</Button>
                 </div>
               </div>
@@ -9717,9 +9706,6 @@ const Admin = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <Button onClick={previewDraft} variant="outline" className="text-xs">
                       <Eye className="mr-1.5 h-3.5 w-3.5 text-french-blue" /> Prévisualiser tout le site
-                    </Button>
-                    <Button onClick={saveDraft} variant="outline" className="text-xs">
-                      <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
                     </Button>
                     <Button onClick={resetDraft} variant="ghost" className="text-xs text-slate-500 hover:text-red-600">
                       <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Réinitialiser

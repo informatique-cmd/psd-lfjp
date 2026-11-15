@@ -19,13 +19,11 @@ import {
   Home,
   Layers,
   Plus,
-  Save,
   ShieldCheck,
   Sparkles,
   Target,
   Trash2,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import {
   BarChart,
   Bar,
@@ -320,20 +318,6 @@ const ActionDetailPage: React.FC<ActionDetailPageProps> = ({ overrideSlug }) => 
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    saveActionPage(currentPage);
-                    toast.success('Brouillon enregistré localement', {
-                      description: `La fiche action « ${currentPage.title} » est sauvegardée dans votre brouillon privé.`,
-                    });
-                  }}
-                  className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-                >
-                  <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
-                </Button>
-
                 <Button
                   type="button"
                   size="sm"

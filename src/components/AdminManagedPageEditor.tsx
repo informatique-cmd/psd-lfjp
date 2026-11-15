@@ -8,17 +8,14 @@ import {
   ChevronUp,
   FileEdit,
   Plus,
-  Save,
   Trash2,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { usePrivilegedAccess } from '@/lib/authAccess';
 import type { ContentBlock, ManagedPage } from '@/content/pageTypes';
 
 export interface AdminManagedPageEditorProps {
   page: ManagedPage;
   onChange: (nextPage: ManagedPage) => void;
-  onSaveDraft?: () => void;
 }
 
 const blockTypeLabels: Record<ContentBlock['type'], string> = {
@@ -40,7 +37,6 @@ const blockTypeLabels: Record<ContentBlock['type'], string> = {
 export const AdminManagedPageEditor: React.FC<AdminManagedPageEditorProps> = ({
   page,
   onChange,
-  onSaveDraft,
 }) => {
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [isOpen, setIsOpen] = useState(false);
@@ -111,16 +107,6 @@ export const AdminManagedPageEditor: React.FC<AdminManagedPageEditorProps> = ({
     });
   };
 
-  const handleSaveDraftClick = () => {
-    if (onSaveDraft) {
-      onSaveDraft();
-      return;
-    }
-    onChange(page);
-    toast.success('Brouillon enregistré localement', {
-      description: 'Les modifications de cette rubrique restent privées jusqu’à la publication.',
-    });
-  };
 
   return (
     <div className="container mx-auto px-6 pt-6" data-interactive="true">
@@ -146,15 +132,6 @@ export const AdminManagedPageEditor: React.FC<AdminManagedPageEditorProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSaveDraftClick}
-              className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-            >
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
-            </Button>
-
             <Button
               type="button"
               size="sm"

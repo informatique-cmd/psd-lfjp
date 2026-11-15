@@ -11,7 +11,6 @@ import {
   LayoutGrid,
   Lock,
   Plus,
-  Save,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,7 +57,6 @@ export interface AdminHomeEditorProps {
   pages?: ManagedPage[];
   onChange: (nextHome: HomeSectionContent) => void;
   onPagesChange?: (nextPages: ManagedPage[]) => void;
-  onSaveDraft?: () => void;
 }
 
 export const AdminHomeEditor: React.FC<AdminHomeEditorProps> = ({
@@ -66,7 +64,6 @@ export const AdminHomeEditor: React.FC<AdminHomeEditorProps> = ({
   pages = [],
   onChange,
   onPagesChange,
-  onSaveDraft,
 }) => {
   const { isPrivileged, showEditorControls } = usePrivilegedAccess();
   const [isOpen, setIsOpen] = useState(false);
@@ -86,15 +83,6 @@ export const AdminHomeEditor: React.FC<AdminHomeEditorProps> = ({
     return copy;
   };
 
-  const handleSaveDraftClick = () => {
-    if (onSaveDraft) {
-      onSaveDraft();
-      return;
-    }
-    toast.success('Brouillon enregistré localement', {
-      description: 'Vos modifications restent privées jusqu’à la publication.',
-    });
-  };
 
   const handleAddRubrique = () => {
     const baseLabel = 'Nouvelle rubrique';
@@ -206,15 +194,6 @@ export const AdminHomeEditor: React.FC<AdminHomeEditorProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSaveDraftClick}
-              className="bg-french-blue hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-            >
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
-            </Button>
-
             <Button
               type="button"
               size="sm"

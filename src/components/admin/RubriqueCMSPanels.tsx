@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ArrowDown, ArrowUp, BarChart3, CheckCircle2, Copy, CornerDownRight,
   ExternalLink, Eye, FileText, FolderTree, Heart, Layers3, MessageSquareText,
-  Pencil, Plus, Save, Sliders, Sparkles, Target, Trash2, Upload
+  Pencil, Plus, Sliders, Sparkles, Target, Trash2, Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,7 +60,7 @@ export interface RubriqueAccueilPanelProps {
   openRubriqueEditor: (path: string, name: string, parentPath?: string, returnRubrique?: string) => void;
   addSubPage: (parentSlug?: string) => void;
   deletePage: (pageIndex?: number) => void;
-  saveDraft: () => boolean;
+  saveDraft?: () => boolean;
   TextStyleToolbar: React.FC<{ style?: TextStyle; onChange: (patch: Partial<TextStyle>) => void }>;
 }
 
@@ -68,7 +68,7 @@ export const RubriqueAccueilPanel: React.FC<RubriqueAccueilPanelProps> = ({
   content, updateHome, updateCard, updateCardStyle, addCard, removeCard, moveCard, duplicateCard,
   importContentImage, updateMessage, updateMessageArray, addMessageArrayItem, removeMessageArrayItem,
   addMessage, removeMessage, moveMessage, duplicateMessage, pages, openRubriqueEditor,
-  addSubPage, deletePage, saveDraft, TextStyleToolbar
+  addSubPage, deletePage, TextStyleToolbar
 }) => {
   const [subTab, setSubTab] = useState<'cards' | 'messages' | 'hero' | 'subpages'>('cards');
   const accueilCustomPages = pages.filter((p) => !p.parent || p.parent === '/');
@@ -96,9 +96,6 @@ export const RubriqueAccueilPanel: React.FC<RubriqueAccueilPanelProps> = ({
               <a href="/?draft=1" target="_blank" rel="noreferrer">
                 <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page d’accueil
               </a>
-            </Button>
-            <Button type="button" size="sm" onClick={() => saveDraft()} className="bg-french-blue hover:bg-blue-700 h-8 text-xs">
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
             </Button>
           </div>
         </div>
@@ -397,11 +394,11 @@ export interface RubriqueMethodePanelProps {
   openRubriqueEditor: (path: string, name: string, parentPath?: string, returnRubrique?: string) => void;
   addSubPage: (parentSlug?: string) => void;
   deletePage: (pageIndex?: number) => void;
-  saveDraft: () => boolean;
+  saveDraft?: () => boolean;
 }
 
 export const RubriqueMethodePanel: React.FC<RubriqueMethodePanelProps> = ({
-  pages, openRubriqueEditor, addSubPage, deletePage, saveDraft
+  pages, openRubriqueEditor, addSubPage, deletePage
 }) => {
   const [subTab, setSubTab] = useState<'content' | 'subpages'>('content');
   const methodeCustomPages = pages.filter((p) => p.parent === '/methode');
@@ -430,9 +427,6 @@ export const RubriqueMethodePanel: React.FC<RubriqueMethodePanelProps> = ({
               <a href="/methode?draft=1" target="_blank" rel="noreferrer">
                 <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page Méthode
               </a>
-            </Button>
-            <Button type="button" size="sm" onClick={() => saveDraft()} className="bg-sky-600 hover:bg-sky-700 text-white h-8 text-xs">
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
             </Button>
           </div>
         </div>
@@ -598,13 +592,13 @@ export interface RubriqueVisionPanelProps {
   openRubriqueEditor: (path: string, name: string, parentPath?: string, returnRubrique?: string) => void;
   addSubPage: (parentSlug?: string) => void;
   deletePage: (pageIndex?: number) => void;
-  saveDraft: () => boolean;
+  saveDraft?: () => boolean;
 }
 
 export const RubriqueVisionPanel: React.FC<RubriqueVisionPanelProps> = ({
   content, updateVisionParagraph, updateMission, updateValue,
   moveVisionParagraph, moveMission, moveValue, duplicateMission, duplicateValue,
-  setContent, pages, openRubriqueEditor, addSubPage, deletePage, saveDraft
+  setContent, pages, openRubriqueEditor, addSubPage, deletePage
 }) => {
   const [subTab, setSubTab] = useState<'vision' | 'missions' | 'valeurs' | 'subpages'>('vision');
   const visionCustomPages = pages.filter((p) => p.parent === '/vision-missions-valeurs');
@@ -632,9 +626,6 @@ export const RubriqueVisionPanel: React.FC<RubriqueVisionPanelProps> = ({
               <a href="/vision-missions-valeurs?draft=1" target="_blank" rel="noreferrer">
                 <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page
               </a>
-            </Button>
-            <Button type="button" size="sm" onClick={() => saveDraft()} className="bg-rose-600 hover:bg-rose-700 text-white h-8 text-xs">
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
             </Button>
           </div>
         </div>
@@ -888,13 +879,13 @@ export interface RubriqueDiagnosticPanelProps {
   openRubriqueEditor: (path: string, name: string, parentPath?: string, returnRubrique?: string) => void;
   addSubPage: (parentSlug?: string) => void;
   deletePage: (pageIndex?: number) => void;
-  saveDraft: () => boolean;
+  saveDraft?: () => boolean;
 }
 
 export const RubriqueDiagnosticPanel: React.FC<RubriqueDiagnosticPanelProps> = ({
   getEditablePageData, updateElcsTitle, updateElcsMetric, addElcsMetric, removeElcsMetric,
   restaurantEditorGroups, getRestaurantRows, addRestaurantRow, removeRestaurantRow, updateRestaurantRow,
-  pages, openRubriqueEditor, addSubPage, deletePage, saveDraft
+  pages, openRubriqueEditor, addSubPage, deletePage
 }) => {
   const [subTab, setSubTab] = useState<'elcs' | 'restaurant' | 'rapports'>('elcs');
   const diagnosticCustomPages = pages.filter((p) => p.parent === '/diagnostic');
@@ -922,9 +913,6 @@ export const RubriqueDiagnosticPanel: React.FC<RubriqueDiagnosticPanelProps> = (
               <a href="/diagnostic?draft=1" target="_blank" rel="noreferrer">
                 <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir la page Diagnostic
               </a>
-            </Button>
-            <Button type="button" size="sm" onClick={() => saveDraft()} className="bg-purple-600 hover:bg-purple-700 text-white h-8 text-xs">
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
             </Button>
           </div>
         </div>
@@ -1289,7 +1277,7 @@ export interface RubriquePlanStrategiquePanelProps {
   openRubriqueEditor: (path: string, name: string, parentPath?: string, returnRubrique?: string) => void;
   addSubPage: (parentSlug?: string) => void;
   deletePage: (pageIndex?: number) => void;
-  saveDraft: () => boolean;
+  saveDraft?: () => boolean;
 }
 
 export const RubriquePlanStrategiquePanel: React.FC<RubriquePlanStrategiquePanelProps> = ({
@@ -1298,7 +1286,7 @@ export const RubriquePlanStrategiquePanel: React.FC<RubriquePlanStrategiquePanel
   moveTimelineAction, duplicateTimelineAction, updateScheduleDay, updateScheduleRoom,
   addScheduleDay, removeScheduleDay, addScheduleRoom, removeScheduleRoom, updateFilmLevel,
   updateFilmAction, addFilmAction, removeFilmAction, removeFilmLevel, addFilmLevel,
-  pages, openRubriqueEditor, addSubPage, deletePage, saveDraft
+  pages, openRubriqueEditor, addSubPage, deletePage
 }) => {
   const [subTab, setSubTab] = useState<'overview' | 'axe1' | 'axe2' | 'axe3' | 'axe4'>('overview');
   const [axe3InnerTab, setAxe3InnerTab] = useState<'timeline' | 'bac-blanc' | 'film-annuel' | 'subpages'>('timeline');
@@ -1562,9 +1550,6 @@ export const RubriquePlanStrategiquePanel: React.FC<RubriquePlanStrategiquePanel
               <a href="/plan-strategique?draft=1" target="_blank" rel="noreferrer">
                 <Eye className="mr-1.5 h-3.5 w-3.5" /> Voir le Plan Stratégique
               </a>
-            </Button>
-            <Button type="button" size="sm" onClick={() => saveDraft()} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs">
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Enregistrer le brouillon
             </Button>
           </div>
         </div>
