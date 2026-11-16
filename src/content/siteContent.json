@@ -66,22 +66,26 @@
       {
         "id": "methode",
         "label": "Méthode",
-        "path": "/methode"
+        "path": "/methode",
+        "isProtected": false
       },
       {
         "id": "vision",
         "label": "Vision & Valeurs",
-        "path": "/vision-missions-valeurs"
+        "path": "/vision-missions-valeurs",
+        "isProtected": false
       },
       {
         "id": "diagnostic",
         "label": "Diagnostic",
-        "path": "/diagnostic"
+        "path": "/diagnostic",
+        "isProtected": false
       },
       {
         "id": "plan-strategique",
         "label": "Plan Stratégique",
-        "path": "/plan-strategique"
+        "path": "/plan-strategique",
+        "isProtected": false
       }
     ],
     "cards": [
