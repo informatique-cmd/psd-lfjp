@@ -901,10 +901,6 @@
               "label": "Budget d’amélioration",
               "link": "/budget-cadre-vie-infrastructures",
               "highlight": true
-            },
-            {
-              "label": "test",
-              "link": "/actions/test"
             }
           ]
         },
